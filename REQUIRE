@@ -1,1 +1,9 @@
 julia 0.6
+
+IterativeSolvers
+LinearMaps
+Optim
+PyPlot
+DataFrames
+CSV
+PGFPlotsX
