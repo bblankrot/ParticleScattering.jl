@@ -20,14 +20,11 @@ Return a `ShapeParams` object conataing the shape parametrized by
 \$x(θ)^4 + y(θ)^4 = r^4\$ with 2`N` nodes.
 """
 function squircle(r, N)
-    #naive but wrong
-    # ft =  r*[sqrt(abs(cos(t))).*sign(cos(t))   sqrt(abs(sin(t))).*sign(sin(t))]
-    # dft = 0.5*r*[-sin(t)./sqrt(abs(cos(t)))   cos(t)./sqrt(abs(sin(t)))]
     #substituting x = rho*cost, y = rho*sint in x^4+y^4=R^4
     t = Float64[pi*j/N for j=0:(2*N-1)]
-    cost = cos(t); cos4t = cos(4*t);
-    sint = sin(t); sin4t = sin(4*t);
-    rho = sqrt(2)*r./((3+cos4t).^0.25)
+    cost = cos.(t); cos4t = cos.(4*t);
+    sint = sin.(t); sin4t = sin.(4*t);
+    rho = (sqrt(2)*r)./((3+cos4t).^0.25)
     ft = [rho.*cost rho.*sint]
     drho = rho.*sin4t./(3+cos4t)
     dx = drho.*cost - rho.*sint
