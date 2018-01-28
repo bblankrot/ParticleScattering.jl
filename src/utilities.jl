@@ -2,6 +2,7 @@ function binarySearch(f, key, low, high)
     #given monotonically increasing function f, find lowest index i such that
     #f(i) >= key. For monotonically decreasing simply negate f and key, and this
     #will return lowest i such that f(i) <= key
+    low > high && error("binarySearch: low > high")
     val = 0
     mid = 0
     while low != high
