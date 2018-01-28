@@ -114,33 +114,32 @@ function KM_weights(N)
     return (R,K)
 end
 
-function solvePotentialShapePW(kout, kin, t, ft, dft, θ_i)
-    N = length(t) #N here is different...
+function solvePotentialShapePW(kout, kin, s, θ_i)
+    N = length(s.t) #N here is different...
 
-    A = SDNTpotentialsdiff(kout, kin, t, ft, dft)
+    A = SDNTpotentialsdiff(kout, kin, s.t, s.ft, s.dft)
     LU = lufact(A)
 
-	ndft = sqrt.(sum(abs2,dft,2))
-    uinc = exp.(1.0im*kout*(cos(θ_i)*ft[:,1] + sin(θ_i)*ft[:,2]))
+	ndft = sqrt.(sum(abs2,s.dft,2))
+    uinc = exp.(1.0im*kout*(cos(θ_i)*s.ft[:,1] + sin(θ_i)*s.ft[:,2]))
     rhs = -[uinc;
-			(1.0im*kout*uinc).*((cos(θ_i)*dft[:,2] - sin(θ_i)*dft[:,1])./ndft)]
+			(1.0im*kout*uinc).*((cos(θ_i)*s.dft[:,2] - sin(θ_i)*s.dft[:,1])./ndft)]
 
     sigma_mu = LU\rhs
-    return sigma_mu
 end
 
-function scatteredField(sigma_mu, kout, t, ft, dft, p)
+function scatteredField(sigma_mu, k, t, ft, dft, p)
     #calculates the scattered field of a shape with parametrization ft(t),...,dft(t)
-    #in space with wavenumber kout at points p *off* the boundary. For field on the boundary,
+    #in space with wavenumber k at points p *off* the boundary. For field on the boundary,
     #SDpotentials function must be used.
-    N=length(t)
-    M=size(p,1)
+    N = length(t)
+    M = size(p,1)
     #loop is faster here:
     SDout = Array{Complex{Float64}}(M, 2*N)
     for j = 1:N
         ndft = hypot(dft[j,1],dft[j,2])
         for i = 1:M
-            r = [p[i,1] - ft[j,1];p[i,2] - ft[j,2]] #r = p[i,:] - ft[j,:]
+            r = [p[i,1] - ft[j,1];p[i,2] - ft[j,2]]
             nr = hypot(r[1],r[2])
             if nr < eps()
                 warn("Encountered singularity in scatteredField.")
@@ -148,11 +147,60 @@ function scatteredField(sigma_mu, kout, t, ft, dft, p)
                 SDout[i,j+N] = 0
                 continue
             end
-            SDout[i,j] = (2*pi/N)*0.25im*besselh(0,1,kout*nr)*ndft
-            SDout[i,j+N] = (2*pi/N)*0.25im*kout*besselh(1,1,kout*nr)*(dft[j,2]*r[1] - dft[j,1]*r[2])/nr
+            SDout[i,j] = (2*pi/N)*0.25im*besselh(0,1, k*nr)*ndft
+            SDout[i,j+N] = (2*pi/N)*0.25im*k*besselh(1,1, k*nr)*(dft[j,2]*r[1] - dft[j,1]*r[2])/nr
         end
     end
     u_scat = SDout*sigma_mu
+end
+
+function scatteredField(sigma_mu, kout, s::ShapeParams, p::Array{Float64,2})
+    #calculates the scattered field of a shape with parametrization ft(t),...,dft(t)
+    #in space with wavenumber kout at points p *off* the boundary. For field on the boundary,
+    #SDpotentials function must be used.
+    N = length(s.t)
+    M = size(p,1)
+    #loop is faster here:
+    SDout = Array{Complex{Float64}}(M, 2*N)
+    for j = 1:N
+        ndft = hypot(s.dft[j,1], s.dft[j,2])
+        for i = 1:M
+            r = [p[i,1] - s.ft[j,1];p[i,2] - s.ft[j,2]]
+            nr = hypot(r[1], r[2])
+            if nr < eps()
+                warn("Encountered singularity in scatteredField.")
+                SDout[i,j] = 0
+                SDout[i,j+N] = 0
+                continue
+            end
+            SDout[i,j] = besselh(0,1,kout*nr)*ndft
+            SDout[i,j+N] = kout*besselh(1,1,kout*nr)*(s.dft[j,2]*r[1] - s.dft[j,1]*r[2])/nr
+        end
+    end
+    u_scat = (0.5im*π/N)*(SDout*sigma_mu)
+end
+
+function scatteredField(sigma_mu, kout, s::ShapeParams, p::Array{Float64,1}
+    #calculates the scattered field of a shape with parametrization ft(t),...,dft(t)
+    #in space with wavenumber kout at points p *off* the boundary. For field on the boundary,
+    #SDpotentials function must be used.
+    N = length(s.t)
+    SDout = Array{Complex{Float64}}(2*N)
+    for j = 1:N
+        ndft = hypot(s.dft[j,1], s.dft[j,2])
+        i = 1
+        r = [p[1] - s.ft[j,1]; p[2] - s.ft[j,2]]
+        nr = hypot(r[1], r[2])
+        if nr < eps()
+            warn("Encountered singularity in scatteredField.")
+            SDout[j] = 0
+            SDout[j+N] = 0
+            continue
+        end
+        SDout[j] = besselh(0,1,kout*nr)*ndft
+        SDout[j+N] = kout*besselh(1,1,kout*nr)*(s.dft[j,2]*r[1] - s.dft[j,1]*r[2])/nr
+    end
+    u_scat = (0.5im*π/N)*(SDout.'*sigma_mu)
 end
 
 function shapeMultipoleExpansion(k, t, ft, dft, P)
