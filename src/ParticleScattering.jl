@@ -52,7 +52,7 @@ export ScatteringProblem, ShapeParams, CircleParams, AbstractShapeParams,
     FMMoptions, OptimBuffer, R_multipole
 
 #temp
-include("optimize_rs_new.jl")
+include("optimize_rs_old.jl")
 export divideSpace, FMMtruncation, particleExpansion, FMMbuildMatrices
 
 export FMMbuffer, FMMmatrices
