@@ -1,3 +1,4 @@
+#TODO:If calling with gmres with initial guess of zero, supply that to save r0=b-A(x0)
 function FMM_mainMVP_pre!(output, beta, scatteringMatrices, φs::Vector{Float64}, ids::Vector{Int64}, P, mFMM, pre_agg, translated_sum)
     #@simd does not have a positive effect in 0.6.0
     #calculate matrix-vector product - devectorized with pre-preconditioning
