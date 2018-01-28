@@ -24,7 +24,7 @@ function minimumN(kout, kin, shape_function; tol = 1e-9, N_points = 10_000, N_st
     err_points = [s.R*f(i*2*pi/N_points) for i=0:(N_points-1), f in (cos,sin)]
     E_ana = (0.25im*besselh(0,1,kout*s.R))*ones(Complex{Float64},N_points)
 
-    E_comp = scatteredField(mu_sigma, kout, s.t, s.ft, s.dft, err_points)
+    E_comp = scatteredField(mu_sigma, kout, s, err_points)
     err = norm(E_ana-E_comp)/norm(E_ana)
 
     N = round(Int64, N_start*(err/tol)^(1/3))
@@ -32,7 +32,7 @@ function minimumN(kout, kin, shape_function; tol = 1e-9, N_points = 10_000, N_st
     s = shape_function(N)
     mu_sigma = solvePotential_forError(kin, kout, s, [0.0 0.0], [1], 0.0)
 
-    E_comp = scatteredField(mu_sigma, kout, s.t, s.ft, s.dft, err_points)
+    E_comp = scatteredField(mu_sigma, kout, s, err_points)
     err = norm(E_ana-E_comp)/norm(E_ana)
 
     if err > tol
@@ -61,7 +61,7 @@ function minimumN_helper(N, kout, kin, shape_function, err_points, E_comp, E_ana
     s = shape_function(N)
     mu_sigma = solvePotential_forError(kin, kout, s, [0.0 0.0], [1], 0.0)
 
-    E_comp[:] = scatteredField(mu_sigma, kout, s.t, s.ft, s.dft, err_points)
+    E_comp[:] = scatteredField(mu_sigma, kout, s, err_points)
     this_err = norm(E_ana-E_comp)/norm(E_ana)
 end
 
@@ -83,8 +83,8 @@ function minimumP(k0, kin, s::ShapeParams; tol = 1e-9, N_points = 10_000, P_min 
 	warn("""minimumP: Calculating at $dist*R, thus implicitly assuming all scatterers have same radius and we do not care about closer implications.""")
 
     #compute direct solution for comparison
-    inner = solvePotentialShapePW(k0, kin, s.t, s.ft, s.dft, 0.0)
-    E_quadrature = scatteredField(inner, k0, s.t, s.ft, s.dft, err_points)
+    inner = solvePotentialShapePW(k0, kin, s, 0.0)
+    E_quadrature = scatteredField(inner, k0, s, err_points)
     E_multipole = Array{Complex{Float64}}(N_points)
 
     P, errP = binarySearch(P_ -> -minimumP_helper(k0, kin, s, P_,
