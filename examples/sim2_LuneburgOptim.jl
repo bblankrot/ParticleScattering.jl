@@ -25,7 +25,8 @@ r_min = (a_lens*1e-3)*ones(size(centers,1))
 rs0 = (0.25*a_lens)*ones(size(centers,1))
 
 tic()
-test_max = optimize_radius(rs0, r_min, r_max, points, P, θ_i, k0, kin,
+ids_max = collect(1:length(rs0))
+test_max = optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin,
                 centers, fmm_options, optim_options, false, "BFGS", linesearch)
 optim_time = toq()
 rs_max = test_max.minimizer
@@ -44,7 +45,7 @@ plotNearField_pgf(filename1, k0, kin, P, sp1, θ_i; opt = fmm_options,
     x_points = 201, y_points = 201, border = border)
 
 sp2 = ScatteringProblem([CircleParams(rs_max[i]) for i in eachindex(rs_max)],
-        collect(1:length(rs_max)), centers, φs)
+        ids_max, centers, φs)
 Ez2 = plotNearField(k0, kin, P, sp2, θ_i, x_points = 150, y_points = 150,
             opt = fmm_options, border = border)
 plotNearField_pgf(filename2, k0, kin, P, sp2, θ_i; opt = fmm_options,
@@ -93,42 +94,27 @@ end
 pgf.save(dirname(@__FILE__) * "/tikz/opt_r_conv.tex", ax ,include_preamble = false)
 
 ################ Testing with symmetry ######################
-assert(length(ids)==size(centers,1))
+assert(length(ids_max)==size(centers,1))
 centers_abs = centers[:,1] + 1im*abs.(centers[:,2])
-ids2,centers_abs = ParticleScattering.my_uniqueind(centers_abs)
+ids_sym, centers_abs = ParticleScattering.my_uniqueind(centers_abs)
+J = length(centers_abs)
+r_max = (a_lens/1.15/2)*ones(J)
+r_min = (a_lens*1e-3)*ones(J)
+rs0 = (0.25*a_lens)*ones(J)
 
-r_max = (a_lens/1.15/2)*ones(length(centers_abs))
-r_min = (a_lens*1e-3)*ones(length(centers_abs))
-rs0 = (0.25*a_lens)*ones(length(centers_abs))
-
-test_max_sym = ParticleScattering.optimize_radius2(rs0, r_min, r_max, points, ids2, P, θ_i, k0, kin,
+tic()
+test_max_sym = ParticleScattering.optimize_radius2(rs0, r_min, r_max, points, ids_sym, P, θ_i, k0, kin,
                 centers, fmm_options, optim_options, false, optimmethod2)
-rs4 = test_max_sym.minimizer
+rs_sym = test_max_sym.minimizer
+sym_time = toq()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+sp4 = ScatteringProblem([CircleParams(rs_sym[i]) for i in eachindex(rs_sym)],
+        ids_sym, centers, φs)
+Ez4 = plotNearField(k0, kin, P, sp4, θ_i, x_points = 150, y_points = 150,
+        opt = fmm_options, border = border)
 
 #####################################
+# selfconsistent err P calculation
 Ez_4 = calculateNearField(k0, kin, 4, sp1, points, θ_i; opt = fmm_options)
 Ez_5 = calculateNearField(k0, kin, 5, sp1, points, θ_i; opt = fmm_options)
 Ez_6 = calculateNearField(k0, kin, 6, sp1, points, θ_i; opt = fmm_options)
