@@ -42,8 +42,8 @@ begin
     if draw_fig
         figure()
         #draw shapes and points
-        drawShapes(shapes, centers, ids, φs, gca())
-        plot(points[:,1],points[:,2],"r*")
+        draw_shapes(shapes, centers, ids, φs)
+        plot(points[:,1], points[:,2], "r*")
         tight_layout()
         ax = gca()
         ax[:set_aspect]("equal", adjustable = "box")
@@ -69,7 +69,7 @@ optim_time = toq()
 # %%
 
 sp_before = ScatteringProblem(shapes, ids, centers, φs)
-plotNearField(k0, kin, P, sp_before, θ_i,
+plot_near_field(k0, kin, P, sp_before, θ_i,
                 x_points = 600, y_points = 200, border = plot_border);
 colorbar()
 clim([0;5])
@@ -78,7 +78,7 @@ plotNearField_pgf(dirname(@__FILE__) * "/tikz/opt_phi_before.tex", k0, kin, P,
     border = plot_border, downsample = 4)
 
 sp_after = ScatteringProblem(shapes, ids, centers, test_max.minimizer)
-plotNearField(k0, kin, P, sp_after, θ_i,
+plot_near_field(k0, kin, P, sp_after, θ_i,
                 x_points = 600, y_points = 200, border = plot_border)
 colorbar()
 clim([0;5])

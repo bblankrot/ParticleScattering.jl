@@ -1,5 +1,5 @@
 """
-	solveParticleScattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0; get_inner = true, print_log = true) -> beta, inner
+	solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0; get_inner = true, print_log = true) -> beta, inner
 
 Solve the scattering problem `sp` with outer wavenumber `k0`, inner wavenumber
 `kin`, `2P+1` cylindrical harmonics per inclusion and incident plane wave angle
@@ -11,7 +11,8 @@ case of circular). By default, incident wave propagates left->right.
 Inner coefficients are only calculated if `get_inner` is true, and timing is
 printed if `print_log` is true.
 """
-function solveParticleScattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0; get_inner = true, print_log = true)
+function solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0;
+								get_inner = true, print_log = true)
 	# This function solves for the outgoing multipole coefficients in the presence
 	# of an incident plane wave.
 	# incident wave direction - from left to right is 0:
@@ -54,23 +55,30 @@ function solveParticleScattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0; 
 	dt3 = toq()
 	#recover full incoming expansion - in sigma_mu terms for parametrized shape,
 	#in multipole expansion for circle
-	tic()
-	inner = Array{Vector{Complex{Float64}}}(Ns)
-	for ic = 1:Ns
-		rng = (ic-1)*(2*P+1) + (1:2*P+1)
-		if typeof(shapes[ids[ic]]) == ShapeParams
-			if φs[ic] == 0.0
-				α_c = scatteringMatrices[ids[ic]]\beta[rng]
+	if get_inner
+		tic()
+
+		#find LU factorization once for each shape
+        scatteringLU = [lufact(scatteringMatrices[iid])) for iid = 1:length(shapes)]
+
+		inner = Array{Vector{Complex{Float64}}}(Ns)
+		α_c = Array{Complex{Float64}}(2*P+1)
+		for ic = 1:Ns
+			rng = (ic-1)*(2*P+1) + (1:2*P+1)
+			if typeof(shapes[ids[ic]]) == ShapeParams
+				if φs[ic] == 0.0
+					α_c[:] = scatteringLU[ids[ic]]\beta[rng]
+				else
+					Rot = spdiagm(Complex{Float64}[exp(-1.0im*φs[ic]*l) for l=-P:P]) #rotation matrix
+					α_c[:] = scatteringLU[ids[ic]]\(conj(Rot)*beta[rng])
+				end
+				inner[ic] = innerExpansions[ids[ic]]*α_c
 			else
-				Rot = spdiagm(Complex{Float64}[exp(-1.0im*φs[ic]*l) for l=-P:P]) #rotation matrix
-				α_c = scatteringMatrices[ids[ic]]\(conj(Rot)*beta[rng])
+				inner[ic] = innerExpansions[ids[ic]]*beta[rng]
 			end
-			inner[ic] = innerExpansions[ids[ic]]*α_c
-		else
-			inner[ic] = innerExpansions[ids[ic]]*beta[rng]
 		end
+		dt4 = toq()
 	end
-	dt4 = toq()
 	print_log && begin
 		println("Scattering matrix solution: $dt1 s")
 		println("Matrix construction: $dt2 s")
@@ -96,61 +104,24 @@ function M2Lmatrix!(T, k, P, d)
 	end
 end
 
-function plotMultipoleRCS(k0, beta, centers, len = 401)
-	#compute total scattered field - assumes unit incident plane wave
-	Ns = size(centers,1)
-	P = div(div(length(beta),Ns)-1,2)
-	rfar = 1e7*maximum([sqrt(sum(centers.^2,2));1.0])
-	ts = linspace(0,2*pi,len)
-	points = [rfar*cos(ts) rfar*sin(ts)]
-
-	Esc = zeros(Complex{Float64},len)
-	scatteredFieldMultipole2(k0, beta, centers, points, Esc)
-
-	figure()
-	plot(ts/pi,2π*rfar*abs2.(Esc)/(2π/k0));
-	xlabel(L"\varphi/\pi")
-	ylabel(L"\sigma/\lambda")
-	return Esc
-end
-
-#TODO: Figure out via benchamrks, etc which one to keep, and document
-function scatteredFieldMultipole2(k0, beta, centers::Array{Float64,2}, points::Array{Float64,2}, Esc)
-	#compute total scattered field - only positive besselh to save time
-	#devectorized, except for besselh, which is slow when devec'd.
-	#adds to existing vector, make sure to preallocate zeros outside.
+function scattered_field_multipole(k0, beta, centers::Array{Float64,2}, points::Array{Float64,2})
 	Ns = size(centers,1)
 	P = div(div(length(beta),Ns)-1,2)
 	len = size(points,1)
-	bess = Array{Complex{Float64}}(P + 1)
-	#iterate over all desired points and all multipole centers
-	for ic = 1:Ns
-		ind = P + 1 + (ic-1)*(2*P+1)
-		for il = 1:len
-			points_moved1 = points[il,1] - centers[ic,1]
-			points_moved2 = points[il,2] - centers[ic,2]
+	Esc = zeros(Complex{Float64}, len)
 
-			rs_moved = sqrt(points_moved1^2 + points_moved2^2)#hypot(points_moved1,points_moved2)
-			ts_moved = atan2(points_moved2,points_moved1)
-
-			bess[:] = besselh.(0:P,1,k0*rs_moved)
-			Esc[il] += beta[ind]*bess[1]
-			for p = 1:P
-				Esc[il] += bess[p+1]*(beta[p + ind]*exp(1.0im*p*ts_moved) + (-1)^p*beta[-p + ind]*exp(-1.0im*p*ts_moved))
-			end
-		end
-	end
+	scattered_field_multipole!(Esc, k0, beta, P, centers, 1:Ns, points, 1:len)
 	return Esc
 end
 
-function scatteredFieldMultipole(k0, beta, P, centers::Array{Float64,2}, ind_centers, points::Array{Float64,2}, Esc::Array{Complex{Float64},1}, ind_points)
-	for ip in ind_points
-		for ic in ind_centers
-			ind = (ic-1)*(2*P+1) + P + 1
+function scattered_field_multipole!(Esc::Array{Complex{Float64},1}, k0, beta, P, centers::Array{Float64,2}, ind_centers, points::Array{Float64,2}, ind_points)
+	for ic in ind_centers
+		ind = (ic-1)*(2*P+1) + P + 1
+		for ip in ind_points
 			points_moved1 = points[ip,1] - centers[ic,1]
 			points_moved2 = points[ip,2] - centers[ic,2]
 
-			rs_moved = sqrt(points_moved1^2 + points_moved2^2)
+			rs_moved = hypot(points_moved1, points_moved2)
 			ts_moved = atan2(points_moved2, points_moved1)
 
 			Esc[ip] += beta[ind]*besselh(0, 1, k0*rs_moved)

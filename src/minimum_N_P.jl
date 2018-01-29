@@ -95,8 +95,8 @@ function minimumP_helper(k0, kin, s, P, N_points, err_points, E_quadrature, E_mu
     #helper function for computing error for given P
     E_multipole[:] = 0.0
 	sp = ScatteringProblem([s],[1],[0.0 0.0],[0.0])
-    beta_p,inn = solveParticleScattering(k0, kin, P, sp, 0.0)
-    scatteredFieldMultipole(k0, beta_p, P, [0.0 0.0], [1], err_points,
-		E_multipole, 1:N_points)
+    beta_p,inn = solve_particle_scattering(k0, kin, P, sp, 0.0)
+    scattered_field_multipole!(E_multipole, k0, beta_p, P, [0.0 0.0], [1],
+		err_points, 1:N_points)
     this_err = norm(E_quadrature - E_multipole)/norm(E_quadrature)
 end
