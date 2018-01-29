@@ -142,6 +142,7 @@ function scatteredField(sigma_mu, k, t, ft, dft, p)
             r = [p[i,1] - ft[j,1];p[i,2] - ft[j,2]]
             nr = hypot(r[1],r[2])
             if nr < eps()
+                #TODO: use SDNTpotentialsdiff here
                 warn("Encountered singularity in scatteredField.")
                 SDout[i,j] = 0
                 SDout[i,j+N] = 0
@@ -168,6 +169,7 @@ function scatteredField(sigma_mu, kout, s::ShapeParams, p::Array{Float64,2})
             r = [p[i,1] - s.ft[j,1];p[i,2] - s.ft[j,2]]
             nr = hypot(r[1], r[2])
             if nr < eps()
+                #TODO: use SDNTpotentialsdiff here
                 warn("Encountered singularity in scatteredField.")
                 SDout[i,j] = 0
                 SDout[i,j+N] = 0
@@ -180,7 +182,7 @@ function scatteredField(sigma_mu, kout, s::ShapeParams, p::Array{Float64,2})
     u_scat = (0.5im*π/N)*(SDout*sigma_mu)
 end
 
-function scatteredField(sigma_mu, kout, s::ShapeParams, p::Array{Float64,1}
+function scatteredField(sigma_mu, kout, s::ShapeParams, p::Array{Float64,1})
     #calculates the scattered field of a shape with parametrization ft(t),...,dft(t)
     #in space with wavenumber kout at points p *off* the boundary. For field on the boundary,
     #SDpotentials function must be used.
@@ -192,6 +194,7 @@ function scatteredField(sigma_mu, kout, s::ShapeParams, p::Array{Float64,1}
         r = [p[1] - s.ft[j,1]; p[2] - s.ft[j,2]]
         nr = hypot(r[1], r[2])
         if nr < eps()
+            #TODO: use SDNTpotentialsdiff here
             warn("Encountered singularity in scatteredField.")
             SDout[j] = 0
             SDout[j+N] = 0
