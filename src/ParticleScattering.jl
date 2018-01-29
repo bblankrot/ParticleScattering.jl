@@ -29,14 +29,15 @@ export rounded_star, squircle, square_grid, randpoints,
 export solveParticleScattering, scatteredFieldMultipole
 #methods, minimum_N_P.jl
 export minimumN, minimumP
+#methods, visualization.jl
+export plot_far_field, plot_near_field, calc_near_field, draw_shapes
 
 ### documented till here####
+
 
 #methods, scattering.jl
 export solvePotentialShape, solvePotentialShapePW,
     scatteredField, solvePotential_forError
-#methods, visualization.jl
-export plotFarField, plotNearField, calculateNearField, drawShapes
 #methods, fmm_main.jl
 export solveParticleScattering_FMM
 #methods, optimize_phis.jl

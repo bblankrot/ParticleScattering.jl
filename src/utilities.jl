@@ -71,3 +71,15 @@ function my_uniqueind(v::Vector{T}) where T <: Number
     end
     return unique_inds,unique_vals
 end
+
+function find_border(sp::ScatteringProblem)
+    Rmax = maximum(s.R for s in sp.shapes)
+    x_max,y_max = maximum(sp.centers,1) + 2*Rmax
+    x_min,y_min = minimum(sp.centers,1) - 2*Rmax
+    border = [x_min; x_max; y_min; y_max]
+end
+
+function cartesianrotation(φ)
+    [cos(φ) -sin(φ);
+     sin(φ) cos(φ)]
+end
