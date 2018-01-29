@@ -42,8 +42,8 @@ begin
     if draw_fig
         figure()
         #draw shapes and points
-        draw_shapes(shapes, centers, ids, φs, gca())
-        plot(points[:,1],points[:,2],"r*")
+        draw_shapes(shapes, centers, ids, φs)
+        plot(points[:,1], points[:,2], "r*")
         tight_layout()
         ax = gca()
         ax[:set_aspect]("equal", adjustable = "box")

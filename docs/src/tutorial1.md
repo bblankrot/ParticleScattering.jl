@@ -38,13 +38,13 @@ Now that the scattering problem is set up, we solve for the cylindrical harmonic
 coefficients and potential densities, respectively, by using
 
 ```julia
-beta,inner = solveParticleScattering(k0, kin, P, sp::ScatteringProblem, θ_i)
+beta,inner = solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i)
 ```
 
 These can be used to calculate the scattered field at any point in space using
 low-level function `scatteredField`, or strictly outside the circle of radius `shapes[1].R`
-with `scatteredFieldMultipole`. For large numbers of calculation points, however, it is
-easier to use `calc_near_field` which performs `solveParticleScattering` and
+with `scattered_field_multipole`. For large numbers of calculation points, however, it is
+easier to use `calc_near_field` which performs `solve_particle_scattering` and
 calculates the total (incident + scattered) field at every point using the most
 appropriate method:
 
