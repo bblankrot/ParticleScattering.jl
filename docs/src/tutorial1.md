@@ -6,8 +6,8 @@ identical shapes (rotated versions of the same shape are considered identical).
 Thus solving multiple-scattering problems is syntactically similar to solving
 for a single particle.
 
-In this example, we will simulate TM plane-wave scattering from a single rounded
-star, parametrized by the equation
+In this example, we will simulate TM plane-wave scattering ``e^{ik(\cos(\θ_i),\sin(\θ_i)) \cdot \mathbf{r}}``
+from a single rounded star, parametrized by the equation
 
 ```math
 (x(\theta), y(\theta)) = [R + d \cos(5\theta)](\cos \theta, \sin \theta), \quad
@@ -44,14 +44,14 @@ beta,inner = solveParticleScattering(k0, kin, P, sp::ScatteringProblem, θ_i)
 These can be used to calculate the scattered field at any point in space using
 low-level function `scatteredField`, or strictly outside the circle of radius `shapes[1].R`
 with `scatteredFieldMultipole`. For large numbers of calculation points, however, it is
-easier to use `calculateNearField` which performs `solveParticleScattering` and
+easier to use `calc_near_field` which performs `solveParticleScattering` and
 calculates the total (incident + scattered) field at every point using the most
 appropriate method:
 
 ```julia
 #calculate field on the x-axis passing through the particle
 points = [linspace(-0.5λ0, 0.5λ0, 200)  zeros(200)]
-u = calculateNearField(k0, kin, P, sp, points, θ_i)
+u = calc_near_field(k0, kin, P, sp, points, θ_i)
 plot(points[:,1]/λ0, abs.(u))
 ```
 
@@ -59,7 +59,7 @@ plot(points[:,1]/λ0, abs.(u))
 
 Similarly, a 2D plot can be drawn of the total field around the scatterer:
 ```julia
-plotNearField(k0, kin, P, sp::ScatteringProblem, θ_i;
+plot_near_field(k0, kin, P, sp::ScatteringProblem, θ_i;
     x_points = 201, y_points = 201, border = 0.5λ0*[-1;1;-1;1])
 ```
 
@@ -102,14 +102,14 @@ lead to unnecessary computations.
 
 Plotting the near field with the code
 ```julia
-data = plotNearField(k0, kin, P, sp, θ_i)
+data = plot_near_field(k0, kin, P, sp, θ_i)
 colorbar()
 ```
 yields the following near-field plot:
 
 ![simple_tutorial_plot3](./assets/simple_tutorial_plot3.png)
 
-The reason the plot is mostly dark is that `plotNearField` automatically scales
+The reason the plot is mostly dark is that `plot_near_field` automatically scales
 the colors up to the maximum value calculated, which in this case happens to be
 a glitch due to inaccurate calculations close to a boundary. While this issue
 can be somewhat alleviated by increasing `N`, it will remain due to the

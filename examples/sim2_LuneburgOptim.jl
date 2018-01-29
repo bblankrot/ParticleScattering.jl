@@ -1,5 +1,5 @@
 using PyPlot, ParticleScattering
-import Optim
+import Optim, JLD
 
 er = 4.5
 k0 = 2π
@@ -29,6 +29,7 @@ ids_max = collect(1:length(rs0))
 test_max = optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin,
                 centers, fmm_options, optim_options, false, "BFGS", linesearch)
 optim_time = toq()
+
 rs_max = test_max.minimizer
 
 # plot near fields
@@ -39,21 +40,21 @@ border = (R_lens + a_lens)*[-1;1;-1;1]
 
 sp1 = ScatteringProblem([CircleParams(rs_lnbrg[i]) for i in eachindex(rs_lnbrg)],
         ids, centers, φs)
-Ez1 = plotNearField(k0, kin, P, sp1, θ_i, x_points = 150, y_points = 150,
+Ez1 = plot_near_field(k0, kin, P, sp1, θ_i, x_points = 150, y_points = 150,
         opt = fmm_options, border = border)
 plotNearField_pgf(filename1, k0, kin, P, sp1, θ_i; opt = fmm_options,
     x_points = 201, y_points = 201, border = border)
 
 sp2 = ScatteringProblem([CircleParams(rs_max[i]) for i in eachindex(rs_max)],
         ids_max, centers, φs)
-Ez2 = plotNearField(k0, kin, P, sp2, θ_i, x_points = 150, y_points = 150,
+Ez2 = plot_near_field(k0, kin, P, sp2, θ_i, x_points = 150, y_points = 150,
             opt = fmm_options, border = border)
 plotNearField_pgf(filename2, k0, kin, P, sp2, θ_i; opt = fmm_options,
     x_points = 201, y_points = 201, border = border)
 
 sp3 = ScatteringProblem([CircleParams(rs0[i]) for i in eachindex(rs0)],
         collect(1:length(rs0)), centers, φs)
-Ez3 = plotNearField(k0, kin, P, sp3, θ_i, x_points = 150, y_points = 150,
+Ez3 = plot_near_field(k0, kin, P, sp3, θ_i, x_points = 150, y_points = 150,
         opt = fmm_options, border = border)
 plotNearField_pgf(filename3, k0, kin, P, sp3, θ_i; opt = fmm_options,
     x_points = 201, y_points = 201, border = border)
@@ -65,11 +66,11 @@ fobj = -[test_max.trace[i].value for i=1:inner_iters]
 gobj = [test_max.trace[i].g_norm for i=1:inner_iters]
 rng = iters .== 0
 
-figure()
-plot(0:inner_iters-1, fobj)
-plot(0:inner_iters-1, gobj)
-plot((0:inner_iters-1)[rng], fobj[rng],"*")
-plot((0:inner_iters-1)[rng], gobj[rng],"*")
+# figure()
+# plot(0:inner_iters-1, fobj)
+# plot(0:inner_iters-1, gobj)
+# plot((0:inner_iters-1)[rng], fobj[rng],"*")
+# plot((0:inner_iters-1)[rng], gobj[rng],"*")
 
 import PGFPlotsX; const pgf = PGFPlotsX
 pgf.@pgf begin
@@ -93,6 +94,8 @@ pgf.@pgf begin
 end
 pgf.save(dirname(@__FILE__) * "/tikz/opt_r_conv.tex", ax ,include_preamble = false)
 
+JLD.@save dirname(@__FILE__) * "luneburg_optim.jld"
+
 ################ Testing with symmetry ######################
 assert(length(ids_max)==size(centers,1))
 centers_abs = centers[:,1] + 1im*abs.(centers[:,2])
@@ -107,15 +110,16 @@ test_max_sym = ParticleScattering.optimize_radius2(rs0, r_min, r_max, points, id
                 centers, fmm_options, optim_options, false, optimmethod2)
 rs_sym = test_max_sym.minimizer
 sym_time = toq()
+JLD.@save dirname(@__FILE__) * "luneburg_optim_sym.jld" test_max_sym sym_time
 
 sp4 = ScatteringProblem([CircleParams(rs_sym[i]) for i in eachindex(rs_sym)],
         ids_sym, centers, φs)
-Ez4 = plotNearField(k0, kin, P, sp4, θ_i, x_points = 150, y_points = 150,
+Ez4 = plot_near_field(k0, kin, P, sp4, θ_i, x_points = 150, y_points = 150,
         opt = fmm_options, border = border)
 
 #####################################
 # selfconsistent err P calculation
-Ez_4 = calculateNearField(k0, kin, 4, sp1, points, θ_i; opt = fmm_options)
-Ez_5 = calculateNearField(k0, kin, 5, sp1, points, θ_i; opt = fmm_options)
-Ez_6 = calculateNearField(k0, kin, 6, sp1, points, θ_i; opt = fmm_options)
-Ez_7 = calculateNearField(k0, kin, 7, sp1, points, θ_i; opt = fmm_options)
+Ez_4 = calc_near_field(k0, kin, 4, sp1, points, θ_i; opt = fmm_options)
+Ez_5 = calc_near_field(k0, kin, 5, sp1, points, θ_i; opt = fmm_options)
+Ez_6 = calc_near_field(k0, kin, 6, sp1, points, θ_i; opt = fmm_options)
+Ez_7 = calc_near_field(k0, kin, 7, sp1, points, θ_i; opt = fmm_options)
