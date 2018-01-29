@@ -23,22 +23,24 @@ include("utilities.jl")
 include("minimum_N_P.jl")
 
 #methods, shapes.jl
-export rounded_star, squircle, square_grid, randpoints,
-    luneburg_grid, verify_min_distance
+export rounded_star, squircle, square_grid, randpoints, luneburg_grid,
+    verify_min_distance
 #methods, multipole.jl
-export solveParticleScattering, scatteredFieldMultipole
+export solve_particle_scattering, scattered_field_multipole
 #methods, minimum_N_P.jl
 export minimumN, minimumP
+#methods, visualization.jl
+export plot_far_field, plot_near_field, calc_near_field, draw_shapes
+#methods, fmm_main.jl
+export solve_particle_scattering_FMM
 
 ### documented till here####
+
 
 #methods, scattering.jl
 export solvePotentialShape, solvePotentialShapePW,
     scatteredField, solvePotential_forError
-#methods, visualization.jl
-export plotFarField, plotNearField, calculateNearField, drawShapes
-#methods, fmm_main.jl
-export solveParticleScattering_FMM
+
 #methods, optimize_phis.jl
 export optimize_φ_grad
 #methods, optimize_rs.jl
@@ -48,8 +50,8 @@ export plotNearField_pgf, drawShapes_pgf
 
 
 #types, PS_types.jl
-export ScatteringProblem, ShapeParams, CircleParams, AbstractShapeParams,
-    FMMoptions, OptimBuffer, R_multipole
+export ScatteringProblem, OptimBuffer, FMMoptions, R_multipole,
+    ShapeParams, CircleParams, AbstractShapeParams
 
 #temp
 include("optimize_rs_old.jl")

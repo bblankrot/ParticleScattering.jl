@@ -1,22 +1,12 @@
 function plotNearField_pgf(filename, k0, kin, P, sp::ScatteringProblem, θ_i = 0;
                             opt::FMMoptions = FMMoptions(), use_multipole = true,
-                            x_points = 201, y_points = 201, border = [NaN64;0.0;0.0;0.0],
+                            x_points = 201, y_points = 201, border = find_border(sp),
                             downsample = 1, include_preamble = false)
     #important difference: here function is measured on the grid, unlike pcolormesh.
     shapes = sp.shapes;	ids = sp.ids; centers = sp.centers; φs = sp.φs
     axwidth = 5
-    if any(isnan.(border))
-        Rmax = 0.0
-        for s in shapes
-            Rs = (typeof(s) == ShapeParams ? maximum(hypot.(s.ft[:,1],s.ft[:,2])) : s.R)
-            Rmax = max(Rs,Rmax)
-        end
-        (x_max,y_max) = maximum(centers,1) + 2*Rmax
-        (x_min,y_min) = minimum(centers,1) - 2*Rmax
-    else
-        x_min = border[1]; x_max = border[2]
-        y_min = border[3]; y_max = border[4]
-    end
+    
+    x_min, x_max, y_min, y_max = border
 
     x = linspace(x_min, x_max, x_points)
     y = linspace(y_min, y_max, y_points)
@@ -25,7 +15,7 @@ function plotNearField_pgf(filename, k0, kin, P, sp::ScatteringProblem, θ_i = 0
     ygrid = repmat(y,1,x_points)
     points = [xgrid[:] ygrid[:]]
 
-    Ez = calculateNearField(k0, kin, P, sp, points, θ_i,
+    Ez = calc_near_field(k0, kin, P, sp, points, θ_i,
                             use_multipole=use_multipole, opt = opt)
 
     normalized = true
