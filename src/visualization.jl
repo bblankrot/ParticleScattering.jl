@@ -128,8 +128,8 @@ function draw_shapes(shapes, centers, ids, φs, ax = gca())
             if φs[ic] == 0.0
                 ft_rot = shapes[ids[ic]].ft .+ centers[ic,:]'
             else
-                Rot = [cos(φs[ic]) sin(φs[ic]);-sin(φs[ic]) cos(φs[ic])]
-                ft_rot = shapes[ids[ic]].ft*Rot .+ centers[ic,:]'
+                Rot = cartesianrotation(φs[ic])
+                ft_rot = shapes[ids[ic]].ft*Rot.' .+ centers[ic,:]'
             end
             ax[:plot]([ft_rot[:,1];ft_rot[1,1]],[ft_rot[:,2];ft_rot[1,2]],
                         "k", linewidth = 2)
@@ -163,14 +163,14 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, θ_i;
     shapes = sp.shapes;	ids = sp.ids; centers = sp.centers; φs = sp.φs
     u = zeros(Complex{Float64},size(points,1))
     if opt.FMM
-        result,sigma_mu =  solveParticleScattering_FMM(k0, kin, P, sp, θ_i, opt)
+        result,sigma_mu =  solve_particle_scattering_FMM(k0, kin, P, sp, θ_i, opt)
         if result[2].isconverged == false
             warn("FMM process did not converge")
             return
         end
         beta = result[1]
     else
-        beta, sigma_mu = solveParticleScattering(k0, kin, P, sp, θ_i)
+        beta, sigma_mu = solve_particle_scattering(k0, kin, P, sp, θ_i)
     end
 
     tic()
@@ -183,7 +183,7 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, θ_i;
     rng_in = zeros(Bool,size(points,1))
     rng_out = zeros(Bool,size(points,1))
     Rot = Array{Float64}(2,2)
-    for ic = 1:size(centers,1)
+    for ic = 1:size(sp)
         rng_in[:] = (tags .== ic)
         rng_out[:] = (tags .== -ic)
         (any(rng_in) || any(rng_out)) || continue
@@ -213,10 +213,10 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, θ_i;
                             ft_rot, dft_rot, points[rng_out,:])
             u[rng_out] += exp.(1.0im*k0*(cos(θ_i)*points[rng_out,1] +
                                         sin(θ_i)*points[rng_out,2])) #incident
-            for ic2 = 1:size(centers,1)
+            for ic2 = 1:size(sp)
                 ic == ic2 && continue
                 if use_multipole
-                    scatteredFieldMultipole!(u, k0, beta, P, centers, ic2, points,
+                    scattered_field_multipole!(u, k0, beta, P, centers, ic2, points,
                         find(rng_out))
                 else
                     if φs[ic2] == 0.0
@@ -241,7 +241,7 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, θ_i;
     #incident field
     u[rng] = exp.(1.0im*k0*(cos(θ_i)*points[rng,1] + sin(θ_i)*points[rng,2]))
     if use_multipole
-        scatteredFieldMultipole!(u, k0, beta, P, centers, 1:size(centers,1), points,
+        scattered_field_multipole!(u, k0, beta, P, centers, 1:size(sp), points,
             find(rng))
     else
         for ic = 1:size(centers,1)
@@ -258,7 +258,7 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, θ_i;
                                 ft_rot, dft_rot, points[rng,:])
                 end
             else
-                scatteredFieldMultipole!(u, k0, beta, P, centers, ic, points,
+                scattered_field_multipole!(u, k0, beta, P, centers, ic, points,
                     find(rng))
             end
         end
@@ -278,21 +278,21 @@ function calculateFarField(k0, kin, P, points, sp::ScatteringProblem, θ_i;
     #calc only scattered field + assumes all points are outside shapes
     shapes = sp.shapes; centers = sp.centers; ids = sp.ids, φs = sp.φs
     if opt.FMM
-        result,sigma_mu =  solveParticleScattering_FMM(k0, kin, P, sp, θ_i, opt)
+        result,sigma_mu =  solve_particle_scattering_FMM(k0, kin, P, sp, θ_i, opt)
         if result[2].isconverged == false
             warn("FMM process did not converge")
             return
         end
         beta = result[1]
     else
-        beta, sigma_mu = solveParticleScattering(k0, kin, P, sp, θ_i)
+        beta, sigma_mu = solve_particle_scattering(k0, kin, P, sp, θ_i)
     end
     Ez = zeros(Complex{Float64}, size(points,1))
     if use_multipole
-        scatteredFieldMultipole!(Ez, k0, beta, P, centers, 1:size(centers,1),
+        scattered_field_multipole!(Ez, k0, beta, P, centers, 1:size(sp),
             points, 1:size(points,1))
     else
-        for ic = 1:size(centers,1)
+        for ic = 1:size(sp)
             if typeof(shapes[ids[ic]]) == ShapeParams
                 if φs[ic] == 0.0
                     ft_rot = shapes[ids[ic]].ft .+ centers[ic,:]'
@@ -307,7 +307,7 @@ function calculateFarField(k0, kin, P, points, sp::ScatteringProblem, θ_i;
                 end
             else
                 warning("should be only subset of beta!")
-                scatteredFieldMultipole!(Ez, k0, beta, P, centers, ic, points,
+                scattered_field_multipole!(Ez, k0, beta, P, centers, ic, points,
                     1:size(points,1))
             end
         end
@@ -320,7 +320,7 @@ function tagpoints(sp, points)
 
     tags = zeros(Integer, size(points,1))
     X = Array{Float64}(2)
-    for ix = 1:size(points,1), ic = 1:size(centers,1)
+    for ix = 1:size(points,1), ic = 1:size(sp)
         X .= points[ix,:] - centers[ic,:]
         if sum(abs2,X) <= shapes[ids[ic]].R^2
             if typeof(shapes[ids[ic]]) == ShapeParams

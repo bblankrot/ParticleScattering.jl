@@ -1,5 +1,5 @@
 """
-	solveParticleScattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0; get_inner = true, print_log = true) -> beta, inner
+	solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0; get_inner = true, print_log = true) -> beta, inner
 
 Solve the scattering problem `sp` with outer wavenumber `k0`, inner wavenumber
 `kin`, `2P+1` cylindrical harmonics per inclusion and incident plane wave angle
@@ -11,7 +11,7 @@ case of circular). By default, incident wave propagates left->right.
 Inner coefficients are only calculated if `get_inner` is true, and timing is
 printed if `print_log` is true.
 """
-function solveParticleScattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0;
+function solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0;
 								get_inner = true, print_log = true)
 	# This function solves for the outgoing multipole coefficients in the presence
 	# of an incident plane wave.
@@ -55,23 +55,30 @@ function solveParticleScattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0;
 	dt3 = toq()
 	#recover full incoming expansion - in sigma_mu terms for parametrized shape,
 	#in multipole expansion for circle
-	tic()
-	inner = Array{Vector{Complex{Float64}}}(Ns)
-	for ic = 1:Ns
-		rng = (ic-1)*(2*P+1) + (1:2*P+1)
-		if typeof(shapes[ids[ic]]) == ShapeParams
-			if φs[ic] == 0.0
-				α_c = scatteringMatrices[ids[ic]]\beta[rng]
+	if get_inner
+		tic()
+
+		#find LU factorization once for each shape
+        scatteringLU = [lufact(scatteringMatrices[iid])) for iid = 1:length(shapes)]
+
+		inner = Array{Vector{Complex{Float64}}}(Ns)
+		α_c = Array{Complex{Float64}}(2*P+1)
+		for ic = 1:Ns
+			rng = (ic-1)*(2*P+1) + (1:2*P+1)
+			if typeof(shapes[ids[ic]]) == ShapeParams
+				if φs[ic] == 0.0
+					α_c[:] = scatteringLU[ids[ic]]\beta[rng]
+				else
+					Rot = spdiagm(Complex{Float64}[exp(-1.0im*φs[ic]*l) for l=-P:P]) #rotation matrix
+					α_c[:] = scatteringLU[ids[ic]]\(conj(Rot)*beta[rng])
+				end
+				inner[ic] = innerExpansions[ids[ic]]*α_c
 			else
-				Rot = spdiagm(Complex{Float64}[exp(-1.0im*φs[ic]*l) for l=-P:P]) #rotation matrix
-				α_c = scatteringMatrices[ids[ic]]\(conj(Rot)*beta[rng])
+				inner[ic] = innerExpansions[ids[ic]]*beta[rng]
 			end
-			inner[ic] = innerExpansions[ids[ic]]*α_c
-		else
-			inner[ic] = innerExpansions[ids[ic]]*beta[rng]
 		end
+		dt4 = toq()
 	end
-	dt4 = toq()
 	print_log && begin
 		println("Scattering matrix solution: $dt1 s")
 		println("Matrix construction: $dt2 s")
@@ -97,17 +104,17 @@ function M2Lmatrix!(T, k, P, d)
 	end
 end
 
-function scatteredFieldMultipole(k0, beta, centers::Array{Float64,2}, points::Array{Float64,2})
+function scattered_field_multipole(k0, beta, centers::Array{Float64,2}, points::Array{Float64,2})
 	Ns = size(centers,1)
 	P = div(div(length(beta),Ns)-1,2)
 	len = size(points,1)
 	Esc = zeros(Complex{Float64}, len)
 
-	scatteredFieldMultipole!(Esc, k0, beta, P, centers, 1:Ns, points, 1:len)
+	scattered_field_multipole!(Esc, k0, beta, P, centers, 1:Ns, points, 1:len)
 	return Esc
 end
 
-function scatteredFieldMultipole!(Esc::Array{Complex{Float64},1}, k0, beta, P, centers::Array{Float64,2}, ind_centers, points::Array{Float64,2}, ind_points)
+function scattered_field_multipole!(Esc::Array{Complex{Float64},1}, k0, beta, P, centers::Array{Float64,2}, ind_centers, points::Array{Float64,2}, ind_points)
 	for ic in ind_centers
 		ind = (ic-1)*(2*P+1) + P + 1
 		for ip in ind_points
