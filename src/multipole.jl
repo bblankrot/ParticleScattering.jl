@@ -59,7 +59,7 @@ function solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0
 		tic()
 
 		#find LU factorization once for each shape
-        scatteringLU = [lufact(scatteringMatrices[iid])) for iid = 1:length(shapes)]
+        scatteringLU = [lufact(scatteringMatrices[iid]) for iid = 1:length(shapes)]
 
 		inner = Array{Vector{Complex{Float64}}}(Ns)
 		α_c = Array{Complex{Float64}}(2*P+1)
