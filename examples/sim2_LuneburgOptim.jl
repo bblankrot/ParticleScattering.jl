@@ -1,6 +1,7 @@
 using PyPlot, ParticleScattering
 import Optim, JLD
 
+output_dir = "/home/bblankro/Dropbox/outputdir"
 er = 4.5
 k0 = 2π
 l0 = 2π/k0
@@ -29,13 +30,12 @@ ids_max = collect(1:length(rs0))
 test_max = optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin,
                 centers, fmm_options, optim_options, false, "BFGS", linesearch)
 optim_time = toq()
-
 rs_max = test_max.minimizer
 
 # plot near fields
-filename1 = dirname(@__FILE__) * "/tikz/opt_r_luneburg.tex"
-filename2 = dirname(@__FILE__) * "/tikz/opt_r_max.tex"
-filename3 = dirname(@__FILE__) * "/tikz/opt_r_0.tex"
+filename1 = output_dir * "/opt_r_luneburg.tex"
+filename2 = output_dir * "/opt_r_max.tex"
+filename3 = output_dir * "/opt_r_0.tex"
 border = (R_lens + a_lens)*[-1;1;-1;1]
 
 sp1 = ScatteringProblem([CircleParams(rs_lnbrg[i]) for i in eachindex(rs_lnbrg)],
@@ -66,6 +66,8 @@ fobj = -[test_max.trace[i].value for i=1:inner_iters]
 gobj = [test_max.trace[i].g_norm for i=1:inner_iters]
 rng = iters .== 0
 
+JLD.@save output_dir * "/luneburg_optim.jld"
+
 # figure()
 # plot(0:inner_iters-1, fobj)
 # plot(0:inner_iters-1, gobj)
@@ -92,9 +94,7 @@ pgf.@pgf begin
             legend_style = "font = \\footnotesize"
         })
 end
-pgf.save(dirname(@__FILE__) * "/tikz/opt_r_conv.tex", ax ,include_preamble = false)
-
-JLD.@save dirname(@__FILE__) * "luneburg_optim.jld"
+pgf.save(output_dir * "/opt_r_conv.tex", ax ,include_preamble = false)
 
 ################ Testing with symmetry ######################
 assert(length(ids_max)==size(centers,1))
@@ -110,7 +110,7 @@ test_max_sym = ParticleScattering.optimize_radius2(rs0, r_min, r_max, points, id
                 centers, fmm_options, optim_options, false, optimmethod2)
 rs_sym = test_max_sym.minimizer
 sym_time = toq()
-JLD.@save dirname(@__FILE__) * "luneburg_optim_sym.jld" test_max_sym sym_time
+JLD.@save output_dir * "/luneburg_optim_sym.jld" test_max_sym sym_time
 
 sp4 = ScatteringProblem([CircleParams(rs_sym[i]) for i in eachindex(rs_sym)],
         ids_sym, centers, φs)
