@@ -155,35 +155,3 @@ function optimize_radius_g!_dep(grad_stor, rs, last_rs, shared_var, φs, α_inc,
 
     grad_stor[:] = ifelse(minimize,2,-2)*real(shared_var.∂β.'*(H*conj(shared_var.f)))
 end
-
-function updateCircleScatteringDerivative!(S, dS_S, kout, kin, R, P)
-    #non-vectorized, reuses bessel. Find quicker way to update
-
-    pre_J0 = besselj(-1,kout*R)
-    pre_J1 = besselj(-1,kin*R)
-    pre_H = besselh(-1,kout*R)
-    for p = 0:P
-        J0 = besselj(p,kout*R)
-        J1 = besselj(p,kin*R)
-        H = besselh(p,kout*R)
-
-        dJ0 = kout*(pre_J0 - (p/kout/R)*J0)
-        dJ1 = kin*(pre_J1 - (p/kin/R)*J1)
-        dH = kout*(pre_H - (p/kout/R)*H)
-
-		numer = (-2.0im/pi/R)*(kin^2 - kout^2)*J1^2
-        denom = (dH*J1 - H*dJ1)
-
-		S[p+P+1,p+P+1] = -(dJ0*J1 - J0*dJ1)/denom
-		dS_S[p+P+1,p+P+1] = -(numer/denom)/(dJ0*J1 - J0*dJ1)
-
-		if p != 0
-			S[P+1-p,P+1-p] = S[p+P+1,p+P+1]
-			dS_S[P+1-p,P+1-p] = dS_S[p+P+1,p+P+1]
-		end
-
-        pre_J0 = J0
-        pre_J1 = J1
-        pre_H = H
-    end
-end

@@ -21,8 +21,8 @@ function optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin, cente
     mFMM = FMMbuildMatrices(k0, P, P2, Q, groups, centers, boxSize, tri=true)
 
     #allocate derivative - TODO: find better way to do this
-    scatteringMatrices = [speye(2*P+1) for ic = 1:J]
-    dS_S = [speye(2*P+1) for ic = 1:J]
+    scatteringMatrices = [speye(Complex{Float64}, 2*P+1) for ic = 1:J]
+    dS_S = [speye(Complex{Float64}, 2*P+1) for ic = 1:J]
 
     #stuff that is done once
     H = optimizationHmatrix(points, centers, Ns, P, k0)
