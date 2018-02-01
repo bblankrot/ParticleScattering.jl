@@ -137,3 +137,15 @@ function optimizationHmatrix(points, centers, Ns, P, k0)
     end
     H
 end
+
+function prepare_fmm_reusal_φs(k0, kin, P, shapes, centers, ids, fmmopt)
+    #setup FMM reusal
+    Ns = size(centers,1)
+    (groups, boxSize) = divideSpace(centers, fmmopt)
+    (P2, Q) = FMMtruncation(fmmopt.acc, boxSize, k0)
+    mFMM = FMMbuildMatrices(k0, P, P2, Q, groups, centers, boxSize, tri=true)
+    scatteringMatrices,innerExpansions = particleExpansion(k0, kin, shapes, P, ids)
+    scatteringLU = [lufact(scatteringMatrices[iid]) for iid = 1:length(shapes)]
+    buf = FMMbuffer(Ns,P,Q,length(groups))
+    return mFMM,scatteringMatrices,scatteringLU,buf
+end
