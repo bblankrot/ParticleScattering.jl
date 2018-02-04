@@ -71,7 +71,7 @@ is inefficient here as we only have one scatterer, and `solvePotentialShapePW`
 would be more accurate. This is meant only as an introductory example to the
 ParticleScattering syntax.
 
-#### Scattering from a small grid of particles
+#### Scattering from a small grid of particles(@id scattering_small_grid)
 Expanding the example above to a collection of different particles is straightforward:
 
 ```julia
@@ -87,7 +87,7 @@ shapes = [rounded_star(0.1λ0, 0.05λ0, 5, N_star);
             squircle(0.15λ0, N_squircle)]
 ids = [1;2;2;1]
 centers =  square_grid(2, 0.4λ0) #2x2 grid with distance 0.4λ0
-φs = 2π*rand(4) #zero rotation angles
+φs = 2π*rand(4) #random rotation angles
 sp = ScatteringProblem(shapes, ids, centers, φs)
 ```
 

@@ -1,3 +1,6 @@
+"""
+	optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids, fmmopts, optimopts, minimize, method)
+"""
 function optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids, fmmopts, optimopts, minimize, method)
     #optimization with gradient
 
@@ -21,7 +24,8 @@ function optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids, fmmop
             (grad_stor, φs) -> optimize_φ_g!(grad_stor, φs, shared_var,
                                     last_φs, α_inc, H, points, P, θ_i,
                                     Ns, k0, centers, scatteringMatrices,
-                                    scatteringLU, ids, mFMM, fmmopts, buf, minimize))
+                                    scatteringLU, ids, mFMM, fmmopts, buf, minimize),
+                                    initial_φs)
     else
         df = OnceDifferentiable(
             φs -> -optimize_φ_f(φs, shared_var, last_φs, α_inc,
@@ -30,7 +34,8 @@ function optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids, fmmop
             (grad_stor, φs) -> optimize_φ_g!(grad_stor, φs, shared_var,
                                     last_φs, α_inc, H, points, P, θ_i,
                                     Ns, k0, centers, scatteringMatrices,
-                                    scatteringLU, ids, mFMM, fmmopts, buf, minimize))
+                                    scatteringLU, ids, mFMM, fmmopts, buf, minimize),
+                                    initial_φs)
     end
     optimize(df, initial_φs, method, optimopts)
 end
@@ -56,37 +61,53 @@ function optimize_φ_common!(φs, last_φs, shared_var, α_inc, H, points, P, θ
         end
 
         if opt.method == "pre"
-            MVP = LinearMap{eltype(buf.rhs)}((output_, x_) -> FMM_mainMVP_pre!(output_, x_, scatteringMatrices, φs,
-                 ids, P, mFMM, buf.pre_agg, buf.trans), Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
+            MVP = LinearMap{eltype(buf.rhs)}(
+                    (output_, x_) -> FMM_mainMVP_pre!(output_, x_,
+                                        scatteringMatrices, φs, ids, P, mFMM,
+                                        buf.pre_agg, buf.trans),
+                    Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
         elseif opt.method == "pre2"
-            MVP = LinearMap{eltype(buf.rhs)}((output_, x_) -> FMM_mainMVP_pre2!(output_, x_, scatteringMatrices, φs,
-                 ids, P, mFMM, buf.pre_agg, buf.trans), Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
+            MVP = LinearMap{eltype(buf.rhs)}(
+                    (output_, x_) -> FMM_mainMVP_pre2!(output_, x_,
+                                        scatteringMatrices, φs, ids, P, mFMM,
+                                        buf.pre_agg, buf.trans),
+                    Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
         end
 
         fill!(shared_var.β,0.0)
-        shared_var.β,ch = gmres!(shared_var.β, MVP, buf.rhs, restart = Ns*(2*P+1), tol = opt.tol, log = true) #no restart, preconditioning
+        shared_var.β,ch = gmres!(shared_var.β, MVP, buf.rhs,
+                            restart = Ns*(2*P+1), tol = opt.tol, log = true) #no restart, preconditioning
         !ch.isconverged && error("FMM process did not converge")
 
         shared_var.f[:] = H.'*shared_var.β
-        shared_var.f[:] .+= exp.(1.0im*k0*(cos(θ_i)*points[:,1] + sin(θ_i)*points[:,2])) #incident
+        shared_var.f[:] .+= exp.(1.0im*k0*(cos(θ_i)*points[:,1] +
+                                            sin(θ_i)*points[:,2])) #incident
     end
 end
 
 function optimize_φ_f(φs, shared_var, last_φs, α_inc, H, points, P, θ_i, Ns, k0, centers,scatteringMatrices, ids, mFMM, opt, buf)
-    optimize_φ_common!(φs, last_φs, shared_var, α_inc, H, points, P, θ_i, Ns, k0, centers,scatteringMatrices, ids, mFMM, opt, buf)
+    optimize_φ_common!(φs, last_φs, shared_var, α_inc, H, points, P, θ_i, Ns,
+        k0, centers,scatteringMatrices, ids, mFMM, opt, buf)
 
     func = sum(abs2,shared_var.f)
 end
 
 function optimize_φ_g!(grad_stor, φs, shared_var, last_φs, α_inc, H, points, P, θ_i, Ns, k0, centers, scatteringMatrices, scatteringLU, ids, mFMM, opt, buf, minimize)
-    optimize_φ_common!(φs, last_φs, shared_var, α_inc, H, points, P, θ_i, Ns, k0, centers,scatteringMatrices, ids, mFMM, opt, buf)
+    optimize_φ_common!(φs, last_φs, shared_var, α_inc, H, points, P, θ_i, Ns,
+        k0, centers,scatteringMatrices, ids, mFMM, opt, buf)
 
     if opt.method == "pre"
-        MVP = LinearMap{eltype(buf.rhs)}((output_, x_) -> FMM_mainMVP_pre!(output_, x_, scatteringMatrices, φs,
-             ids, P, mFMM, buf.pre_agg, buf.trans), Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
+        MVP = LinearMap{eltype(buf.rhs)}(
+                (output_, x_) -> FMM_mainMVP_pre!(output_, x_,
+                                    scatteringMatrices, φs, ids, P, mFMM,
+                                    buf.pre_agg, buf.trans),
+                Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
     elseif opt.method == "pre2"
-        MVP = LinearMap{eltype(buf.rhs)}((output_, x_) -> FMM_mainMVP_pre2!(output_, x_, scatteringMatrices, φs,
-             ids, P, mFMM, buf.pre_agg, buf.trans), Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
+        MVP = LinearMap{eltype(buf.rhs)}(
+                (output_, x_) -> FMM_mainMVP_pre2!(output_, x_,
+                                    scatteringMatrices, φs, ids, P, mFMM,
+                                    buf.pre_agg, buf.trans),
+                Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
     end
     #time for gradient
     shared_var.rhs_grad[:] = 0.0
@@ -104,7 +125,9 @@ function optimize_φ_g!(grad_stor, φs, shared_var, last_φs, α_inc, H, points,
         rotateMultipole!(v,φs[n],P)
         v[:] += D.*shared_var.β[rng]
 
-        shared_var.∂β[:,n], ch = gmres!(shared_var.∂β[:,n], MVP, shared_var.rhs_grad, restart = Ns*(2*P+1), tol = 10*opt.tol, log = true)
+        shared_var.∂β[:,n], ch = gmres!(shared_var.∂β[:,n], MVP,
+                                    shared_var.rhs_grad, restart = Ns*(2*P+1),
+                                    tol = 10*opt.tol, log = true)
         #warn("using dbdn_tol = 10*opt.tol = $(10*opt.tol)")
 
         if ch.isconverged == false
@@ -115,7 +138,8 @@ function optimize_φ_g!(grad_stor, φs, shared_var, last_φs, α_inc, H, points,
         v[:] = 0.0im
     end
 
-    grad_stor[:] = ifelse(minimize,2,-2)*real(shared_var.∂β.'*(H*conj(shared_var.f)))
+    grad_stor[:] = ifelse(minimize,2,-2)*
+                    real(shared_var.∂β.'*(H*conj(shared_var.f)))
 end
 
 function optimizationHmatrix(points, centers, Ns, P, k0)
@@ -143,7 +167,7 @@ function prepare_fmm_reusal_φs(k0, kin, P, shapes, centers, ids, fmmopt)
     Ns = size(centers,1)
     (groups, boxSize) = divideSpace(centers, fmmopt)
     (P2, Q) = FMMtruncation(fmmopt.acc, boxSize, k0)
-    mFMM = FMMbuildMatrices(k0, P, P2, Q, groups, centers, boxSize, tri=true)
+    mFMM = FMMbuildMatrices(k0, P, P2, Q, groups, centers, boxSize, tri = true)
     scatteringMatrices,innerExpansions = particleExpansion(k0, kin, shapes, P, ids)
     scatteringLU = [lufact(scatteringMatrices[iid]) for iid = 1:length(shapes)]
     buf = FMMbuffer(Ns,P,Q,length(groups))
