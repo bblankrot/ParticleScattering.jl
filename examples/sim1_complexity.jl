@@ -1,5 +1,5 @@
 # Here is a simulation of solution time as a function of M - number of shapes (or sqrt of number of shapes)
-using ParticleScattering, LinearMaps, IterativeSolvers
+using ParticleScattering, IterativeSolvers
 using PyPlot, LaTeXStrings
 
 #loop definitions
@@ -21,10 +21,10 @@ tol = 1e-6
 dist = 0.9l0
 
 myshapefun(N) = rounded_star(a1, a2, a3, N)
-N = 342, errN = 9.97e-7
+N = 342; errN = 9.97e-7
 # N,errN = minimumN(k0, kin, myshapefun, tol = tol, N_points = 20_000)
 shapes = [myshapefun(N)]
-P = 10, errP = 9.57e-7
+P = 10; errP = 9.57e-7
 # P,errP = minimumP(k0, kin, shapes[1], tol = tol, N_points = 20_000,
 #                             P_min = 1, P_max = 120)
 
@@ -75,19 +75,24 @@ for is = 1:simlen, it = 1:trials
     pre_agg_buffer = zeros(Complex{Float64},Q,length(groups))
     trans_buffer = Array{Complex{Float64}}(Q)
 
-    MVP = LinearMap{eltype(rhs)}((output_, x_) -> ParticleScattering.FMM_mainMVP_pre!(output_, x_, scatteringMatrices,
-        φs, ids, P, mFMM, pre_agg_buffer, trans_buffer), M*(2*P+1), M*(2*P+1), ismutating = true)
+    MVP = LinearMaps.LinearMap{eltype(rhs)}((output_, x_) ->
+            ParticleScattering.FMM_mainMVP_pre!(output_, x_, scatteringMatrices,
+                φs, ids, P, mFMM, pre_agg_buffer, trans_buffer),
+            M*(2*P+1), M*(2*P+1), ismutating = true)
     x = zero(rhs)
     setup_vec[is,it] = toq()
 
     tic()
-    x,ch = gmres!(x, MVP, rhs, restart = M*(2*P+1), tol = opt.tol, log = true, initially_zero = true) #no restart, preconditioning
+    x,ch = gmres!(x, MVP, rhs, restart = M*(2*P+1), tol = opt.tol, log = true,
+                initially_zero = true) #no restart, preconditioning
     res_vec[is,it] = toq()
     tic()
     rhs[:] = MVP*x
     mvp_vec[is,it] = toq()
     iter_vec[is,it] = ch.iters
 end
+
+using JLD; @save "sim1_complexity.jld" res_vec, mvp_vec
 
 #average over all simulations
 res_vec = vec(mean(res_vec,2))

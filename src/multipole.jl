@@ -123,8 +123,11 @@ function scattered_field_multipole!(Esc::Array{Complex{Float64},1}, k0, beta, P,
 
 			rs_moved = hypot(points_moved1, points_moved2)
 			ts_moved = atan2(points_moved2, points_moved1)
-
-			Esc[ip] += beta[ind]*besselh(0, 1, k0*rs_moved)
+			try
+				Esc[ip] += beta[ind]*besselh(0, 1, k0*rs_moved)
+			catch
+				error("rs_moved == 0, center=$(centers[ic,:]), point=$(points[ip,:]), k0 = $k0, ic=$ic, ip=$ip")
+			end
 			for p = 1:P
 				Esc[ip] += besselh(p, 1, k0*rs_moved)*(beta[p + ind]*exp(1im*p*ts_moved) + (-1)^p*beta[-p + ind]*exp(-1im*p*ts_moved))
 			end

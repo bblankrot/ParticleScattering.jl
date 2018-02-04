@@ -1,5 +1,5 @@
-using IterativeSolvers, PyPlot, ParticleScattering
-import Optim, PGFPlotsX; const pgf = PGFPlotsX
+using PyPlot, ParticleScattering
+import JLD, Optim, PGFPlotsX; const pgf = PGFPlotsX
 
 Ns = 100
 k0 = 2π
