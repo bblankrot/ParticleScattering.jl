@@ -1,7 +1,7 @@
 """
 	rounded_star(r, d, num, N)
 
-Return a `ShapeParams` object conataing the shape parametrized by
+Return a `ShapeParams` object containing the shape parametrized by
 \$(x(θ),y(θ)) = (r + d*cos(θ*num))*(cos(θ),sin(θ))\$ with 2`N` nodes.
 """
 function rounded_star(r, d, num, N)
@@ -16,7 +16,7 @@ end
 """
 	squircle(r, N)
 
-Return a `ShapeParams` object conataing the shape parametrized by
+Return a `ShapeParams` object containing the shape parametrized by
 \$x(θ)^4 + y(θ)^4 = r^4\$ with 2`N` nodes.
 """
 function squircle(r, N)
@@ -34,6 +34,19 @@ function squircle(r, N)
 end
 
 """
+	ellipse(r1, r2, N)
+
+Return a `ShapeParams` object containing the shape parametrized by
+`(x/r1)^2 + (y/r2)^2 = 1` with 2`N` nodes.
+"""
+function ellipse(r1, r2, N)
+    t = Float64[pi*j/N for j=0:(2*N-1)]
+    ft = [r1*cos.(t) r2*sin.(t)]
+    dft = [(-r1)*sin.(t) r2*cos.(t)]
+    return ShapeParams(t, ft, dft)
+end
+
+"""
 	square_grid(a::Integer, d)
 
 Return `centers`, an `(a^2,2)` array containing the points on an `a` by `a`
@@ -43,6 +56,22 @@ function square_grid(a::Integer, d)
     offsetx = -0.5*(a-1)
     offsety = -0.5*(a-1)
     centers = d*Float64[mod.((1:a^2)-1,a) + offsetx   div.((1:a^2)-1,a) + offsety]
+end
+
+"""
+	rect_grid(a::Integer, b::Integer, dx, dy)
+
+Return `centers`, an `(a*b,2)` array containing the points spanned by `a` points
+distanced `dx` and `b` points distanced `dy`, in the x and y directions,
+respectively.
+"""
+function rect_grid(a::Integer, b::Integer, dx, dy)
+    offsetx = -0.5*(a-1)
+    offsety = -0.5*(b-1)
+	xpoints = dx*((0:a-1) + offsetx)
+	ypoints = dy*((0:b-1) + offsety)
+
+    centers = [repeat(xpoints, outer=[b]) 	repeat(ypoints, inner=[a])]
 end
 
 """
