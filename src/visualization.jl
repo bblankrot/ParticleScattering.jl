@@ -163,7 +163,8 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, θ_i;
     shapes = sp.shapes;	ids = sp.ids; centers = sp.centers; φs = sp.φs
     u = zeros(Complex{Float64},size(points,1))
     if opt.FMM
-        result,sigma_mu =  solve_particle_scattering_FMM(k0, kin, P, sp, θ_i, opt)
+        result,sigma_mu =  solve_particle_scattering_FMM(k0, kin, P, sp, θ_i, opt,
+                            verbose = verbose)
         if result[2].isconverged == false
             warn("FMM process did not converge")
             return
@@ -241,8 +242,7 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, θ_i;
     #incident field
     u[rng] = exp.(1.0im*k0*(cos(θ_i)*points[rng,1] + sin(θ_i)*points[rng,2]))
     if use_multipole
-        scattered_field_multipole!(u, k0, beta, P, centers, 1:size(sp), points,
-            find(rng))
+        scattered_field_multipole!(u, k0, beta, P, centers, 1:size(sp), points, find(rng))
     else
         for ic = 1:size(centers,1)
             if typeof(shapes[ids[ic]]) == ShapeParams
@@ -320,21 +320,23 @@ function tagpoints(sp, points)
 
     tags = zeros(Integer, size(points,1))
     X = Array{Float64}(2)
-    for ix = 1:size(points,1), ic = 1:size(sp)
-        X .= points[ix,:] - centers[ic,:]
-        if sum(abs2,X) <= shapes[ids[ic]].R^2
-            if typeof(shapes[ids[ic]]) == ShapeParams
-                if φs[ic] != 0.0 #rotate point backwards instead of shape forwards
-                    Rot = [cos(-φs[ic]) -sin(-φs[ic]);sin(-φs[ic]) cos(-φs[ic])]
-                    X = Rot*X
+    for ix = 1:size(points,1)
+        for ic = 1:size(sp)
+            X .= points[ix,:] - centers[ic,:]
+            if sum(abs2,X) <= shapes[ids[ic]].R^2
+                if typeof(shapes[ids[ic]]) == ShapeParams
+                    if φs[ic] != 0.0 #rotate point backwards instead of shape forwards
+                        Rot = [cos(-φs[ic]) -sin(-φs[ic]);sin(-φs[ic]) cos(-φs[ic])]
+                        X = Rot*X
+                    end
+                    tags[ix] = pInPolygon(X, shapes[ids[ic]].ft) ? ic : -ic
+        			break #can't be in two shapes
+                else #CircleParams
+                    tags[ix] = ic
+                    break #can't be in two shapes
                 end
-                tags[ix] = pInPolygon(X, shapes[ids[ic]].ft) ? ic : -ic
-    			break #can't be in two shapes
-            else #CircleParams
-                tags[ix] = ic
-                break #can't be in two shapes
-            end
-    	end
+        	end
+        end
     end
     tags
 end

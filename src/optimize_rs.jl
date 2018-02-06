@@ -21,8 +21,8 @@ function optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin, cente
     mFMM = FMMbuildMatrices(k0, P, P2, Q, groups, centers, boxSize, tri=true)
 
     #allocate derivative - TODO: find better way to do this
-    scatteringMatrices = [speye(2*P+1) for ic = 1:J]
-    dS_S = [speye(2*P+1) for ic = 1:J]
+    scatteringMatrices = [speye(Complex{Float64}, 2*P+1) for ic = 1:J]
+    dS_S = [speye(Complex{Float64}, 2*P+1) for ic = 1:J]
 
     #stuff that is done once
     H = optimizationHmatrix(points, centers, Ns, P, k0)
@@ -43,7 +43,8 @@ function optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin, cente
                     (grad_stor, rs) -> optimize_radius_g!(grad_stor, rs, last_rs,
                                         shared_var, φs, α_inc, H, points, P, θ_i,
                                         Ns, k0, kin, centers, scatteringMatrices,
-                                        dS_S, ids, mFMM, fmmopts, buf, minimize))
+                                        dS_S, ids, mFMM, fmmopts, buf, minimize),
+                                        initial_rs)
     else
         df = OnceDifferentiable(rs -> -optimize_radius_f(rs, last_rs, shared_var,
                                         φs, α_inc, H, points, P, θ_i, Ns, k0,
@@ -52,7 +53,8 @@ function optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin, cente
                     (grad_stor, rs) -> optimize_radius_g!(grad_stor, rs, last_rs,
                                         shared_var, φs, α_inc, H, points, P, θ_i,
                                         Ns, k0, kin, centers, scatteringMatrices,
-                                        dS_S, ids, mFMM, fmmopts, buf, minimize))
+                                        dS_S, ids, mFMM, fmmopts, buf, minimize),
+                                        initial_rs)
     end
 
     outer_iterations = optimopts.iterations #?
