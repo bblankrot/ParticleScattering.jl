@@ -70,7 +70,7 @@ function solve_particle_scattering_FMM(k0, kin, P, sp::ScatteringProblem, θ_i, 
         tic()
 
         #find LU factorization once for each shape
-        scatteringLU = [lufact(scatteringMatrices[i])) for i = 1:length(shapes)]
+        scatteringLU = [lufact(scatteringMatrices[i]) for i = 1:length(shapes)]
 
         inner = Array{Vector{Complex{Float64}}}(Ns)
         α_c = Array{Complex{Float64}}(2*P+1)
@@ -97,7 +97,7 @@ function solve_particle_scattering_FMM(k0, kin, P, sp::ScatteringProblem, θ_i, 
         figure()
         semilogy(result[2].residuals.')
     end
-    if verbose begin
+    if verbose
         println("FMM matrix construction: $dt0 s")
         println("Scattering matrix solution: $dt1 s")
         println("RHS construction: $dt2 s")

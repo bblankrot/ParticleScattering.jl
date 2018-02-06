@@ -6,8 +6,23 @@ increase the necessary `P`.
 """
 const R_multipole = 1.1
 
+"""
+	AbstractShapeParams
+
+Abstract type which all shape types inherit from.
+"""
 abstract type AbstractShapeParams end
 
+"""
+	ShapeParams(t,ft,dft)
+
+Returns `ShapeParams` object containing the parametrization of a two-dimensional
+shape. `t` is a uniform sampling of [0,2π), `ft = [x(t) y(t)]`, and
+`dft = [x'(t) y'(t)]`. The field `R` contains the radius of the shape's
+scattering disk.
+
+See also: `CircleParams`,`R_multipole`.
+"""
 type ShapeParams <: AbstractShapeParams
 	t::Array{Float64,1}
 	ft::Array{Float64,2}
@@ -17,6 +32,14 @@ type ShapeParams <: AbstractShapeParams
 	ShapeParams(t,ft,dft) = new(t,ft,dft,R_multipole*maximum(hypot.(ft[:,1],ft[:,2])))
 end
 
+"""
+	CircleParams(R)
+
+Returns object for a circular shape, containing its radius in the field `R`
+(which is also the radius of the scattering disk).
+
+See also: `ShapeParams`,`R_multipole`.
+"""
 type CircleParams <: AbstractShapeParams
 	R::Float64 #radius of multipole disk = radius of circle
 end
