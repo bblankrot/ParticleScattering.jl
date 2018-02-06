@@ -111,7 +111,7 @@ yields the following near-field plot:
 
 The reason the plot is mostly dark is that `plot_near_field` automatically scales
 the colors up to the maximum value calculated, which in this case happens to be
-a glitch due to inaccurate calculations close to a boundary. While this issue
+an artifact due to inaccurate calculations close to a particle boundary. While this issue
 can be somewhat alleviated by increasing `N`, it will remain due to the
 quadrature method used here. Fortunately, this does not affect the results off
 the shape boundaries, and can be safely ignored by calling `clim([0.0;4.0])`.
