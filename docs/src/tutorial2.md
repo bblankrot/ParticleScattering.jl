@@ -13,28 +13,29 @@ an iterative solver for the system of equations (GMRES is used here). Thus a
 certain residual tolerance must be defined at which point the GMRES process
 terminates.
 
-The scattering problem here is given by:
+The scattering problem here is set up by
 
 ```julia
+using ParticleScattering, PyPlot
 λ0 = 1 #doesn't matter since everything is normalized to λ0
 k0 = 2π/λ0
 kin = 3k0
 θ_i = π/4 #incident wave e^{i k_0 (1/sqrt{2},1/sqrt{2}) \cdot \mathbf{r}}
 
 N_squircle = 200
-N_star = 260
+N_star = 210
 P = 10
 
 M = 20
-shapes = [rounded_star(0.1λ0, 0.05λ0, 5, N_star);
+shapes = [rounded_star(0.1λ0, 0.03λ0, 5, N_star);
             squircle(0.15λ0, N_squircle)]
-centers =  square_grid(M, 0.4λ0) #MxM grid with distance 0.4λ0
+centers =  square_grid(M, λ0) #MxM grid with distance λ0
 ids = rand(1:2, M^2)
 φs = 2π*rand(M^2) #random rotation angles
 sp = ScatteringProblem(shapes, ids, centers, φs)
 ```
 
-To setup FMM, we use the constructor `FMMoptions`, whose options are given by:
+To setup FMM, we use the constructor `FMMoptions` with the following options:
 
 ```julia
 FMM::Bool       # Is FMM used? (default: false)
@@ -64,11 +65,22 @@ converted to line sources, and are thus fully contained in the FMM grid.
 ![fmm_tutorial_plot0](./assets/fmm_tutorial_plot0.png)
 
 Calculating and plotting the near or far fields with FMM is just as in the
-[previous tutorial](@ref scattering_small_grid), except we must supply the `FMMoptions` object:
+[previous tutorial](@ref scattering_small_grid), except we must supply the
+`FMMoptions` object:
 
 ```julia
-data = plot_near_field(k0, kin, P, sp, θ_i, opt = fmm_options)
+plot_near_field(k0, kin, P, sp, θ_i, opt = fmm_options,
+                border = [-12;12;-10;10], x_points = 480, y_points = 400)
 colorbar()
 ```
 
 ![fmm_tutorial_plot1](./assets/fmm_tutorial_plot1.png)
+
+![fmm_tutorial_plot2](./assets/fmm_tutorial_plot2.png)
+
+**Note:**
+Currently, FMM is used to accelerate the solution of the scattering problem,
+but not for the field calculation in `plot_near_field`.
+
+#### Direct vs. FMM
+.
