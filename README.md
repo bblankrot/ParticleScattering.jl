@@ -15,4 +15,4 @@ particle parameters for various design problems.
 # Installation
 
 Currently, only Julia 0.6 is supported, and the package must be installed
-manually. See the directions at [the official Julia documentation](https://docs.julialang.org/en/stable/manual/packages/#Installing-Unregistered-Packages-1)
+manually. See directions at [the official Julia documentation](https://docs.julialang.org/en/stable/manual/packages/#Installing-Unregistered-Packages-1).
