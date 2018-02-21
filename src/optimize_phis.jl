@@ -76,7 +76,8 @@ function optimize_φ_common!(φs, last_φs, shared_var, α_inc, H, points, P, θ
 
         fill!(shared_var.β,0.0)
         shared_var.β,ch = gmres!(shared_var.β, MVP, buf.rhs,
-                            restart = Ns*(2*P+1), tol = opt.tol, log = true) #no restart, preconditioning
+                            restart = Ns*(2*P+1), tol = opt.tol, log = true,
+							initially_zero = true) #no restart, preconditioning
         !ch.isconverged && error("FMM process did not converge")
 
         shared_var.f[:] = H.'*shared_var.β
@@ -127,7 +128,8 @@ function optimize_φ_g!(grad_stor, φs, shared_var, last_φs, α_inc, H, points,
 
         shared_var.∂β[:,n], ch = gmres!(shared_var.∂β[:,n], MVP,
                                     shared_var.rhs_grad, restart = Ns*(2*P+1),
-                                    tol = 10*opt.tol, log = true)
+                                    tol = 10*opt.tol, log = true,
+									initially_zero = true)
         #warn("using dbdn_tol = 10*opt.tol = $(10*opt.tol)")
 
         if ch.isconverged == false

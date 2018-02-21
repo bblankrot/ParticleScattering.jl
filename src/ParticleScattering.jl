@@ -54,7 +54,8 @@ export optimize_φ
 export optimize_radius
 #methods, visualization_pgf.jl
 export plotNearField_pgf, drawShapes_pgf
-
+#methods, utilities.jl
+export find_border
 
 # For advanced plotting with pgfplots
 import DataFrames, CSV, PGFPlotsX; const pgf = PGFPlotsX
