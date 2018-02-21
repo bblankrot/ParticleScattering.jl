@@ -40,6 +40,7 @@ Return a `ShapeParams` object containing the shape parametrized by
 `(x/r1)^2 + (y/r2)^2 = 1` with 2`N` nodes.
 """
 function ellipse(r1, r2, N)
+	warn("ellipse currently exhibiting abnormal behavior in cylindrical harmonics (minimumP does not converge)")
     t = Float64[pi*j/N for j=0:(2*N-1)]
     ft = [r1*cos.(t) r2*sin.(t)]
     dft = [(-r1)*sin.(t) r2*cos.(t)]
@@ -205,6 +206,11 @@ function verify_min_distance(shapes, centers::Array{Float64,2}, ids, points::Arr
     end
     true
 end
+
+verify_min_distance(sp::ScatteringProblem, points) =
+	verify_min_distance(sp.shapes, sp.centers, sp.ids, points)
+verify_min_distance(sp::ScatteringProblem) =
+	verify_min_distance(sp.shapes, sp.centers, sp.ids)
 
 """
     luneburg_grid(R_lens, N_cells, er; levels = 0, TM = true) -> centers, ids, rs
