@@ -3,6 +3,7 @@ function binarySearch(f, key, low, high)
     #f(i) >= key. For monotonically decreasing simply negate f and key, and this
     #will return lowest i such that f(i) <= key
     low > high && error("binarySearch: low > high")
+    f(high) < key && error("binarySearch: search area does not include value")
     val = 0
     mid = 0
     while low != high
