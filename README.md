@@ -19,6 +19,6 @@ particle parameters for various design problems.
 Currently, only Julia 0.6 is supported, and the package must be installed
 manually. See directions at [the official Julia documentation](https://docs.julialang.org/en/stable/manual/packages/#Installing-Unregistered-Packages-1).
 
-Community
+### Community
 
 The easiest way to contribute is by opening issues! Of course, we'd be more than happy if you implement any fixes and send a PR. If you have any relevant scattering problems that would make good examples for the docs, feel free to open an issue for that as well.
