@@ -17,7 +17,6 @@ makedocs(format = :html,
 deploydocs(
     repo   = "github.com/bblankrot/ParticleScattering.jl.git",
     target = "build",
-    julia = "0.6",
     deps   = nothing,
     make   = nothing
 )
