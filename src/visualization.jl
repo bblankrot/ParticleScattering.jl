@@ -1,7 +1,8 @@
 """
     plot_near_field(k0, kin, P, sp::ScatteringProblem, θ_i = 0;
                         opt::FMMoptions = FMMoptions(), use_multipole = true,
-                        x_points = 201, y_points = 201, border = find_border(sp))
+                        x_points = 201, y_points = 201, border = find_border(sp),
+                        normalize = 1.0)
 
 Plots the total electric field as a result of a plane wave with incident
 angle `θ_i` scattering from the ScatteringProblem `sp`, using matplotlib's
@@ -12,7 +13,8 @@ Uses the FMM options given by `opt` (default behavious is disabled FMM);
 `use_multipole` dictates whether electric field is calculated using the
 multipole/cylindrical harmonics (true) or falls back on potential densities
 (false). Either way, the multiple-scattering system is solved in the cylindrical
-harmonics space.
+harmonics space. Normalizes all distances and sizes in plot (but not output) by
+`normalize`.
 
 Returns the calculated field in two formats:
 1. `(points, Ez)` where `Ez[i]` is the total electric field at `points[i,:]`, and
@@ -22,7 +24,7 @@ contains the field at `(mean(xgrid[i, j:j+1]), mean(ygrid[i:i+1, j]))`.
 function plot_near_field(k0, kin, P, sp::ScatteringProblem, θ_i = 0;
                         opt::FMMoptions = FMMoptions(), use_multipole = true,
                         x_points = 201, y_points = 201, interpolate = false,
-                        border = find_border(sp))
+                        border = find_border(sp), normalize = 1.0)
 
     x_min, x_max, y_min, y_max = border
 
@@ -63,13 +65,13 @@ function plot_near_field(k0, kin, P, sp::ScatteringProblem, θ_i = 0;
                 use_multipole=use_multipole, opt = opt)
         zgrid = reshape(Ez, y_points, x_points)
         figure()
-        pcolormesh(xgrid, ygrid, abs.(zgrid))
+        pcolormesh(xgrid/normalize, ygrid/normalize, abs.(zgrid))
     end
 
     ax = gca()
-    draw_shapes(sp.shapes, sp.centers, sp.ids, sp.φs, ax)
-    xlim([x_min;x_max])
-    ylim([y_min;y_max])
+    draw_shapes(sp.shapes, sp.centers, sp.ids, sp.φs, ax; normalize = normalize)
+    xlim([x_min/normalize;x_max/normalize])
+    ylim([y_min/normalize;y_max/normalize])
     tight_layout()
     ax[:set_aspect]("equal", adjustable = "box")
     return (points,Ez),(xgrid,ygrid,zgrid)
@@ -121,7 +123,7 @@ end
 Draws all of the shapes in a given scattering problem. Parametrized shapes are
 drawn as polygons while circles are drawn using matplotlib's `patch.Circle`.
 """
-function draw_shapes(shapes, centers, ids, φs, ax = gca())
+function draw_shapes(shapes, centers, ids, φs, ax = gca(); normalize = 1.0)
     #draw shapes
     for ic = 1:size(centers,1)
         if typeof(shapes[ids[ic]]) == ShapeParams
@@ -131,12 +133,13 @@ function draw_shapes(shapes, centers, ids, φs, ax = gca())
                 Rot = cartesianrotation(φs[ic])
                 ft_rot = shapes[ids[ic]].ft*Rot.' .+ centers[ic,:]'
             end
-            ax[:plot]([ft_rot[:,1];ft_rot[1,1]],[ft_rot[:,2];ft_rot[1,2]],
-                        "k", linewidth = 2)
+            ax[:plot]([ft_rot[:,1];ft_rot[1,1]]/normalize,
+                    [ft_rot[:,2];ft_rot[1,2]]/normalize, "k", linewidth = 2)
         else
-            ax[:add_patch](patch.Circle((centers[ic,1],centers[ic,2]),
-                            radius = shapes[ids[ic]].R, edgecolor="k",
-                            facecolor="none", linewidth = 2))
+            ax[:add_patch](patch.Circle((centers[ic,1]/normalize,
+                            centers[ic,2]/normalize),
+                            radius = shapes[ids[ic]].R/normalize,
+                            edgecolor="k", facecolor="none", linewidth = 2))
         end
     end
 end
