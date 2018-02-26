@@ -14,6 +14,9 @@ script:
 before_install:
   - julia -e 'ENV["PYTHON"]=""; Pkg.add("Conda"); using Conda; Conda.update(); Conda.add("matplotlib"); Conda.add("basemap"); Pkg.add("PyCall"); Pkg.build("PyCall"); Pkg.add("PyPlot");'
 after_success:
+  #doc
+  - julia -e 'Pkg.add("Documenter")'
+  - julia -e 'cd(Pkg.dir("ParticleScattering")); include(joinpath("docs", "make.jl"))'
   # push coverage results to Coveralls
   #- julia -e 'cd(Pkg.dir("ParticleScattering")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
   # push coverage results to Codecov
