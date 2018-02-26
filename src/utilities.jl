@@ -3,6 +3,7 @@ function binarySearch(f, key, low, high)
     #f(i) >= key. For monotonically decreasing simply negate f and key, and this
     #will return lowest i such that f(i) <= key
     low > high && error("binarySearch: low > high")
+    f(high) < key && error("binarySearch: search area does not include value")
     val = 0
     mid = 0
     while low != high
@@ -76,6 +77,13 @@ function find_border(sp::ScatteringProblem)
     Rmax = maximum(s.R for s in sp.shapes)
     x_max,y_max = maximum(sp.centers,1) + 2*Rmax
     x_min,y_min = minimum(sp.centers,1) - 2*Rmax
+    border = [x_min; x_max; y_min; y_max]
+end
+
+function find_border(sp::ScatteringProblem, points::Array{Float64,2})
+    Rmax = maximum(s.R for s in sp.shapes)
+    x_max,y_max = maximum([sp.centers;points],1) + 2*Rmax
+    x_min,y_min = minimum([sp.centers;points],1) - 2*Rmax
     border = [x_min; x_max; y_min; y_max]
 end
 

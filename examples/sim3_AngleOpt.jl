@@ -1,6 +1,7 @@
 using PyPlot, ParticleScattering
 import JLD, Optim, PGFPlotsX; const pgf = PGFPlotsX
 
+output_dir = homedir()
 Ns = 100
 k0 = 2π
 kin = 3*k0
@@ -15,7 +16,7 @@ height = size_factor*l0
 myshapefun(N) = rounded_star(a1,a2,a3,N)
 points = [linspace(0.0,width,10) height*ones(10)]
 
-if !isfile(dirname(@__FILE__) * "/mindata.jld")
+if !isfile(dirname(@__FILE__) * "/sim3data.jld")
     centers = randpoints(Ns, dmin, width, height, points)
 else
     import JLD; JLD.@load(dirname(@__FILE__) * "/sim3data.jld", centers)
@@ -73,7 +74,7 @@ plot_near_field(k0, kin, P, sp_before, θ_i,
                 x_points = 600, y_points = 200, border = plot_border);
 colorbar()
 clim([0;5])
-plotNearField_pgf(dirname(@__FILE__) * "/tikz/opt_phi_before.tex", k0, kin, P,
+plotNearField_pgf(output_dir * "/opt_phi_before.tex", k0, kin, P,
     sp_before, θ_i; opt = fmm_options, x_points = 600, y_points = 200,
     border = plot_border, downsample = 4)
 
@@ -82,7 +83,7 @@ plot_near_field(k0, kin, P, sp_after, θ_i,
                 x_points = 600, y_points = 200, border = plot_border)
 colorbar()
 clim([0;5])
-plotNearField_pgf(dirname(@__FILE__) * "/tikz/opt_phi_after.tex", k0, kin, P,
+plotNearField_pgf(output_dir * "/opt_phi_after.tex", k0, kin, P,
     sp_after, θ_i; opt = fmm_options, x_points = 600, y_points = 200,
     border = plot_border, downsample = 4)
 
@@ -110,4 +111,4 @@ pgf.@pgf begin
             legend_style = "font = \\footnotesize"
         })
 end
-pgf.save(dirname(@__FILE__) * "/tikz/opt_phi_conv.tex", ax ,include_preamble = false)
+pgf.save(output_dir * "/opt_phi_conv.tex", ax ,include_preamble = false)
