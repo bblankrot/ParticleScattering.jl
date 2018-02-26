@@ -1,7 +1,7 @@
 using PyPlot, ParticleScattering
 import Optim, JLD
 
-output_dir = "/home/bblankro/Dropbox/outputdir"
+output_dir = homedir()
 er = 4.5
 k0 = 2π
 l0 = 2π/k0

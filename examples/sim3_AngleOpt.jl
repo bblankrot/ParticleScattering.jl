@@ -1,7 +1,7 @@
 using PyPlot, ParticleScattering
 import JLD, Optim, PGFPlotsX; const pgf = PGFPlotsX
 
-output_dir = "/home/bblankro/Dropbox/outputdir"
+output_dir = homedir()
 Ns = 100
 k0 = 2π
 kin = 3*k0
