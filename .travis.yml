@@ -15,6 +15,7 @@ env:
 script:
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
   - julia -e 'Pkg.clone(pwd())'
+  - julia -e 'ENV["PYTHON"]=""; Pkg.add("Conda"); using Conda; Conda.update(); Conda.add("matplotlib"); Conda.add("basemap"); Pkg.add("PyCall"); Pkg.build("PyCall"); Pkg.add("PyPlot");'
   - julia -e 'Pkg.test("ParticleScattering")'
 #  - julia -e 'Pkg.clone(pwd()); Pkg.build("ParticleScattering"); Pkg.test("ParticleScattering"; coverage=true)'
 after_success:
