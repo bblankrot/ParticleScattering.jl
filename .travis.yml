@@ -2,7 +2,6 @@
 language: julia
 os:
   - linux
-  - osx
 julia:
   - 0.6
 notifications:
@@ -10,14 +9,16 @@ notifications:
 git:
   depth: 99999999
 env:
-    global:
-    - PYTHON=conda
+ - PYTHON=""
 
 ## uncomment the following lines to override the default test script
-#script:
+script:
+  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
+  - julia -e 'Pkg.clone(pwd())'
+  - julia -e 'Pkg.test("ParticleScattering")'
 #  - julia -e 'Pkg.clone(pwd()); Pkg.build("ParticleScattering"); Pkg.test("ParticleScattering"; coverage=true)'
 after_success:
   # push coverage results to Coveralls
-  - julia -e 'cd(Pkg.dir("ParticleScattering")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
+  #- julia -e 'cd(Pkg.dir("ParticleScattering")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
   # push coverage results to Codecov
-  - julia -e 'cd(Pkg.dir("ParticleScattering")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
+  #- julia -e 'cd(Pkg.dir("ParticleScattering")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
