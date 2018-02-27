@@ -2,7 +2,7 @@ using Documenter, ParticleScattering
 
 makedocs(format = :html,
     sitename = "ParticleScattering.jl",
-    authors = "Boaz Blankrot"
+    authors = "Boaz Blankrot",
     linkcheck = !("skiplinks" in ARGS),
     pages = Any[
         "Main" => "index.md",

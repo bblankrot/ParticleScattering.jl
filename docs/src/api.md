@@ -1,6 +1,7 @@
 # User Interface
 
 ```@autodocs
+Modules = [ParticleScattering]
 ```
 
 # Index

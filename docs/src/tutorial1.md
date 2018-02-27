@@ -6,7 +6,7 @@ identical shapes (rotated versions of the same shape are considered identical).
 Thus solving multiple-scattering problems is syntactically similar to solving
 for a single particle.
 
-In this example, we will simulate TM plane-wave scattering ``e^{ik(\cos(\θ_i),\sin(\θ_i)) \cdot \mathbf{r}}``
+In this example, we simulate TM plane-wave scattering (``E_z = e^{ik(\cos \theta_i, \, \sin \theta_i) \cdot \mathbf{r}}``)
 from a single rounded star, parametrized by the equation
 
 ```math
@@ -71,7 +71,7 @@ is inefficient here as we only have one scatterer, and `solvePotentialShapePW`
 would be more accurate. This is meant only as an introductory example to the
 ParticleScattering syntax.
 
-#### Scattering from a small grid of particles(@id scattering_small_grid)
+#### [Scattering from a small grid of particles](@id scattering_small_grid)
 Expanding the example above to a collection of different particles is straightforward:
 
 ```julia
