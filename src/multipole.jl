@@ -1,5 +1,5 @@
 """
-	solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0; get_inner = true, print_log = true) -> beta, inner
+	solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0; get_inner = true, verbose = true) -> beta, inner
 
 Solve the scattering problem `sp` with outer wavenumber `k0`, inner wavenumber
 `kin`, `2P+1` cylindrical harmonics per inclusion and incident plane wave angle
@@ -9,10 +9,10 @@ densities (in case of arbitrary inclusion) or inner cylindrical coefficients (in
 case of circular). By default, incident wave propagates left->right.
 
 Inner coefficients are only calculated if `get_inner` is true, and timing is
-printed if `print_log` is true.
+printed if `verbose` is true.
 """
 function solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0;
-								get_inner = true, print_log = true)
+								get_inner = true, verbose = true)
 	# This function solves for the outgoing multipole coefficients in the presence
 	# of an incident plane wave.
 	# incident wave direction - from left to right is 0:
@@ -79,7 +79,7 @@ function solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0
 		end
 		dt4 = toq()
 	end
-	print_log && begin
+	verbose && begin
 		println("Scattering matrix solution: $dt1 s")
 		println("Matrix construction: $dt2 s")
 		println("Matrix solution: $dt3 s")
