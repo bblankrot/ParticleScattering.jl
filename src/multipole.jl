@@ -17,7 +17,6 @@ function solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0
 	# of an incident plane wave.
 	# incident wave direction - from left to right is 0:
 	# e^{ik(\cos(\θ_i),\sin(\θ_i)) \cdot \mathbf{r}}
-	println("Direct solution timing:")
 	shapes = sp.shapes;	ids = sp.ids; centers = sp.centers; φs = sp.φs
 	Ns = size(sp)
 	#first solve for single scatterer densities
@@ -57,10 +56,8 @@ function solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0
 	#in multipole expansion for circle
 	if get_inner
 		tic()
-
 		#find LU factorization once for each shape
         scatteringLU = [lufact(scatteringMatrices[iid]) for iid = 1:length(shapes)]
-
 		inner = Array{Vector{Complex{Float64}}}(Ns)
 		α_c = Array{Complex{Float64}}(2*P+1)
 		for ic = 1:Ns
@@ -80,6 +77,7 @@ function solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0
 		dt4 = toq()
 	end
 	verbose && begin
+		println("Direct solution timing:")
 		println("Scattering matrix solution: $dt1 s")
 		println("Matrix construction: $dt2 s")
 		println("Matrix solution: $dt3 s")
