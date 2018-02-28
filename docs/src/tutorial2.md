@@ -82,5 +82,63 @@ colorbar()
 Currently, FMM is used to accelerate the solution of the scattering problem,
 but not for the field calculation in `plot_near_field`.
 
-#### Direct vs. FMM
-.
+#### Direct vs. FMM timing
+
+
+#### Which is more accurate?
+Intuitively, the direct approach is more accurate than the FMM with
+its various approximations and iterative solution method. However, inaccuracies
+can arise in the direct solution of even the simplest scattering problems:
+
+```julia
+k0 = 0.01
+kin = 0.02
+shapes = [squircle(1, 200)]
+ids = [1;1]
+centers = [0.0 0.0; 5.0 0.0]
+phis = [0.0;0.0]
+sp = ScatteringProblem(shapes, ids, centers, phis)
+Pmax = 15
+```
+
+We solve this problem using the direct approach and with FMM, and then compare
+both the multipole coefficients ``\beta`` and the resulting potential densities:
+
+```julia
+betas = Array{Vector}(Pmax)
+betas_FMM = Array{Vector}(Pmax)
+inners = Array{Vector}(Pmax)
+inners_FMM = Array{Vector}(Pmax)
+for P = 1:Pmax
+	betas[P], inners[P] = solve_particle_scattering(k0, kin, P, sp, 0.0; verbose = false)
+	res, inners_FMM[P] = solve_particle_scattering_FMM(k0, kin, P, sp, 0.0, ParticleScattering.FMMoptions(true, nx = 1, acc = 9); verbose = false)
+	betas_FMM[P] = res[1]
+end
+
+errnorm(x,y) = norm(x-y)/norm(x)
+
+figure()
+subplot(2,1,1)
+semilogy([errnorm(betas_FMM[i], betas[i]) for i = 1:Pmax])
+ylabel("\$\\Delta \\beta\$")
+subplot(2,1,2)
+semilogy([errnorm(inners_FMM[i], inners[i]) for i = 1:Pmax])
+xlabel("\$ P \$")
+ylabel("\$ \\Delta \$" * " Potential Density")
+```
+![direct_vs_fmm0](./assets/direct_vs_fmm0.png)
+
+In both subplots, we see that increasing `P` actually leads to a decrease in
+accuracy (plotting the results separately also shows that the FMM results stay
+the same, while the direct results blow up). This is due to two main reasons -
+conditioning of the system matrix, and the fact that high-order cylindrical
+harmonics are responsible for substantially greater potential densities than
+lower-order ones. Both of these are impacted by the number of particles as well as the wavelength.
+
+This ties in with [Choosing Minimal `N` and `P`](@ref) &ndash; not only does
+increasing `P` far beyond that required for a certain error impact runtime, but
+can also increase the error in the solution.
+
+Of course, FMM was not really used here as `nx == 1` means both particles are in
+the same FMM group, and the maintained accuracy is purely due to the iterative
+system matrix solution used in `solve_particle_scattering_FMM`, GMRES.
