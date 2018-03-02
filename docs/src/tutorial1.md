@@ -6,7 +6,7 @@ identical shapes (rotated versions of the same shape are considered identical).
 Thus solving multiple-scattering problems is syntactically similar to solving
 for a single particle.
 
-In this example, we will simulate TM plane-wave scattering ``e^{ik(\cos(\θ_i),\sin(\θ_i)) \cdot \mathbf{r}}``
+In this example, we simulate TM plane-wave scattering (``E_z = e^{ik(\cos \theta_i, \, \sin \theta_i) \cdot \mathbf{r}}``)
 from a single rounded star, parametrized by the equation
 
 ```math
@@ -17,7 +17,7 @@ R = 0.1\lambda_0, d = 0.05\lambda_0,
 which is supplied by `rounded_star`. For now, we discretize the shape with `N=260`
 nodes and `P=10` cylindrical harmonics &ndash; for more information on the
 relationship between these parameters and the various resulting errors, see
-[Choosing Minimal `N` and `P`](@ref).
+[Choosing Minimal N and P](@ref minimalNP).
 
 ```julia
 λ0 = 1 #doesn't matter since everything is normalized to λ0
@@ -42,7 +42,7 @@ beta,inner = solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i)
 ```
 
 These can be used to calculate the scattered field at any point in space using
-low-level function `scatteredField`, or strictly outside the circle of radius `shapes[1].R`
+low-level function `scatteredfield`, or strictly outside the circle of radius `shapes[1].R`
 with `scattered_field_multipole`. For large numbers of calculation points, however, it is
 easier to use `calc_near_field` which performs `solve_particle_scattering` and
 calculates the total (incident + scattered) field at every point using the most
@@ -67,11 +67,11 @@ plot_near_field(k0, kin, P, sp::ScatteringProblem, θ_i;
 
 **Note:**
 In practice, converting the shape potential densities to cylindrical harmonics
-is inefficient here as we only have one scatterer, and `solvePotentialShapePW`
+is inefficient here as we only have one scatterer, and `get_potentialPW`
 would be more accurate. This is meant only as an introductory example to the
 ParticleScattering syntax.
 
-#### Scattering from a small grid of particles(@id scattering_small_grid)
+#### [Scattering from a small grid of particles](@id scattering_small_grid)
 Expanding the example above to a collection of different particles is straightforward:
 
 ```julia

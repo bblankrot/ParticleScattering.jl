@@ -23,8 +23,8 @@ contains the field at `(mean(xgrid[i, j:j+1]), mean(ygrid[i:i+1, j]))`.
 """
 function plot_near_field(k0, kin, P, sp::ScatteringProblem, θ_i = 0;
                         opt::FMMoptions = FMMoptions(), use_multipole = true,
-                        x_points = 201, y_points = 201, interpolate = false,
-                        border = find_border(sp), normalize = 1.0)
+                        x_points = 201, y_points = 201, border = find_border(sp),
+                        normalize = 1.0)
 
     x_min, x_max, y_min, y_max = border
 
@@ -32,7 +32,6 @@ function plot_near_field(k0, kin, P, sp::ScatteringProblem, θ_i = 0;
     # thus we need two grids - the rectangle grid and the sampling grid.
     x = linspace(x_min, x_max, x_points + 1)
     y = linspace(y_min, y_max, y_points + 1)
-
     xgrid = repmat(x', y_points + 1, 1)
     ygrid = repmat(y, 1, x_points + 1)
     dx = (x_max - x_min)/2/x_points
@@ -40,33 +39,11 @@ function plot_near_field(k0, kin, P, sp::ScatteringProblem, θ_i = 0;
     points = cat(2, vec(xgrid[1:y_points, 1:x_points]) + dx,
                 vec(ygrid[1:y_points, 1:x_points]) + dy)
 
-    if interpolate == true
-        #TODO: make this work, some time
-        flags = Array{Bool}(size(points,1))
-        flags[:] = true
-        for ix = 1:size(points,1)
-            for ic = 1:length(sp.ids)
-                typ = sqrt(sum(abs2,sp.shapes[sp.ids[ic]].ft[1,:] - sp.shapes[sp.ids[ic]].ft[2,:]))
-                dist = minimum(sqrt(sum(abs2,(points[ix,:] - sp.centers[ic,:])' .- sp.shapes[sp.ids[ic]].ft ,2)))
-                if dist < 3*typ
-                    flags[ix] = false
-                    break
-                end
-            end
-        end
-        points = points[flags,:]
-        Ez = calc_near_field(k0, kin, P, sp, points, θ_i, use_multipole=use_multipole, opt = opt)
-        levs = linspace(0.0,maximum(abs.(Ez)),40)
-        x_min += dx; y_min += dy; x_max += dx; y_max += dy;
-        figure()
-        tricontourf(vec(points[:,1]),vec(points[:,2]),vec(abs.(Ez)),levels=levs)
-    else
-        Ez = calc_near_field(k0, kin, P, sp, points, θ_i,
-                use_multipole=use_multipole, opt = opt)
-        zgrid = reshape(Ez, y_points, x_points)
-        figure()
-        pcolormesh(xgrid/normalize, ygrid/normalize, abs.(zgrid))
-    end
+    Ez = calc_near_field(k0, kin, P, sp, points, θ_i,
+            use_multipole=use_multipole, opt = opt)
+    zgrid = reshape(Ez, y_points, x_points)
+    figure()
+    pcolormesh(xgrid/normalize, ygrid/normalize, abs.(zgrid))
 
     ax = gca()
     draw_shapes(sp.shapes, sp.centers, sp.ids, sp.φs, ax; normalize = normalize)
@@ -94,7 +71,7 @@ function plot_far_field(k0, kin, P, sp::ScatteringProblem, θ_i = 0;
 
     x_max,y_max = maximum(sp.centers,1) + 2*Rmax
     x_min,y_min = minimum(sp.centers,1) - 2*Rmax
-    Raggregate = 0.5*max(x_max - x_min, y_max - y_min)
+    Raggregate = 0.5*max(x_max - x_min, y_max - y_min) #radius of bounding circle
     x_center = 0.5*(x_max + x_min)
     y_center = 0.5*(y_max + y_min)
     Rfar = Raggregate*1e6
@@ -204,7 +181,7 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, θ_i;
         #field inside shape
         if any(rng_in)
             if typeof(shapes[ids[ic]]) == ShapeParams
-                u[rng_in] += scatteredField(sigma_mu[ic], kin, shapes[ids[ic]].t,
+                u[rng_in] += scatteredfield(sigma_mu[ic], kin, shapes[ids[ic]].t,
                                 ft_rot, dft_rot, points[rng_in,:])
             else
                 u[rng_in] += innerFieldCircle(kin, sigma_mu[ic], centers[ic,:],
@@ -213,7 +190,7 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, θ_i;
         end
         #field between shape and multipole disk (impossible for circle)
         if any(rng_out)
-            u[rng_out] += scatteredField(sigma_mu[ic], k0, shapes[ids[ic]].t,
+            u[rng_out] += scatteredfield(sigma_mu[ic], k0, shapes[ids[ic]].t,
                             ft_rot, dft_rot, points[rng_out,:])
             u[rng_out] += exp.(1.0im*k0*(cos(θ_i)*points[rng_out,1] +
                                         sin(θ_i)*points[rng_out,2])) #incident
@@ -231,7 +208,7 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, θ_i;
                         ft_rot2 = shapes[ids[ic2]].ft*Rot.' .+ centers[ic2,:]'
                         dft_rot2 = shapes[ids[ic2]].dft*Rot.'
                     end
-                    u[rng_out] += scatteredField(sigma_mu[ic2], k0, shapes[ids[ic2]].t,
+                    u[rng_out] += scatteredfield(sigma_mu[ic2], k0, shapes[ids[ic2]].t,
                                     ft_rot2, dft_rot2, points[rng_out,:])
                 end
             end
@@ -251,13 +228,13 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, θ_i;
             if typeof(shapes[ids[ic]]) == ShapeParams
                 if φs[ic] == 0.0
                     ft_rot = shapes[ids[ic]].ft .+ centers[ic,:]'
-                    u[rng] += scatteredField(sigma_mu[ic], k0, shapes[ids[ic]].t,
+                    u[rng] += scatteredfield(sigma_mu[ic], k0, shapes[ids[ic]].t,
                                 ft_rot, shapes[ids[ic]].dft, points[rng,:])
                 else
                     Rot[:] = cartesianrotation(φs[ic])
                     ft_rot = shapes[ids[ic]].ft*Rot.' .+ centers[ic,:]'
                     dft_rot = shapes[ids[ic]].dft*Rot.'
-                    u[rng] += scatteredField(sigma_mu[ic], k0, shapes[ids[ic]].t,
+                    u[rng] += scatteredfield(sigma_mu[ic], k0, shapes[ids[ic]].t,
                                 ft_rot, dft_rot, points[rng,:])
                 end
             else
@@ -299,13 +276,13 @@ function calculateFarField(k0, kin, P, points, sp::ScatteringProblem, θ_i;
             if typeof(shapes[ids[ic]]) == ShapeParams
                 if φs[ic] == 0.0
                     ft_rot = shapes[ids[ic]].ft .+ centers[ic,:]'
-                    Ez[:] += scatteredField(sigma_mu[ic], k0, shapes[ids[ic]].t,
+                    Ez[:] += scatteredfield(sigma_mu[ic], k0, shapes[ids[ic]].t,
                                 ft_rot, shapes[ids[ic]].dft, points)
                 else
                     Rot = cartesianrotation(φs[ic])
                     ft_rot = shapes[ids[ic]].ft*Rot.' .+ centers[ic,:]'
                     dft_rot = shapes[ids[ic]].dft*Rot.'
-                    Ez[:] += scatteredField(sigma_mu[ic], k0, shapes[ids[ic]].t,
+                    Ez[:] += scatteredfield(sigma_mu[ic], k0, shapes[ids[ic]].t,
                                 ft_rot, dft_rot, points)
                 end
             else
