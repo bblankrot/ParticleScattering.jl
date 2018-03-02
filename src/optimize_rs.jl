@@ -15,10 +15,9 @@ function optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin, cente
     end
 
     #setup FMM reusal
-    (groups, boxSize) = divideSpace(centers, fmmopts)
-
-    (P2, Q) = FMMtruncation(fmmopts.acc, boxSize, k0)
-    mFMM = FMMbuildMatrices(k0, P, P2, Q, groups, centers, boxSize, tri=true)
+    groups, boxSize = divideSpace(centers, fmmopts)
+    P2, Q = FMMtruncation(fmmopts.acc, boxSize, k0)
+    mFMM = FMMbuildMatrices(k0, P, P2, Q, groups, centers, boxSize, tri = true)
 
     #allocate derivative
     scatteringMatrices = [speye(Complex{Float64}, 2*P+1) for ic = 1:J]
@@ -169,7 +168,7 @@ function optimize_radius_g!(grad_stor, rs, last_rs, shared_var, φs, α_inc, H, 
 end
 
 function updateCircleScatteringDerivative!(S, dS_S, kout, kin, R, P)
-    #non-vectorized, reuses bessel. Find quicker way to update
+    #non-vectorized, reuses bessel
 
     pre_J0 = besselj(-1,kout*R)
     pre_J1 = besselj(-1,kin*R)
@@ -193,55 +192,6 @@ function updateCircleScatteringDerivative!(S, dS_S, kout, kin, R, P)
 			S[P+1-p,P+1-p] = S[p+P+1,p+P+1]
 			dS_S[P+1-p,P+1-p] = dS_S[p+P+1,p+P+1]
 		end
-
-        pre_J0 = J0
-        pre_J1 = J1
-        pre_H = H
-    end
-end
-
-
-function updateCircleScatteringDerivative!_faster(S, dS_S, kout, kin, R, P)
-    #non-vectorized, reuses bessel. Find quicker way to update
-
-    pre_J0 = besselj(-1,kout*R)
-    pre_J1 = besselj(-1,kin*R)
-    pre_H = besselh(-1,kout*R)
-
-    J0 = besselj(0,kout*R)
-    J1 = besselj(0,kin*R)
-    H = besselh(0,kout*R)
-
-    dJ0 = kout*pre_J0
-    dJ1 = kin*pre_J1
-    dH = kout*pre_H
-
-	numer = (-2.0im/(π*R))*(kin^2 - kout^2)*J1^2
-    denom = dH*J1 - H*dJ1
-
-	S[P+1,P+1] = -(dJ0*J1 - J0*dJ1)/denom
-	dS_S[P+1,P+1] = -(numer/denom)/(dJ0*J1 - J0*dJ1)
-
-    pre_J0 = J0
-    pre_J1 = J1
-    pre_H = H
-    for p = 1:P
-        J0 = besselj(p,kout*R)
-        J1 = besselj(p,kin*R)
-        H = besselh(p,kout*R)
-
-        dJ0 = kout*(pre_J0 - (p/kout/R)*J0)
-        dJ1 = kin*(pre_J1 - (p/kin/R)*J1)
-        dH = kout*(pre_H - (p/kout/R)*H)
-
-		numer = (-2.0im/(π*R))*(kin^2 - kout^2)*J1^2
-        denom = dH*J1 - H*dJ1
-
-		S[p+P+1,p+P+1] = -(dJ0*J1 - J0*dJ1)/denom
-		dS_S[p+P+1,p+P+1] = -(numer/denom)/(dJ0*J1 - J0*dJ1)
-
-		S[P+1-p,P+1-p] = S[p+P+1,p+P+1]
-		dS_S[P+1-p,P+1-p] = dS_S[p+P+1,p+P+1]
 
         pre_J0 = J0
         pre_J1 = J1

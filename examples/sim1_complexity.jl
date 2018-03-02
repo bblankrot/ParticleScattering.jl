@@ -1,6 +1,5 @@
 # Here is a simulation of solution time as a function of M - number of shapes (or sqrt of number of shapes)
-using ParticleScattering, IterativeSolvers
-using PyPlot, LaTeXStrings
+using ParticleScattering, IterativeSolvers, PyPlot
 
 #loop definitions
 sqrtM_vec = collect(5:30); M_vec = sqrtM_vec.^2

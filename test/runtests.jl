@@ -1,4 +1,4 @@
 using ParticleScattering
 using Base.Test
 
-include("scatteredField.jl")
+include("scatteredfield.jl")

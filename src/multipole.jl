@@ -219,7 +219,7 @@ function particleExpansion(k0, kin, shapes, P, ids)
 		end
 		if typeof(shapes[i]) == ShapeParams
             AB = shapeMultipoleExpansion(k0, shapes[i].t, shapes[i].ft, shapes[i].dft, P)
-    		sigma_mu_mult = solvePotentialShape(k0, kin, P, shapes[i].t, shapes[i].ft, shapes[i].dft)
+    		sigma_mu_mult = get_potential(k0, kin, P, shapes[i].t, shapes[i].ft, shapes[i].dft)
     		ScatMat = AB*sigma_mu_mult
             push!(scatteringMatrices, ScatMat)
             push!(innerExpansions, sigma_mu_mult)  # push!(invs, inv(ScatMat))

@@ -1,13 +1,10 @@
-# User Interface
-
-```@autodocs
-Modules = [ParticleScattering]
-```
-
 # Index
 
 ```@index
 ```
 
-```@contents
+# User Interface
+
+```@autodocs
+Modules = [ParticleScattering]
 ```

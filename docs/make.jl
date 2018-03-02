@@ -5,11 +5,12 @@ makedocs(format = :html,
     authors = "Boaz Blankrot",
     linkcheck = !("skiplinks" in ARGS),
     pages = Any[
-        "Main" => "index.md",
+        "Home" => "index.md",
         "Tutorials" => Any[
             "tutorial1.md",
             "tutorial2.md"
         ],
+        "Choosing Minimal N and P" => "minimalNP.md",
         "api.md"
     ]
 )

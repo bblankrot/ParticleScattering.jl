@@ -52,7 +52,7 @@ function pInPolygon(p, ft)
             end
         end
     end
-    return (wn != 0)
+    wn != 0
 end
 
 function my_uniqueind(v::Vector{T}) where T <: Number
@@ -73,6 +73,11 @@ function my_uniqueind(v::Vector{T}) where T <: Number
     return unique_inds,unique_vals
 end
 
+"""
+    find_border(sp::ScatteringProblem) -> [x_min; x_max; y_min; y_max]
+
+Returns bounding box that contains all of the shapes in `sp`.
+"""
 function find_border(sp::ScatteringProblem)
     Rmax = maximum(s.R for s in sp.shapes)
     x_max,y_max = maximum(sp.centers,1) + 2*Rmax
@@ -80,6 +85,12 @@ function find_border(sp::ScatteringProblem)
     border = [x_min; x_max; y_min; y_max]
 end
 
+"""
+    find_border(sp::ScatteringProblem, points::Array{Float64,2}) -> [x_min; x_max; y_min; y_max]
+
+Returns bounding box that contains all of the shapes in `sp` as well as specified
+`points`.
+"""
 function find_border(sp::ScatteringProblem, points::Array{Float64,2})
     Rmax = maximum(s.R for s in sp.shapes)
     x_max,y_max = maximum([sp.centers;points],1) + 2*Rmax
