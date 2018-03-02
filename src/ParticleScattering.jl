@@ -36,33 +36,31 @@ export minimumN, minimumP
 export plot_far_field, plot_near_field, calc_near_field, draw_shapes
 #methods, fmm_main.jl
 export solve_particle_scattering_FMM
-
+#methods, scattering.jl
+export get_potential, get_potentialPW, scatteredfield
 #types, PS_types.jl
 export ScatteringProblem, OptimBuffer, FMMoptions, R_multipole,
     ShapeParams, CircleParams, AbstractShapeParams
+#methods, utilities.jl
+export find_border
 
 ### documented till here####
-
-
-#methods, scattering.jl
-export solvePotentialShape, solvePotentialShapePW,
-    scatteredField, solvePotential_forError
 
 #methods, optimize_phis.jl
 export optimize_φ
 #methods, optimize_rs.jl
 export optimize_radius
-#methods, visualization_pgf.jl
-export plotNearField_pgf, drawShapes_pgf
-#methods, utilities.jl
-export find_border
+
 
 # For advanced plotting with pgfplots
 import DataFrames, CSV, PGFPlotsX; const pgf = PGFPlotsX
 include("visualization_pgf.jl")
+#methods, visualization_pgf.jl
+export plotNearField_pgf, drawShapes_pgf
 
 #temp
 include("optimize_rs_old.jl")
+
 export divideSpace, FMMtruncation, particleExpansion, FMMbuildMatrices
 
 export FMMbuffer, FMMmatrices

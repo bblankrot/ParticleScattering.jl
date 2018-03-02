@@ -88,11 +88,11 @@ end
 Constructor for `struct` containing all FMM options. `FMM` decides if FMM is used,
 and the following keyword arguments dictate its behavior:
 
-| nx::Integer     | number of groups in x direction (for division)
-| dx::Real        | group height/width (alternative division)
-| acc::Integer    | accuracy digits for translation truncation, and also for gmres if `tol` is not given
-| tol::Real       | gmres tolerance
-| method::String  | method used: for now can be "pre" or "pre2". Mainly used for development
+- `nx::Integer`: number of groups in x direction (for division)
+- `dx::Real`: group height/width (alternative division)
+- `acc::Integer`: accuracy digits for translation truncation, and also for gmres if `tol` is not given
+- `tol::Real`: gmres tolerance
+- `method::String`: method used: for now can be "pre" or "pre2". Mainly used for development.
 """
 mutable struct FMMoptions
     FMM::Bool       #Is FMM used?

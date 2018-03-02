@@ -2,14 +2,15 @@ using Documenter, ParticleScattering
 
 makedocs(format = :html,
     sitename = "ParticleScattering.jl",
-    authors = "Boaz Blankrot"
+    authors = "Boaz Blankrot",
     linkcheck = !("skiplinks" in ARGS),
     pages = Any[
-        "Main" => "index.md",
+        "Home" => "index.md",
         "Tutorials" => Any[
             "tutorial1.md",
             "tutorial2.md"
         ],
+        "Choosing Minimal N and P" => "minimalNP.md",
         "api.md"
     ]
 )
@@ -17,7 +18,6 @@ makedocs(format = :html,
 deploydocs(
     repo   = "github.com/bblankrot/ParticleScattering.jl.git",
     target = "build",
-    julia = "0.6",
     deps   = nothing,
     make   = nothing
 )

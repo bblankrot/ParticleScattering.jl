@@ -1,5 +1,5 @@
 """
-	solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0; get_inner = true, print_log = true) -> beta, inner
+	solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0; get_inner = true, verbose = true) -> beta, inner
 
 Solve the scattering problem `sp` with outer wavenumber `k0`, inner wavenumber
 `kin`, `2P+1` cylindrical harmonics per inclusion and incident plane wave angle
@@ -9,15 +9,14 @@ densities (in case of arbitrary inclusion) or inner cylindrical coefficients (in
 case of circular). By default, incident wave propagates left->right.
 
 Inner coefficients are only calculated if `get_inner` is true, and timing is
-printed if `print_log` is true.
+printed if `verbose` is true.
 """
 function solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0;
-								get_inner = true, print_log = true)
+								get_inner = true, verbose = true)
 	# This function solves for the outgoing multipole coefficients in the presence
 	# of an incident plane wave.
 	# incident wave direction - from left to right is 0:
 	# e^{ik(\cos(\θ_i),\sin(\θ_i)) \cdot \mathbf{r}}
-	println("Direct solution timing:")
 	shapes = sp.shapes;	ids = sp.ids; centers = sp.centers; φs = sp.φs
 	Ns = size(sp)
 	#first solve for single scatterer densities
@@ -57,10 +56,8 @@ function solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0
 	#in multipole expansion for circle
 	if get_inner
 		tic()
-
 		#find LU factorization once for each shape
         scatteringLU = [lufact(scatteringMatrices[iid]) for iid = 1:length(shapes)]
-
 		inner = Array{Vector{Complex{Float64}}}(Ns)
 		α_c = Array{Complex{Float64}}(2*P+1)
 		for ic = 1:Ns
@@ -79,7 +76,8 @@ function solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0
 		end
 		dt4 = toq()
 	end
-	print_log && begin
+	verbose && begin
+		println("Direct solution timing:")
 		println("Scattering matrix solution: $dt1 s")
 		println("Matrix construction: $dt2 s")
 		println("Matrix solution: $dt3 s")
@@ -221,7 +219,7 @@ function particleExpansion(k0, kin, shapes, P, ids)
 		end
 		if typeof(shapes[i]) == ShapeParams
             AB = shapeMultipoleExpansion(k0, shapes[i].t, shapes[i].ft, shapes[i].dft, P)
-    		sigma_mu_mult = solvePotentialShape(k0, kin, P, shapes[i].t, shapes[i].ft, shapes[i].dft)
+    		sigma_mu_mult = get_potential(k0, kin, P, shapes[i].t, shapes[i].ft, shapes[i].dft)
     		ScatMat = AB*sigma_mu_mult
             push!(scatteringMatrices, ScatMat)
             push!(innerExpansions, sigma_mu_mult)  # push!(invs, inv(ScatMat))
