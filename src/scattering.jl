@@ -1,3 +1,51 @@
+"""
+    get_potential(kout, kin, P, s::ShapeParams) -> sigma_mu
+
+Given a shape `s` with `2N` discretization nodes, outer and inner wavenumbers
+`kout`,`kin`, and the cylindrical harmonics parameter `P`, returns the potential
+densities `sigma_mu`. Each column contains the response to a different harmonic,
+where the first `2N` entries contain the single-layer potential density
+(``\sigma``), and the lower entries contain the double-layer density (``\mu``).
+"""
+function get_potential(kout, kin, P, t, ft, dft)
+    N = length(t) #N here is 2N elesewhere.
+
+    A = SDNTpotentialsdiff(kout, kin, t, ft, dft)
+    LU = lufact(A)
+
+    sigma_mu = Array{Complex{Float64}}(2*N, 2*P+1)
+
+    #assuming the wave is sampled on the shape
+    nz = sqrt.(sum(abs2,ft,2))
+    ndz = sqrt.(sum(abs2,dft,2))
+    nzndz = nz.*ndz
+    #precompute? or negative = (-1)^n positive?
+    #no precompute
+	wro = dft[:,2].*ft[:,1] - dft[:,1].*ft[:,2]
+	zz = dft[:,1].*ft[:,1] + dft[:,2].*ft[:,2]
+
+    bessp = besselj.(-P-1, kout*nz)
+    bess = similar(bessp)
+    du = Array{Complex{Float64}}(length(bessp))
+    rhs = Array{Complex{Float64}}(2*length(bessp))
+    for p = -P:P
+        bess[:] = besselj.(p, kout*nz)
+		du[:] = kout*bessp.*wro - (p*bess./nz).*(wro + 1im*zz)
+        rhs[:] = -[bess.*exp.(1.0im*p*t);
+               (du./nzndz).*exp.(1.0im*p*t)]
+        sigma_mu[:,p + P + 1] = LU\rhs
+        copy!(bessp, bess)
+    end
+    return sigma_mu
+end
+
+"""
+    get_potential(kout, kin, P, t, ft, dft) -> sigma_mu
+Same, but with the `ShapeParams` supplied directly.
+"""
+get_potential(kout, kin, P, s::ShapeParams) =
+    get_potential(kout, kin, P, s.t, s.ft, s.dft)
+
 function SDNTpotentialsdiff(k1, k2, t, ft, dft)
     #now just returns system matrix, utilizes similarities between upper and lower triangles
     iseven(length(t)) ?
@@ -70,38 +118,6 @@ function SDNTpotentialsdiff(k1, k2, t, ft, dft)
     return A
 end
 
-function solvePotentialShape(kout, kin, P, t, ft, dft)
-    N = length(t) #N here is different...
-
-    A = SDNTpotentialsdiff(kout, kin, t, ft, dft)
-    LU = lufact(A) #w/o pivoting: (L,U) = lu(A,Val{false})
-
-    sigma_mu = Array{Complex{Float64}}(2*N, 2*P+1)
-
-    #assuming the wave is sampled on the shape
-    nz = sqrt.(sum(abs2,ft,2))
-    ndz = sqrt.(sum(abs2,dft,2))
-    nzndz = nz.*ndz
-    #precompute? or negative = (-1)^n positive?
-    #no precompute
-	wro = dft[:,2].*ft[:,1] - dft[:,1].*ft[:,2]
-	zz = dft[:,1].*ft[:,1] + dft[:,2].*ft[:,2]
-
-    bessp = besselj.(-P-1, kout*nz)
-    bess = similar(bessp)
-    du = Array{Complex{Float64}}(length(bessp))
-    rhs = Array{Complex{Float64}}(2*length(bessp))
-    for p = -P:P
-        bess[:] = besselj.(p, kout*nz)
-		du[:] = kout*bessp.*wro - (p*bess./nz).*(wro + 1im*zz)
-        rhs[:] = -[bess.*exp.(1.0im*p*t);
-               (du./nzndz).*exp.(1.0im*p*t)]
-        sigma_mu[:,p + P + 1] = LU\rhs #w/o pivoting: sigma_mu[:,p + P + 1] = U\(L\rhs)
-        copy!(bessp,bess)
-    end
-    return sigma_mu
-end
-
 function KM_weights(N)
     #computes the weights necessary for Kussmaul-Martensen quadrature (evenly
     #spaced).
@@ -114,7 +130,16 @@ function KM_weights(N)
     return (R,K)
 end
 
-function solvePotentialShapePW(kout, kin, s, θ_i)
+"""
+    get_potentialPW(kout, kin, s::ShapeParams, θ_i) -> sigma_mu
+
+Given a shape `s` with `2N` discretization nodes, outer and inner wavenumbers
+`kout`,`kin`, and an incident plane-wave angle, returns the potential
+densities vector `sigma_mu`. The first `2N` entries contain the single-layer
+potential density (``\sigma``), and the lower entries contain the double-layer
+density (``\mu``).
+"""
+function get_potentialPW(kout, kin, s, θ_i)
     N = length(s.t) #N here is different...
 
     A = SDNTpotentialsdiff(kout, kin, s.t, s.ft, s.dft)
@@ -128,22 +153,43 @@ function solvePotentialShapePW(kout, kin, s, θ_i)
     sigma_mu = LU\rhs
 end
 
-function scatteredField(sigma_mu, k, t, ft, dft, p)
+
+"""
+    scatteredfield(sigma_mu, k, s::ShapeParams, p) -> u_s
+
+Computes field scattered by the particle `s` with pre-computed potential
+densities `sigma_mu` at points `p`. All points must either be inside `k = kin`
+or outside `k = kout` the particle.
+"""
+scatteredfield(sigma_mu, k, s::ShapeParams, p) =
+    scatteredfield(sigma_mu, k, s.t, s.ft, s.dft, p)
+
+"""
+    scatteredfield(sigma_mu, k, t, ft, dft, p) -> u_s
+
+Same, but with the `ShapeParams` supplied directly. Useful for computing `u_s`
+for rotated shapes.
+"""
+function scatteredfield(sigma_mu, k, t, ft, dft, p)
     #calculates the scattered field of a shape with parametrization ft(t),...,dft(t)
     #in space with wavenumber k at points p *off* the boundary. For field on the boundary,
     #SDpotentials function must be used.
+    if size(p,2) == 1 #single point, rotate it
+        p = p.'
+    end
     N = length(t)
     M = size(p,1)
+    r = zeros(Float64,2)
     #loop is faster here:
     SDout = Array{Complex{Float64}}(M, 2*N)
     for j = 1:N
         ndft = hypot(dft[j,1],dft[j,2])
         for i = 1:M
-            r = [p[i,1] - ft[j,1];p[i,2] - ft[j,2]]
+            r[:] = [p[i,1] - ft[j,1];p[i,2] - ft[j,2]]
             nr = hypot(r[1],r[2])
             if nr < eps()
                 #TODO: use SDNTpotentialsdiff here
-                warn("Encountered singularity in scatteredField.")
+                warn("Encountered singularity in scatteredfield.")
                 SDout[i,j] = 0
                 SDout[i,j+N] = 0
                 continue
@@ -152,58 +198,7 @@ function scatteredField(sigma_mu, k, t, ft, dft, p)
             SDout[i,j+N] = (2*pi/N)*0.25im*k*besselh(1,1, k*nr)*(dft[j,2]*r[1] - dft[j,1]*r[2])/nr
         end
     end
-    u_scat = SDout*sigma_mu
-end
-
-function scatteredField(sigma_mu, kout, s::ShapeParams, p::Array{Float64,2})
-    #calculates the scattered field of a shape with parametrization ft(t),...,dft(t)
-    #in space with wavenumber kout at points p *off* the boundary. For field on the boundary,
-    #SDpotentials function must be used.
-    N = length(s.t)
-    M = size(p,1)
-    #loop is faster here:
-    SDout = Array{Complex{Float64}}(M, 2*N)
-    for j = 1:N
-        ndft = hypot(s.dft[j,1], s.dft[j,2])
-        for i = 1:M
-            r = [p[i,1] - s.ft[j,1];p[i,2] - s.ft[j,2]]
-            nr = hypot(r[1], r[2])
-            if nr < eps()
-                #TODO: use SDNTpotentialsdiff here
-                warn("Encountered singularity in scatteredField.")
-                SDout[i,j] = 0
-                SDout[i,j+N] = 0
-                continue
-            end
-            SDout[i,j] = besselh(0,1,kout*nr)*ndft
-            SDout[i,j+N] = kout*besselh(1,1,kout*nr)*(s.dft[j,2]*r[1] - s.dft[j,1]*r[2])/nr
-        end
-    end
-    u_scat = (0.5im*π/N)*(SDout*sigma_mu)
-end
-
-function scatteredField(sigma_mu, kout, s::ShapeParams, p::Array{Float64,1})
-    #calculates the scattered field of a shape with parametrization ft(t),...,dft(t)
-    #in space with wavenumber kout at points p *off* the boundary. For field on the boundary,
-    #SDpotentials function must be used.
-    N = length(s.t)
-    SDout = Array{Complex{Float64}}(2*N)
-    for j = 1:N
-        ndft = hypot(s.dft[j,1], s.dft[j,2])
-        i = 1
-        r = [p[1] - s.ft[j,1]; p[2] - s.ft[j,2]]
-        nr = hypot(r[1], r[2])
-        if nr < eps()
-            #TODO: use SDNTpotentialsdiff here
-            warn("Encountered singularity in scatteredField.")
-            SDout[j] = 0
-            SDout[j+N] = 0
-            continue
-        end
-        SDout[j] = besselh(0,1,kout*nr)*ndft
-        SDout[j+N] = kout*besselh(1,1,kout*nr)*(s.dft[j,2]*r[1] - s.dft[j,1]*r[2])/nr
-    end
-    u_scat = (0.5im*π/N)*(SDout.'*sigma_mu)
+    u_s = SDout*sigma_mu
 end
 
 function shapeMultipoleExpansion(k, t, ft, dft, P)

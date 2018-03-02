@@ -86,8 +86,8 @@ function findMinP(N, errN, shapefun, N_points, k0, kin; P_last = 1, P_max = 100)
 
 		err_points = [2.0*s.R*f(i*2*pi/N_points) for i=0:(N_points-1), f in (cos,sin)]
 		#compute direct solution for comparison
-		inner = solvePotentialShapePW(k0, kin, s, 0.0)
-		E_quadrature = scatteredField(inner, k0, s, err_points)
+		inner = get_potentialPW(k0, kin, s, 0.0)
+		E_quadrature = scatteredfield(inner, k0, s, err_points)
 		for P = P_last:P_max
 			err = ParticleScattering.minimumP_helper(k0, kin, s, P, N_points,
 					err_points, E_quadrature, E_multipole)
