@@ -6,7 +6,7 @@ results.
 FMM groups nearby particles and approximates their cumulative effect on "far"
 particles. Here, the grouping is done by drawing a square grid over computational
 region encompassing the particles. The error of these approximations is fairly
-controllable, especially for mid- to high-frequency scattering.
+ controllable, especially for mid- to high-frequency scattering.
 
 Another difference between the direct and FMM solvers is that the latter requires
 an iterative solver for the system of equations (GMRES is used here). Thus a
@@ -80,7 +80,7 @@ colorbar()
 
 **Note:**
 Currently, FMM is used to accelerate the solution of the scattering problem,
-but not the field calculation in `plot_near_field`.
+but not for the field calculation in `plot_near_field`.
 
 #### Direct vs. FMM timing
 
@@ -109,12 +109,9 @@ betas = Array{Vector}(Pmax)
 betas_FMM = Array{Vector}(Pmax)
 inners = Array{Vector}(Pmax)
 inners_FMM = Array{Vector}(Pmax)
-fmmopts = ParticleScattering.FMMoptions(true, nx = 1, acc = 9)
 for P = 1:Pmax
-	betas[P], inners[P] = solve_particle_scattering(k0, kin, P, sp, 0.0;
-                            verbose = false)
-	res, inners_FMM[P] = solve_particle_scattering_FMM(k0, kin, P, sp, 0.0,
-                            fmmopts; verbose = false)
+	betas[P], inners[P] = solve_particle_scattering(k0, kin, P, sp, 0.0; verbose = false)
+	res, inners_FMM[P] = solve_particle_scattering_FMM(k0, kin, P, sp, 0.0, ParticleScattering.FMMoptions(true, nx = 1, acc = 9); verbose = false)
 	betas_FMM[P] = res[1]
 end
 
@@ -136,8 +133,7 @@ accuracy (plotting the results separately also shows that the FMM results stay
 the same, while the direct results blow up). This is due to two main reasons -
 conditioning of the system matrix, and the fact that high-order cylindrical
 harmonics are responsible for substantially greater potential densities than
-lower-order ones. Both of these are impacted by the number of particles as well
-as the wavelength.
+lower-order ones. Both of these are impacted by the number of particles as well as the wavelength.
 
 This ties in with [Choosing Minimal `N` and `P`](@ref) &ndash; not only does
 increasing `P` far beyond that required for a certain error impact runtime, but
