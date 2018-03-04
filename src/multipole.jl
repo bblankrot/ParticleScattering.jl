@@ -207,8 +207,8 @@ function innerFieldCircle(kin, gamma, center::Array{Float64,1}, points::Array{Fl
 end
 
 function particleExpansion(k0, kin, shapes, P, ids)
-    scatteringMatrices = Array{Union{SparseMatrixCSC{Complex{Float64},Int64},Array{Complex{Float64},2}}}(0)
-	innerExpansions = Array{Union{SparseMatrixCSC{Complex{Float64},Int64},Array{Complex{Float64},2}}}(0)
+    scatteringMatrices = Array{Any}(0)
+	innerExpansions = Array{Any}(0)
 	for i = 1:length(shapes)
         #no use in computing matrices if shape doesn't actually show up! push garbage to maintain order
 		if all(ids .!= i)

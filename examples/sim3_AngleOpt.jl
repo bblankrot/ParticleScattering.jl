@@ -29,7 +29,7 @@ P,errP = (12, 8.538711552646218e-7)#
 #P,errP = minimumP(k0, kin, shapes[1], tol = 1e-6, N_points = 20_000, P_min = 1, P_max = 120)
 
 φs = zeros(Float64,Ns)
-ids = ones(Int64,Ns)
+ids = ones(Int, Ns)
 
 fmm_options = FMMoptions(true, acc = 6, nx = 9, method="pre")
 

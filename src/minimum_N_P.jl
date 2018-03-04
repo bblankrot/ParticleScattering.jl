@@ -29,7 +29,7 @@ function minimumN(kout, kin, shape_function; tol = 1e-9, N_points = 10_000, N_st
     #if starting point was too good, it can be our new max
     err_start < tol && (N_max = min(N_start,N_max))
 
-    N = round(Int64, N_start*(err_start/tol)^(1/3))
+    N = round(Int, N_start*(err_start/tol)^(1/3))
     N = max(N, N_min)
 
     err = minimumN_helper(N, kout, kin, shape_function, err_points, E_comp, E_ana)

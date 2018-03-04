@@ -9,9 +9,9 @@ function optimize_radius_dep(rs0, r_min, r_max, points, P, θ_i, k0, kin, center
     mFMM = FMMbuildMatrices(k0, P, P2, Q, groups, centers, boxSize, tri=true)
 
     ids = collect(1:Ns) #all different sizes
-    scatteringMatrices = Array{SparseMatrixCSC{Complex{Float64},Int64}}(0)
+    scatteringMatrices = Array{SparseMatrixCSC{Complex{Float64},Int}}(0)
     #allocate derivative
-    dS_S = Array{SparseMatrixCSC{Complex{Float64},Int64}}(0)
+    dS_S = Array{SparseMatrixCSC{Complex{Float64},Int}}(0)
     for ic = 1:Ns
         push!(scatteringMatrices,speye(2*P+1))
         push!(dS_S,speye(2*P+1))

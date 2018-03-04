@@ -1,7 +1,7 @@
 function FMMtruncation(accuracy, boxSize, k)
     #TODO: use different truncation for different boxes???
     kd = sqrt(2)*boxSize*k
-    P2 = ceil(Int64, kd + 1.8*accuracy^(2/3)*(kd)^(1/3))
+    P2 = ceil(Int, kd + 1.8*accuracy^(2/3)*(kd)^(1/3))
     Q = 2*P2 + 2
     return P2, Q
 end
@@ -26,14 +26,14 @@ function divideSpace(centers::Array{Float64,2}, options; drawGroups = false)
         #size of square boxes specified
         #recenter x to fit boxes
         nx = findfirst(n -> (a*n)>=(x_max-x_min),
-                        1:Int64(ceil((x_max-x_min)/a))+1)
+                        1:Int(ceil((x_max-x_min)/a))+1)
         leftover_x = a*nx - (x_max-x_min)
         x_max += 0.5*leftover_x
         x_min -= 0.5*leftover_x
     end
     #recenter y to fit boxes
     ny = findfirst(n-> (a*n)>=(y_max-y_min),
-                    1:Int64(ceil((y_max-y_min)/a))+1)
+                    1:Int(ceil((y_max-y_min)/a))+1)
     leftover_y = max(a*ny - (y_max-y_min),0.0)
     y_max += 0.5*leftover_y
     y_min -= 0.5*leftover_y
@@ -133,8 +133,8 @@ function FMMnearMatrix(k, P, groups, centers, boxSize, num)
     Ns = size(centers,1)
     G = length(groups)
     W = 2*P+1
-    Is = Array{Int64}(num*W^2)
-    Js = Array{Int64}(num*W^2)
+    Is = Array{Int}(num*W^2)
+    Js = Array{Int}(num*W^2)
     Zs = Array{Complex{Float64}}(num*W^2)
     mindist2 = 3*boxSize^2 #anywhere between 2 and 4
     ind = 0
@@ -175,8 +175,8 @@ function FMMnearMatrix_upperTri(k, P, groups, centers, boxSize, num)
     Ns = size(centers,1)
     G = length(groups)
     W = 2*P+1
-    Is = Array{Int64}(num*W^2)
-    Js = Array{Int64}(num*W^2)
+    Is = Array{Int}(num*W^2)
+    Js = Array{Int}(num*W^2)
     Zs = Array{Complex{Float64}}(num*W^2)
     mindist2 = 3*boxSize^2 #anywhere between 2 and 4
     ind = 0

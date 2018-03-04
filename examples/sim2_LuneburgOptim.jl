@@ -9,7 +9,7 @@ a_lens = 0.2*l0
 R_lens = 10*a_lens
 
 kin = k0*sqrt(er)
-N_cells = Int64(round(2*R_lens/a_lens))
+N_cells = Int(round(2*R_lens/a_lens))
 centers, ids_lnbrg, rs_lnbrg = luneburg_grid(R_lens, N_cells, er)
 φs = zeros(Float64, length(ids_lnbrg))
 θ_i = 0.0
