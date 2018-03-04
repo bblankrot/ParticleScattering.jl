@@ -85,10 +85,12 @@ xlabel("x/a")
 ylabel("y/a")
 ```
 
+```@raw html
 <div style="text-align:center">
 <img alt=optim_radius_before src="./assets/optim_radius_before.png" style="width:40%; height:auto; margin:1%; max-width: 300px">
 <img alt=optim_radius_after src="./assets/optim_radius_after.png" style="width:40%; height:auto; margin:1%; max-width: 300px">
 </div><p style="clear:both;">
+```
 
 `res` also stores the objective value as well as the g
 radient norm in each iteration.
@@ -103,6 +105,9 @@ rng = iters .== 0
 ```
 where `rng` now contains the indices at which a new outer iteration has begun.
 Finally, plotting `fobj` and `gobj` for this example yields the following plot:
+
+```@raw html
 <p style="text-align:center;"><img alt=optim_radius_conv src="./assets/optim_radius_conv.png" style="width:60%; height:auto; max-width:400px"></p>
+```
 
 where markers denote the start of an outer iteration.

@@ -37,15 +37,16 @@ import Optim
         sp1 = ScatteringProblem([CircleParams(rs0[i]) for i = 1:J], ids, centers, φs)
         sp2 = ScatteringProblem([CircleParams(rs[i]) for i = 1:J], ids, centers, φs)
 
-        u1_5 = calc_near_field(k0, kin, 5, sp1, points, θ_i; opt = fmm_options, verbose = false)[1]
-        u1_6 = calc_near_field(k0, kin, 6, sp1, points, θ_i; opt = fmm_options, verbose = false)[1]
-        u1_7 = calc_near_field(k0, kin, 7, sp1, points, θ_i; opt = fmm_options, verbose = false)[1]
-        u2_5 = calc_near_field(k0, kin, 5, sp2, points, θ_i; opt = fmm_options, verbose = false)[1]
-        u2_6 = calc_near_field(k0, kin, 6, sp2, points, θ_i; opt = fmm_options, verbose = false)[1]
-        u2_7 = calc_near_field(k0, kin, 7, sp2, points, θ_i; opt = fmm_options, verbose = false)[1]
+        points_ = [4a 0.0; 0.0 0.0]
+        u1_5 = calc_near_field(k0, kin, 5, sp1, points_, θ_i; opt = fmm_options, verbose = false)
+        u1_6 = calc_near_field(k0, kin, 6, sp1, points_, θ_i; opt = fmm_options, verbose = false)
+        u1_7 = calc_near_field(k0, kin, 7, sp1, points_, θ_i; opt = fmm_options, verbose = false)
+        u2_5 = calc_near_field(k0, kin, 5, sp2, points_, θ_i; opt = fmm_options, verbose = false)
+        u2_6 = calc_near_field(k0, kin, 6, sp2, points_, θ_i; opt = fmm_options, verbose = false)
+        u2_7 = calc_near_field(k0, kin, 7, sp2, points_, θ_i; opt = fmm_options, verbose = false)
 
-        @test abs(u1_5 - u1_6)/abs(u1_6) < 1e-6
-        @test abs(u1_5 - u1_7)/abs(u1_7) < 1e-6
-        @test abs(u2_5 - u2_6)/abs(u2_6) < 1e-6
-        @test abs(u2_5 - u2_7)/abs(u2_7) < 1e-6
+        @test norm(u1_5 - u1_6)/norm(u1_6) < 1e-6
+        @test norm(u1_5 - u1_7)/norm(u1_7) < 1e-6
+        @test norm(u2_5 - u2_6)/norm(u2_6) < 1e-6
+        @test norm(u2_5 - u2_7)/norm(u2_7) < 1e-6
 end
