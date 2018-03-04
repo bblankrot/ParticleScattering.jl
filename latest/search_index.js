@@ -97,6 +97,22 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "tutorial_optim_radius.html#",
+    "page": "Tutorial 4: Radius Optimization",
+    "title": "Tutorial 4: Radius Optimization",
+    "category": "page",
+    "text": ""
+},
+
+{
+    "location": "tutorial_optim_radius.html#Tutorial-4:-Radius-Optimization-1",
+    "page": "Tutorial 4: Radius Optimization",
+    "title": "Tutorial 4: Radius Optimization",
+    "category": "section",
+    "text": "In this tutorial, we explore radius optimization, whereby the radii of a group of circular particles are optimized simultaneously to minimize or maximize the electric field intensity at a group of points.We begin by defining a standard scattering scenario with a 5 times 5 square grid of particles:using PyPlot, ParticleScattering\nimport Optim\n\ner = 4.5\nk0 = 2π\nkin = sqrt(er)*k0\na = 0.2*2π/k0     #wavelength/5\nθ_i = 0.0\nP = 5\ncenters = square_grid(5, a)\nφs = zeros(size(centers,1))\nfmm_options = FMMoptions(true, acc = 6, dx = 2a)optimize_radius not only allows us to optimize all of the radii simultaneously, but also to assign several particles the same id, which can be useful when the target radii are expected to have symmetry of some type. Here we shall assume symmetry with respect to the x-axis (horizontal line of symmetry) with uniqueind:# let\'s impose symmetry wrt x-axis\ncenters_abs = centers[:,1] + 1im*abs.(centers[:,2])\nids, centers_abs = uniqueind(centers_abs)\nJ = maximum(ids) #number of optim varsThe same could be done for the y-axis, both axes simultaneously, or radial symmetry, by appropriately choosing center_abs. We now define the optimization parameters via Optim.Options, with convergence decided by the radii and a limited number of 5 outer iterations (with up to 5 inner iterations each). We choose to minimize the field intensity at a single point outside the structure, assert that this point will remain outside the particles regardless of their size, and set the lower and upper bounds for each circle:optim_options =  Optim.Options(x_tol = 1e-6, iterations = 5,\n                               store_trace = true, show_trace = true,\n                               allow_f_increases = true)\n\npoints = [4a 0.0]\nr_max = (0.4*a)*ones(J)\nr_min = (1e-3*a)*ones(J)\nrs0 = (0.25*a)*ones(J)\nassert(verify_min_distance([CircleParams(r_max[i]) for i = 1:J],\n        centers, ids, points))The optimization process is initiated by running:res = optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin,\n                centers, fmm_options, optim_options, minimize = true)\nrs = res.minimizerWith the optimization process complete, we can plot the electric field with the initial and optimized radii:sp1 = ScatteringProblem([CircleParams(rs0[i]) for i = 1:J], ids, centers, φs)\nplot_near_field(k0, kin, P, sp1, θ_i, x_points = 150, y_points = 150,\n        opt = fmm_options, border = 0.9*[-1;1;-1;1], normalize = a)\ncolorbar()\nclim([0;2.5])\nxlabel(\"x/a\")\nylabel(\"y/a\")\nsp2 = ScatteringProblem([CircleParams(rs[i]) for i = 1:J], ids, centers, φs)\nplot_near_field(k0, kin, P, sp2, θ_i, x_points = 150, y_points = 150,\n        opt = fmm_options, border = 0.9*[-1;1;-1;1], normalize = a)\ncolorbar()\nclim([0;2.5])\nxlabel(\"x/a\")\nylabel(\"y/a\")<div style=\"text-align:center\"> <img alt=optim_radius_before src=\"./assets/optim_radius_before.png\" style=\"width:40%; height:auto; margin:1%; max-width: 300px\"> <img alt=optim_radius_after src=\"./assets/optim_radius_after.png\" style=\"width:40%; height:auto; margin:1%; max-width: 300px\"> </div><p style=\"clear:both;\">res also stores the objective value as well as the g radient norm in each iteration. This can be extracted byinner_iters = length(res.trace)\niters = [res.trace[i].iteration for i=1:inner_iters]\nfobj = [res.trace[i].value for i=1:inner_iters]\ngobj = [res.trace[i].g_norm for i=1:inner_iters]\nrng = iters .== 0where rng now contains the indices at which a new outer iteration has begun. Finally, plotting fobj and gobj for this example yields the following plot: <p style=\"text-align:center;\"><img alt=optim_radius_conv src=\"./assets/optim_radius_conv.png\" style=\"width:60%; height:auto; max-width:400px\"></p>where markers denote the start of an outer iteration."
+},
+
+{
     "location": "minimalNP.html#",
     "page": "Choosing Minimal N and P",
     "title": "Choosing Minimal N and P",
@@ -116,8 +132,8 @@ var documenterSearchIndex = {"docs": [
     "location": "minimalNP.html#ParticleScattering.minimumN",
     "page": "Choosing Minimal N and P",
     "title": "ParticleScattering.minimumN",
-    "category": "Function",
-    "text": "minimumN(kout, kin, shape_function; tol = 1e-9, N_points = 10_000, N_start = 400, N_min = 100, N_max = 1_000) -> N, err\n\nReturn the minimum N necessary (i.e. 2N nodes) to achieve error of at most tol in the electric field for a ShapeParams inclusion created by shape_function(N) which is filled with material of wavenumber kin and surrounded by free space with wavenumber k0. Error is calculated on N_points points on the scattering disk (s.R), by assuming a fictitious line source and comparing its field to that produced by the resulting potential densities.\n\nSince for moderate wavelengths and errors, arepsilon propto N^3, we estimate N using the error of N_start, then binary search based on that guess between N_min and N_max.\n\n\n\n"
+    "category": "function",
+    "text": "minimumN(kout, kin, shape_function; tol = 1e-9, N_points = 10_000,\n    N_start = 400, N_min = 100, N_max = 1_000) -> N, err\n\nReturn the minimum N necessary (i.e. 2N nodes) to achieve error of at most tol in the electric field for a ShapeParams inclusion created by shape_function(N) which is filled with material of wavenumber kin and surrounded by free space with wavenumber k0. Error is calculated on N_points points on the scattering disk (s.R), by assuming a fictitious line source and comparing its field to that produced by the resulting potential densities.\n\nSince for moderate wavelengths and errors, arepsilon propto N^3, we estimate N using the error of N_start, then binary search based on that guess between N_min and N_max.\n\n\n\n"
 },
 
 {
@@ -156,7 +172,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering",
     "page": "API",
     "title": "ParticleScattering",
-    "category": "Module",
+    "category": "module",
     "text": "A Julia package for solving large-scale electromagnetic scattering problems in two dimensions; specifically, those containing a large number of penetrable smooth particles. Provides the ability to optimize over the particle parameters for various design problems.\n\n\n\n"
 },
 
@@ -164,7 +180,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.R_multipole",
     "page": "API",
     "title": "ParticleScattering.R_multipole",
-    "category": "Constant",
+    "category": "constant",
     "text": "R_multipole = 1.1 is the constant ratio between scattering disks and the maximal radius of their particles, and thus half the minimal distance between neighboring particles. While mathematically this can be reduced to 1 + eps(), that will increase the necessary P.\n\n\n\n"
 },
 
@@ -172,7 +188,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.AbstractShapeParams",
     "page": "API",
     "title": "ParticleScattering.AbstractShapeParams",
-    "category": "Type",
+    "category": "type",
     "text": "AbstractShapeParams\n\nAbstract type which all shape types inherit from.\n\n\n\n"
 },
 
@@ -180,7 +196,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.CircleParams",
     "page": "API",
     "title": "ParticleScattering.CircleParams",
-    "category": "Type",
+    "category": "type",
     "text": "CircleParams(R)\n\nReturns object for a circular shape, containing its radius in the field R (which is also the radius of the scattering disk).\n\nSee also: ShapeParams,R_multipole.\n\n\n\n"
 },
 
@@ -188,7 +204,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.FMMoptions",
     "page": "API",
     "title": "ParticleScattering.FMMoptions",
-    "category": "Type",
+    "category": "type",
     "text": "FMMoptions(FMM; nx = 0, dx = 0.0, acc = 0, tol = 0.0, method = \"pre\")\n\nConstructor for struct containing all FMM options. FMM decides if FMM is used, and the following keyword arguments dictate its behavior:\n\nnx::Integer: number of groups in x direction (for division)\ndx::Real: group height/width (alternative division)\nacc::Integer: accuracy digits for translation truncation, and also for gmres if tol is not given\ntol::Real: gmres tolerance\nmethod::String: method used: for now can be \"pre\" or \"pre2\". Mainly used for development.\n\n\n\n"
 },
 
@@ -196,7 +212,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.OptimBuffer",
     "page": "API",
     "title": "ParticleScattering.OptimBuffer",
-    "category": "Type",
+    "category": "type",
     "text": "OptimBuffer(Ns::Integer, P::Integer, Npoints::Integer, [J::Integer])\n\nConstructor for the OptimBuffer type, which stores some of the buffers and shared variables necessary for optimization. Includes the cylindrical harmonics coefficient vector β, field values at points of interest (f), the partial derivatives ∂β, and storage for the various right-hand side vectors used while solving for ∂β.\n\nIf the number of optimization variables J is not supplied, it is assumed that J = Ns.\n\n\n\n"
 },
 
@@ -204,7 +220,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.ScatteringProblem",
     "page": "API",
     "title": "ParticleScattering.ScatteringProblem",
-    "category": "Type",
+    "category": "type",
     "text": "ScatteringProblem(shapes, ids, centers, φs)\n\nConstructor for the ScatteringProblem type, including particle shape information for multiple-scattering problems.\n\n\n\n"
 },
 
@@ -212,7 +228,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.ShapeParams",
     "page": "API",
     "title": "ParticleScattering.ShapeParams",
-    "category": "Type",
+    "category": "type",
     "text": "ShapeParams(t,ft,dft)\n\nReturns ShapeParams object containing the parametrization of a two-dimensional shape. t is a uniform sampling of [0,2π), ft = [x(t) y(t)], and dft = [x\'(t) y\'(t)]. The field R contains the radius of the shape\'s scattering disk.\n\nSee also: CircleParams,R_multipole.\n\n\n\n"
 },
 
@@ -220,7 +236,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.calc_near_field-Tuple{Any,Any,Any,ParticleScattering.ScatteringProblem,Any,Any}",
     "page": "API",
     "title": "ParticleScattering.calc_near_field",
-    "category": "Method",
+    "category": "method",
     "text": "calc_near_field(k0, kin, P, sp::ScatteringProblem, points, θ_i;\n                        opt::FMMoptions = FMMoptions(), use_multipole = true,\n                        verbose = true)\n\nCalculates the total electric field as a result of a plane wave with incident angle θ_i scattering from the ScatteringProblem sp, at points. Uses the FMM options given by opt (default behavious is disabled FMM); use_multipole dictates whether electric field is calculated using the multipole/cylindrical harmonics (true) or falls back on potential densities (false). Either way, the multiple-scattering system is solved in the cylindrical harmonics space, and the field by a particular scatterer inside its own scattering discs is calculated by potential densities, as the cylindrical harmonics approximation is not valid there.\n\n\n\n"
 },
 
@@ -228,7 +244,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.draw_shapes",
     "page": "API",
     "title": "ParticleScattering.draw_shapes",
-    "category": "Function",
+    "category": "function",
     "text": "draw_shapes(shapes, centers, ids, φs, ax = gca())\n\nDraws all of the shapes in a given scattering problem. Parametrized shapes are drawn as polygons while circles are drawn using matplotlib\'s patch.Circle.\n\n\n\n"
 },
 
@@ -236,7 +252,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.ellipse-Tuple{Any,Any,Any}",
     "page": "API",
     "title": "ParticleScattering.ellipse",
-    "category": "Method",
+    "category": "method",
     "text": "ellipse(r1, r2, N)\n\nReturn a ShapeParams object containing the shape parametrized by (x/r1)^2 + (y/r2)^2 = 1 with 2N nodes.\n\n\n\n"
 },
 
@@ -244,7 +260,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.find_border-Tuple{ParticleScattering.ScatteringProblem,Array{Float64,2}}",
     "page": "API",
     "title": "ParticleScattering.find_border",
-    "category": "Method",
+    "category": "method",
     "text": "find_border(sp::ScatteringProblem, points::Array{Float64,2}) -> [x_min; x_max; y_min; y_max]\n\nReturns bounding box that contains all of the shapes in sp as well as specified points.\n\n\n\n"
 },
 
@@ -252,7 +268,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.find_border-Tuple{ParticleScattering.ScatteringProblem}",
     "page": "API",
     "title": "ParticleScattering.find_border",
-    "category": "Method",
+    "category": "method",
     "text": "find_border(sp::ScatteringProblem) -> [x_min; x_max; y_min; y_max]\n\nReturns bounding box that contains all of the shapes in sp.\n\n\n\n"
 },
 
@@ -260,7 +276,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.get_potential-NTuple{6,Any}",
     "page": "API",
     "title": "ParticleScattering.get_potential",
-    "category": "Method",
+    "category": "method",
     "text": "get_potential(kout, kin, P, s::ShapeParams) -> sigma_mu\n\nGiven a shape s with 2N discretization nodes, outer and inner wavenumbers kout,kin, and the cylindrical harmonics parameter P, returns the potential densities sigma_mu. Each column contains the response to a different harmonic, where the first 2N entries contain the single-layer potential density (sigma), and the lower entries contain the double-layer density (mu).\n\n\n\n"
 },
 
@@ -268,7 +284,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.get_potential-Tuple{Any,Any,Any,ParticleScattering.ShapeParams}",
     "page": "API",
     "title": "ParticleScattering.get_potential",
-    "category": "Method",
+    "category": "method",
     "text": "get_potential(kout, kin, P, t, ft, dft) -> sigma_mu\n\nSame, but with the ShapeParams supplied directly.\n\n\n\n"
 },
 
@@ -276,7 +292,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.get_potentialPW-NTuple{4,Any}",
     "page": "API",
     "title": "ParticleScattering.get_potentialPW",
-    "category": "Method",
+    "category": "method",
     "text": "get_potentialPW(kout, kin, s::ShapeParams, θ_i) -> sigma_mu\n\nGiven a shape s with 2N discretization nodes, outer and inner wavenumbers kout,kin, and an incident plane-wave angle, returns the potential densities vector sigma_mu. The first 2N entries contain the single-layer potential density (sigma), and the lower entries contain the double-layer density (mu).\n\n\n\n"
 },
 
@@ -284,7 +300,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.luneburg_grid-Tuple{Any,Any,Any}",
     "page": "API",
     "title": "ParticleScattering.luneburg_grid",
-    "category": "Method",
+    "category": "method",
     "text": "luneburg_grid(R_lens, N_cells, er; levels = 0, TM = true) -> centers, ids, rs\n\nReturns the coordinates and radii of the circular inclusions in a Luneburg lens device of radius R_lens with N_cells unit cells across its diameter. Radii are determined by averaging over cell permittivity, assuming air outside and relative permittivity er in the rods, and depends on incident field polarization (TM/TE with respect to z-axis). If levels == 0, groups identical radii together, such that rs[ids[n]] is the radius of the rod centered at (center[n,1],center[n,2]). Otherwise quantizes the radii to uniformly spaced levels.\n\n\n\n"
 },
 
@@ -292,31 +308,39 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.minimumN-Tuple{Any,Any,Any}",
     "page": "API",
     "title": "ParticleScattering.minimumN",
-    "category": "Method",
-    "text": "minimumN(kout, kin, shape_function; tol = 1e-9, N_points = 10_000, N_start = 400, N_min = 100, N_max = 1_000) -> N, err\n\nReturn the minimum N necessary (i.e. 2N nodes) to achieve error of at most tol in the electric field for a ShapeParams inclusion created by shape_function(N) which is filled with material of wavenumber kin and surrounded by free space with wavenumber k0. Error is calculated on N_points points on the scattering disk (s.R), by assuming a fictitious line source and comparing its field to that produced by the resulting potential densities.\n\nSince for moderate wavelengths and errors, arepsilon propto N^3, we estimate N using the error of N_start, then binary search based on that guess between N_min and N_max.\n\n\n\n"
+    "category": "method",
+    "text": "minimumN(kout, kin, shape_function; tol = 1e-9, N_points = 10_000,\n    N_start = 400, N_min = 100, N_max = 1_000) -> N, err\n\nReturn the minimum N necessary (i.e. 2N nodes) to achieve error of at most tol in the electric field for a ShapeParams inclusion created by shape_function(N) which is filled with material of wavenumber kin and surrounded by free space with wavenumber k0. Error is calculated on N_points points on the scattering disk (s.R), by assuming a fictitious line source and comparing its field to that produced by the resulting potential densities.\n\nSince for moderate wavelengths and errors, arepsilon propto N^3, we estimate N using the error of N_start, then binary search based on that guess between N_min and N_max.\n\n\n\n"
 },
 
 {
     "location": "api.html#ParticleScattering.minimumP-Tuple{Any,Any,ParticleScattering.ShapeParams}",
     "page": "API",
     "title": "ParticleScattering.minimumP",
-    "category": "Method",
-    "text": "minimumP(k0, kin, s::ShapeParams; tol = 1e-9, N_points = 10_000, P_min = 1, P_max = 60, dist = 2) -> P, errP\n\nReturn the minimum P necessary to achieve error of at most tol in the electric field, when compared to that obtained with 2N discretization, for a ShapeParams inclusion filled with material of wavenumber kin and surrounded by free space with wavenumber k0. Error is calculated on N_points points on a disk of radius dist*s.R.\n\nUses binary search between P_min and P_max.\n\n\n\n"
+    "category": "method",
+    "text": "minimumP(k0, kin, s::ShapeParams; tol = 1e-9, N_points = 10_000, P_min = 1,\n    P_max = 60, dist = 2) -> P, errP\n\nReturn the minimum P necessary to achieve error of at most tol in the electric field, when compared to that obtained with 2N discretization, for a ShapeParams inclusion filled with material of wavenumber kin and surrounded by free space with wavenumber k0. Error is calculated on N_points points on a disk of radius dist*s.R.\n\nUses binary search between P_min and P_max.\n\n\n\n"
 },
 
 {
-    "location": "api.html#ParticleScattering.optimize_φ-NTuple{13,Any}",
+    "location": "api.html#ParticleScattering.optimize_radius-Tuple{Any,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any,Optim.Options}",
+    "page": "API",
+    "title": "ParticleScattering.optimize_radius",
+    "category": "method",
+    "text": "optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin, centers,\n    fmmopts, optimopts::Optim.Options; minimize = true, method = \"BFGS\")\n\nOptimize the radii of circular particles for minimization or maximization of the field intensity at points, depending on minimize. Uses Optim\'s Fminbox box-contrained optimization to contain radii in feasible rangle, given in scalar or vector form by r_min and r_max.\n\nHere, ids allows for grouping particles - for example, to maintain symmetry of the optimized device. optimopts defines the convergence criteria and other optimization parameters for both the inner and outer iterations. method can be either \"BFGS\" or \"LBFGS\". See the Fminbox documentation for more details.\n\nReturns an object of type ??????\n\n\n\n"
+},
+
+{
+    "location": "api.html#ParticleScattering.optimize_φ-Tuple{Any,Any,Any,Any,Any,Any,Any,Any,Any,Any,Optim.Options,Optim.AbstractOptimizer}",
     "page": "API",
     "title": "ParticleScattering.optimize_φ",
-    "category": "Method",
-    "text": "optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids, fmmopts, optimopts, minimize, method)\n\n\n\n"
+    "category": "method",
+    "text": "optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids, fmmopts,\n    optimopts::Optim.Options, method::Optim.AbstractOptimizer;\n    minimize = true)\n\nOptimize the rotation angles of a particle collection for minimization or maximization of the field intensity at points, depending on minimize. optimopts and method define the optimization emthod, convergence criteria, and other optimization parameters. Returns an object of type Optim.MultivariateOptimizationResults.\n\n\n\n"
 },
 
 {
     "location": "api.html#ParticleScattering.plot_far_field",
     "page": "API",
     "title": "ParticleScattering.plot_far_field",
-    "category": "Function",
+    "category": "function",
     "text": "plot_far_field(k0, kin, P, sp::ScatteringProblem, θ_i = 0;\n                    opt::FMMoptions = FMMoptions(), use_multipole = true,\n                    plot_points = 200)\n\nPlots the echo width (radar cross section in two dimensions) for a given scattering problem. opt, use_multipole are as in plot_near_field. Also returns the echo width.\n\n\n\n"
 },
 
@@ -324,7 +348,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.plot_near_field",
     "page": "API",
     "title": "ParticleScattering.plot_near_field",
-    "category": "Function",
+    "category": "function",
     "text": "plot_near_field(k0, kin, P, sp::ScatteringProblem, θ_i = 0;\n                    opt::FMMoptions = FMMoptions(), use_multipole = true,\n                    x_points = 201, y_points = 201, border = find_border(sp),\n                    normalize = 1.0)\n\nPlots the total electric field as a result of a plane wave with incident angle θ_i scattering from the ScatteringProblem sp, using matplotlib\'s pcolormesh. Can accept number of sampling points in each direction plus bounding box or calculate automatically.\n\nUses the FMM options given by opt (default behavious is disabled FMM); use_multipole dictates whether electric field is calculated using the multipole/cylindrical harmonics (true) or falls back on potential densities (false). Either way, the multiple-scattering system is solved in the cylindrical harmonics space. Normalizes all distances and sizes in plot (but not output) by normalize.\n\nReturns the calculated field in two formats:\n\n(points, Ez) where Ez[i] is the total electric field at points[i,:], and\n(xgrid,ygrid,zgrid), the format suitable for pcolormesh, where zgrid[i,j]\n\ncontains the field at (mean(xgrid[i, j:j+1]), mean(ygrid[i:i+1, j])).\n\n\n\n"
 },
 
@@ -332,7 +356,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.randpoints-NTuple{4,Any}",
     "page": "API",
     "title": "ParticleScattering.randpoints",
-    "category": "Method",
+    "category": "method",
     "text": "randpoints(M, dmin, width, height; failures = 100)\n\nReturn centers, an (M,2) array containing M points distanced at least dmin in a width by height box. Fails failures times successively before giving up.\n\n\n\n"
 },
 
@@ -340,7 +364,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.randpoints-NTuple{5,Any}",
     "page": "API",
     "title": "ParticleScattering.randpoints",
-    "category": "Method",
+    "category": "method",
     "text": "randpoints(M, dmin, width, height, points; failures = 100)\n\nSame as randpoints(M, dmin, width, height; failures = 100) but also requires centers to be distanced at least dmin from points.\n\n\n\n"
 },
 
@@ -348,7 +372,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.rect_grid-Tuple{Integer,Integer,Any,Any}",
     "page": "API",
     "title": "ParticleScattering.rect_grid",
-    "category": "Method",
+    "category": "method",
     "text": "rect_grid(a::Integer, b::Integer, dx, dy)\n\nReturn centers, an (a*b,2) array containing the points spanned by a points distanced dx and b points distanced dy, in the x and y directions, respectively.\n\n\n\n"
 },
 
@@ -356,7 +380,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.rounded_star-NTuple{4,Any}",
     "page": "API",
     "title": "ParticleScattering.rounded_star",
-    "category": "Method",
+    "category": "method",
     "text": "rounded_star(r, d, num, N)\n\nReturn a ShapeParams object containing the shape parametrized by (x()y()) = (r + d*cos(*num))*(cos()sin()) with 2N nodes.\n\n\n\n"
 },
 
@@ -364,7 +388,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.scatteredfield-NTuple{6,Any}",
     "page": "API",
     "title": "ParticleScattering.scatteredfield",
-    "category": "Method",
+    "category": "method",
     "text": "scatteredfield(sigma_mu, k, t, ft, dft, p) -> u_s\n\nSame, but with the ShapeParams supplied directly. Useful for computing u_s for rotated shapes.\n\n\n\n"
 },
 
@@ -372,7 +396,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.scatteredfield-Tuple{Any,Any,ParticleScattering.ShapeParams,Any}",
     "page": "API",
     "title": "ParticleScattering.scatteredfield",
-    "category": "Method",
+    "category": "method",
     "text": "scatteredfield(sigma_mu, k, s::ShapeParams, p) -> u_s\n\nComputes field scattered by the particle s with pre-computed potential densities sigma_mu at points p. All points must either be inside k = kin or outside k = kout the particle.\n\n\n\n"
 },
 
@@ -380,7 +404,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.solve_particle_scattering",
     "page": "API",
     "title": "ParticleScattering.solve_particle_scattering",
-    "category": "Function",
+    "category": "function",
     "text": "solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0; get_inner = true, verbose = true) -> beta, inner\n\nSolve the scattering problem sp with outer wavenumber k0, inner wavenumber kin, 2P+1 cylindrical harmonics per inclusion and incident plane wave angle θ_i. Solves multiple-scattering equation directly. Returns the cylindrical harmonics basis beta along with potential densities (in case of arbitrary inclusion) or inner cylindrical coefficients (in case of circular). By default, incident wave propagates left->right.\n\nInner coefficients are only calculated if get_inner is true, and timing is printed if verbose is true.\n\n\n\n"
 },
 
@@ -388,7 +412,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.solve_particle_scattering_FMM-Tuple{Any,Any,Any,ParticleScattering.ScatteringProblem,Any,ParticleScattering.FMMoptions}",
     "page": "API",
     "title": "ParticleScattering.solve_particle_scattering_FMM",
-    "category": "Method",
+    "category": "method",
     "text": "solve_particle_scattering_FMM(k0, kin, P, sp::ScatteringProblem, θ_i, opt::FMMoptions; plot_res = false, get_inner = true, verbose = true) -> result, inner\n\nSolve the scattering problem sp with outer wavenumber k0, inner wavenumber kin, 2P+1 cylindrical harmonics per inclusion and incident plane wave angle θ_i. Utilizes FMM with options opt to solve multiple-scattering equation. Returns the cylindrical harmonics basis beta along with convergence data in result. inner contains potential densities (in case of arbitrary inclusion) or inner cylindrical coefficients (in case of circular).\n\nplot_res controls plotting of the residual. Inner coefficients are calculated only if get_inner is true, and timing is printed if verbose is true.\n\n\n\n"
 },
 
@@ -396,7 +420,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.square_grid-Tuple{Integer,Any}",
     "page": "API",
     "title": "ParticleScattering.square_grid",
-    "category": "Method",
+    "category": "method",
     "text": "square_grid(a::Integer, d)\n\nReturn centers, an (a^2,2) array containing the points on an a by a grid of points distanced d.\n\n\n\n"
 },
 
@@ -404,15 +428,23 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.squircle-Tuple{Any,Any}",
     "page": "API",
     "title": "ParticleScattering.squircle",
-    "category": "Method",
+    "category": "method",
     "text": "squircle(r, N)\n\nReturn a ShapeParams object containing the shape parametrized by x()^4 + y()^4 = r^4 with 2N nodes.\n\n\n\n"
+},
+
+{
+    "location": "api.html#ParticleScattering.uniqueind-Union{Tuple{Array{T,1}}, Tuple{T}} where T<:Number",
+    "page": "API",
+    "title": "ParticleScattering.uniqueind",
+    "category": "method",
+    "text": "uniqueind(v::Vector{T}) where T <: Number -> inds,u\n\nGiven a vector of numbers v of length n, returns the unique subset u as well as a vector of indices inds of length n such that v == u[inds].\n\n\n\n"
 },
 
 {
     "location": "api.html#ParticleScattering.verify_min_distance-Tuple{Any,Array{Float64,2},Any,Array{Float64,2}}",
     "page": "API",
     "title": "ParticleScattering.verify_min_distance",
-    "category": "Method",
+    "category": "method",
     "text": "verify_min_distance(shapes, centers::Array{Float64,2}, ids, points::Array{Float64,2})\n\nReturns true if the shapes placed at centers are properly distanced (non-intersecting scattering disks), and all points are outside the scattering disks.\n\n\n\n"
 },
 
@@ -420,7 +452,7 @@ var documenterSearchIndex = {"docs": [
     "location": "api.html#ParticleScattering.verify_min_distance-Tuple{Any,Array{Float64,2},Any}",
     "page": "API",
     "title": "ParticleScattering.verify_min_distance",
-    "category": "Method",
+    "category": "method",
     "text": "verify_min_distance(shapes, centers::Array{Float64,2}, ids)\n\nReturns true if the shapes placed at centers are properly distanced (non-intersecting scattering disks).\n\n\n\n"
 },
 

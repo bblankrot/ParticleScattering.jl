@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Tutorial 4: Radius Optimization · ParticleScattering.jl</title><link href="https://cdnjs.cloudflare.com/ajax/libs/normalize/4.2.0/normalize.min.css" rel="stylesheet" type="text/css"/><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/default.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.2.0/require.min.js" data-main="assets/documenter.js"></script><script src="siteinfo.js"></script><script src="../versions.js"></script><link href="assets/documenter.css" rel="stylesheet" type="text/css"/></head><body><nav class="toc"><h1>ParticleScattering.jl</h1><select id="version-selector" onChange="window.location.href=this.value" style="visibility: hidden"></select><form class="search" id="search-form" action="search.html"><input id="search-query" name="q" type="text" placeholder="Search docs"/></form><ul><li><a class="toctext" href="index.html">Home</a></li><li><span class="toctext">Tutorials</span><ul><li><a class="toctext" href="tutorial1.html">Tutorial 1: Solving a Simple Multiple-Scattering Problem</a></li><li><a class="toctext" href="tutorial2.html">Tutorial 2: Accelerating Solutions with FMM</a></li><li class="current"><a class="toctext" href="tutorial_optim_radius.html">Tutorial 4: Radius Optimization</a><ul class="internal"></ul></li></ul></li><li><a class="toctext" href="minimalNP.html">Choosing Minimal N and P</a></li><li><a class="toctext" href="api.html">API</a></li></ul></nav><article id="docs"><header><nav><ul><li>Tutorials</li><li><a href="tutorial_optim_radius.html">Tutorial 4: Radius Optimization</a></li></ul><a class="edit-page" href="https://github.com/bblankrot/ParticleScattering.jl/blob/master/docs/src/tutorial_optim_radius.md"><span class="fa"></span> Edit on GitHub</a></nav><hr/><div id="topbar"><span>Tutorial 4: Radius Optimization</span><a class="fa fa-bars" href="#"></a></div></header><h1><a class="nav-anchor" id="Tutorial-4:-Radius-Optimization-1" href="#Tutorial-4:-Radius-Optimization-1">Tutorial 4: Radius Optimization</a></h1><p>In this tutorial, we explore radius optimization, whereby the radii of a group of circular particles are optimized simultaneously to minimize or maximize the electric field intensity at a group of points.</p><p>We begin by defining a standard scattering scenario with a <span>$5 \times 5$</span> square grid of particles:</p><pre><code class="language-julia">using PyPlot, ParticleScattering
+import Optim
+
+er = 4.5
+k0 = 2π
+kin = sqrt(er)*k0
+a = 0.2*2π/k0     #wavelength/5
+θ_i = 0.0
+P = 5
+centers = square_grid(5, a)
+φs = zeros(size(centers,1))
+fmm_options = FMMoptions(true, acc = 6, dx = 2a)</code></pre><p><a href="api.html#ParticleScattering.optimize_radius-Tuple{Any,Any,Any,Any,Any,Any,Any,Any,Any,Any,Any,Optim.Options}"><code>optimize_radius</code></a> not only allows us to optimize all of the radii simultaneously, but also to assign several particles the same <code>id</code>, which can be useful when the target radii are expected to have symmetry of some type. Here we shall assume symmetry with respect to the <span>$x$</span>-axis (horizontal line of symmetry) with <code>uniqueind</code>:</p><pre><code class="language-julia"># let&#39;s impose symmetry wrt x-axis
+centers_abs = centers[:,1] + 1im*abs.(centers[:,2])
+ids, centers_abs = uniqueind(centers_abs)
+J = maximum(ids) #number of optim vars</code></pre><p>The same could be done for the <span>$y$</span>-axis, both axes simultaneously, or radial symmetry, by appropriately choosing <code>center_abs</code>. We now define the optimization parameters via <code>Optim.Options</code>, with convergence decided by the radii and a limited number of 5 outer iterations (with up to 5 inner iterations each). We choose to minimize the field intensity at a single point outside the structure, assert that this point will remain outside the particles regardless of their size, and set the lower and upper bounds for each circle:</p><pre><code class="language-julia">optim_options =  Optim.Options(x_tol = 1e-6, iterations = 5,
+                               store_trace = true, show_trace = true,
+                               allow_f_increases = true)
+
+points = [4a 0.0]
+r_max = (0.4*a)*ones(J)
+r_min = (1e-3*a)*ones(J)
+rs0 = (0.25*a)*ones(J)
+assert(verify_min_distance([CircleParams(r_max[i]) for i = 1:J],
+        centers, ids, points))</code></pre><p>The optimization process is initiated by running:</p><pre><code class="language-julia">res = optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin,
+                centers, fmm_options, optim_options, minimize = true)
+rs = res.minimizer</code></pre><p>With the optimization process complete, we can plot the electric field with the initial and optimized radii:</p><pre><code class="language-julia">sp1 = ScatteringProblem([CircleParams(rs0[i]) for i = 1:J], ids, centers, φs)
+plot_near_field(k0, kin, P, sp1, θ_i, x_points = 150, y_points = 150,
+        opt = fmm_options, border = 0.9*[-1;1;-1;1], normalize = a)
+colorbar()
+clim([0;2.5])
+xlabel(&quot;x/a&quot;)
+ylabel(&quot;y/a&quot;)
+sp2 = ScatteringProblem([CircleParams(rs[i]) for i = 1:J], ids, centers, φs)
+plot_near_field(k0, kin, P, sp2, θ_i, x_points = 150, y_points = 150,
+        opt = fmm_options, border = 0.9*[-1;1;-1;1], normalize = a)
+colorbar()
+clim([0;2.5])
+xlabel(&quot;x/a&quot;)
+ylabel(&quot;y/a&quot;)</code></pre><p>&lt;div style=&quot;text-align:center&quot;&gt; &lt;img alt=optim_radius_before src=&quot;./assets/optim_radius_before.png&quot; style=&quot;width:40%; height:auto; margin:1%; max-width: 300px&quot;&gt; &lt;img alt=optim_radius_after src=&quot;./assets/optim_radius_after.png&quot; style=&quot;width:40%; height:auto; margin:1%; max-width: 300px&quot;&gt; &lt;/div&gt;&lt;p style=&quot;clear:both;&quot;&gt;</p><p><code>res</code> also stores the objective value as well as the g radient norm in each iteration. This can be extracted by</p><pre><code class="language-julia">inner_iters = length(res.trace)
+iters = [res.trace[i].iteration for i=1:inner_iters]
+fobj = [res.trace[i].value for i=1:inner_iters]
+gobj = [res.trace[i].g_norm for i=1:inner_iters]
+rng = iters .== 0</code></pre><p>where <code>rng</code> now contains the indices at which a new outer iteration has begun. Finally, plotting <code>fobj</code> and <code>gobj</code> for this example yields the following plot: &lt;p style=&quot;text-align:center;&quot;&gt;&lt;img alt=optim_radius_conv src=&quot;./assets/optim_radius_conv.png&quot; style=&quot;width:60%; height:auto; max-width:400px&quot;&gt;&lt;/p&gt;</p><p>where markers denote the start of an outer iteration.</p><footer><hr/><a class="previous" href="tutorial2.html"><span class="direction">Previous</span><span class="title">Tutorial 2: Accelerating Solutions with FMM</span></a><a class="next" href="minimalNP.html"><span class="direction">Next</span><span class="title">Choosing Minimal N and P</span></a></footer></article></body></html>
