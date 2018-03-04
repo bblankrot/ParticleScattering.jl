@@ -8,7 +8,8 @@ makedocs(format = :html,
         "Home" => "index.md",
         "Tutorials" => Any[
             "tutorial1.md",
-            "tutorial2.md"
+            "tutorial2.md",
+            "tutorial_optim_radius.md"
         ],
         "Choosing Minimal N and P" => "minimalNP.md",
         "api.md"

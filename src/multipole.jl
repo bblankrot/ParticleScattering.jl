@@ -207,7 +207,6 @@ function innerFieldCircle(kin, gamma, center::Array{Float64,1}, points::Array{Fl
 end
 
 function particleExpansion(k0, kin, shapes, P, ids)
-	#TODO: check if results should be preallocated outside...
     scatteringMatrices = Array{Union{SparseMatrixCSC{Complex{Float64},Int64},Array{Complex{Float64},2}}}(0)
 	innerExpansions = Array{Union{SparseMatrixCSC{Complex{Float64},Int64},Array{Complex{Float64},2}}}(0)
 	for i = 1:length(shapes)
@@ -222,7 +221,7 @@ function particleExpansion(k0, kin, shapes, P, ids)
     		sigma_mu_mult = get_potential(k0, kin, P, shapes[i].t, shapes[i].ft, shapes[i].dft)
     		ScatMat = AB*sigma_mu_mult
             push!(scatteringMatrices, ScatMat)
-            push!(innerExpansions, sigma_mu_mult)  # push!(invs, inv(ScatMat))
+            push!(innerExpansions, sigma_mu_mult)
 		else
 			ScatMat, inner = circleScatteringMatrix(k0, kin, shapes[i].R, P, gamma = true)
 			push!(scatteringMatrices, ScatMat)
@@ -235,7 +234,7 @@ end
 function rotateMultipole!(arr,phi,P)
     #applies e^{-i \phi l}, p=-P...P
     #if slow, change from view to direct indexing (should be negligible despite higher memory use)
-    for p=-P:P
+    for p = -P:P
         arr[P + 1 + p] *= exp(-1.0im*phi*p)
     end
 end
@@ -243,7 +242,7 @@ end
 function rotateMultipole!(dest_arr,source_arr,phi,P)
     #applies e^{-i \phi l}, p=-P...P
     #if slow, change from view to direct indexing (should be negligible despite higher memory use)
-    for p=-P:P
+    for p = -P:P
         dest_arr[P + 1 + p] = source_arr[P + 1 + p]*exp(-1.0im*phi*p)
     end
 end

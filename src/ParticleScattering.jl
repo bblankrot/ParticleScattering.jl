@@ -8,6 +8,7 @@ module ParticleScattering
 
 #Core functionality
 using IterativeSolvers, LinearMaps, Optim
+import LineSearches
 #For plotting with PyPlot
 using PyPlot, PyCall
 @pyimport matplotlib.patches as patch #circles,polygons
@@ -42,7 +43,7 @@ export get_potential, get_potentialPW, scatteredfield
 export ScatteringProblem, OptimBuffer, FMMoptions, R_multipole,
     ShapeParams, CircleParams, AbstractShapeParams
 #methods, utilities.jl
-export find_border
+export find_border, uniqueind
 
 ### documented till here####
 

@@ -64,7 +64,7 @@ optim_method = Optim.BFGS(;linesearch = LineSearches.BackTracking())
 
 tic()
 test_max = optimize_φ(φs, points, P, θ_i, k0, kin, shapes,
-            centers, ids, fmm_options, optim_options, false, optim_method)
+            centers, ids, fmm_options, optim_options, optim_method; minimize = false)
 optim_time = toq()
 
 # %%
