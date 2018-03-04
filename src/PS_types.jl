@@ -48,9 +48,9 @@ end
 
 mutable struct FMMgroup
     #TODO: make immutable and change divideSpace accordingly.
-    point_ids::Vector{Int64}
+    point_ids::Vector{Int}
     center::Array{Float64,2}
-	size::Int64
+	size::Int
 
 	FMMgroup(point_ids,center) = new(point_ids,center,length(point_ids))
 end
@@ -76,10 +76,10 @@ mutable struct FMMmatrices
 	Agg::Array{Array{Complex{Float64},2},1}
 	Trans::Array{Array{Complex{Float64},1},1}
 	Disagg::Array{Array{Complex{Float64},2},1}
-	Znear::SparseMatrixCSC{Complex{Float64},Int64}
+	Znear::SparseMatrixCSC{Complex{Float64},Int}
 	groups::Vector{ParticleScattering.FMMgroup}
-	P2::Int64
-	Q::Int64
+	P2::Int
+	Q::Int
 end
 
 """
@@ -161,7 +161,7 @@ for multiple-scattering problems.
 """
 struct ScatteringProblem
 	shapes::Vector{T} where T <: AbstractShapeParams
-	ids::Vector{Int64}
+	ids::Vector{Int}
 	centers::Array{Float64,2}
 	φs::Vector{Float64}
 

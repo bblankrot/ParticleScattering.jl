@@ -1,4 +1,4 @@
-function FMM_mainMVP_pre!(output, beta, scatteringMatrices, φs::Vector{Float64}, ids::Vector{Int64}, P, mFMM, pre_agg, translated_sum)
+function FMM_mainMVP_pre!(output, beta, scatteringMatrices, φs::Vector{Float64}, ids::Vector{Int}, P, mFMM, pre_agg, translated_sum)
     #@simd does not have a positive effect in 0.6.0
     #calculate matrix-vector product - devectorized with pre-preconditioning
 
@@ -69,7 +69,7 @@ function FMM_mainMVP_pre!(output, beta, scatteringMatrices, φs::Vector{Float64}
     return output
 end
 
-function FMM_mainMVP_pre2!(output, beta, scatteringMatrices, φs::Vector{Float64}, ids::Vector{Int64}, P, mFMM, pre_agg, translated_sum)
+function FMM_mainMVP_pre2!(output, beta, scatteringMatrices, φs::Vector{Float64}, ids::Vector{Int}, P, mFMM, pre_agg, translated_sum)
     #calculate matrix-vector product - partially vectorized with pre-preconditioning
 
     @inbounds begin

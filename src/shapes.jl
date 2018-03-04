@@ -246,7 +246,7 @@ function luneburg_grid(R_lens, N_cells, er; levels = 0, TM = true)
         #uniform quantization
         rs = collect(linspace(minimum(r_cell), maximum(r_cell), levels))
         ddd = (r_cell - rs[1])/(rs[2] - rs[1])
-        ids = convert(Array{Int64,1},round(ddd)) + 1
+        ids = convert(Array{Int,1},round(ddd)) + 1
     else
         #only store unique vals
         ids,rs = uniqueind(r_cell)

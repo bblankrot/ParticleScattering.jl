@@ -47,7 +47,7 @@ for is = 1:simlen, it = 1:trials
         M = sqrtM^2
         centers = square_grid(sqrtM, dist)
         φs = rand(M)
-        ids = ones(Int64,M)
+        ids = ones(Int, M)
         opt = FMMoptions(true, acc = Int(-log10(tol)), nx = div(sqrtM,2), method="pre")
     end
     tic()

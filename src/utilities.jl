@@ -34,7 +34,7 @@ function pInPolygon(p, ft)
     #use winding number algorithm to test if a point p is in polygon a.
     #returns 1 if it is in, -1 if out, 0 if on.
     #TODO: Currently returns false if it is on a corner, fix this...
-    wn = Int64(0)
+    wn = Int(0)
     n = size(ft,1)
     for i = 1:n
         i_1 = i == n ? 1 : i + 1
@@ -63,7 +63,7 @@ well as a vector of indices `inds` of length `n` such that `v == u[inds]`.
 """
 function uniqueind(v::Vector{T}) where T <: Number
     #returns inds,vals such that vals[inds[i]] == v[i]
-    inds = Array{Int64}(0)
+    inds = Array{Int}(0)
     u = Array{T}(0)
     k = 0
     for val in v
