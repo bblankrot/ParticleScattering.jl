@@ -1,4 +1,23 @@
-function optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin, centers, fmmopts, optimopts, minimize, method, linesearch)
+"""
+    optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin, centers,
+        fmmopts, optimopts::Optim.Options; minimize = true, method = "BFGS")
+
+Optimize the radii of circular particles for minimization or maximization of the
+field intensity at `points`, depending on `minimize`. Uses `Optim`'s `Fminbox`
+box-contrained optimization to contain radii in feasible rangle, given in scalar
+or vector form by `r_min` and `r_max`.
+
+Here, `ids` allows for grouping particles - for example, to maintain symmetry of
+the optimized device.
+`optimopts` defines the convergence criteria and other optimization parameters
+for both the inner and outer iterations. `method` can be either `"BFGS"` or
+`"LBFGS"`. See the `Fminbox` documentation for more details.
+
+Returns an object of type ??????
+"""
+function optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin,
+                        centers, fmmopts, optimopts::Optim.Options;
+                        minimize = true, method = "BFGS")
     Ns = size(centers,1)
     J = length(rs0)
 
@@ -56,18 +75,17 @@ function optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin, cente
                                         initial_rs)
     end
 
-    outer_iterations = optimopts.iterations #?
-    inner_iterations = optimopts.iterations #?
+    outer_iterations = optimopts.iterations
 
     if method == "LBFGS"
         optimize(df, initial_rs, r_min, r_max, Fminbox{LBFGS}();
             optimizer_o = optimopts, iterations = outer_iterations,
-            linesearch = linesearch, x_tol = optimopts.x_tol,
+            linesearch = LineSearches.BackTracking(), x_tol = optimopts.x_tol,
             f_tol = optimopts.f_tol, g_tol = optimopts.g_tol)
     elseif method == "BFGS"
         optimize(df, initial_rs, r_min, r_max, Fminbox{BFGS}();
             optimizer_o = optimopts, iterations = outer_iterations,
-            linesearch = linesearch, x_tol = optimopts.x_tol,
+            linesearch = LineSearches.BackTracking(), x_tol = optimopts.x_tol,
             f_tol = optimopts.f_tol, g_tol = optimopts.g_tol)
     end
 end

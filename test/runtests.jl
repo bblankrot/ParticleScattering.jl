@@ -1,4 +1,5 @@
 using ParticleScattering
 using Base.Test
 
-include("scatteredfield.jl")
+include("scatteredfield_test.jl")
+include("optimize_radius_test.jl")

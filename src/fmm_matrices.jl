@@ -265,7 +265,7 @@ function FMMnearMatrix_upperTri(k, P, groups, centers, boxSize, num)
 end
 
 #TODO: distinguish between symmetric and non-symmetric.
-function FMMbuildMatrices(k, P, P2, Q, groups, centers, boxSize; tri::Bool = false)
+function FMMbuildMatrices(k, P, P2, Q, groups, centers, boxSize; tri = true)
     G = length(groups)
     t = Float64[2*pi*j/Q for j=0:(Q-1)]
     Agg = Array{Complex{Float64},2}[]
@@ -308,54 +308,4 @@ function FMMbuildMatrices(k, P, P2, Q, groups, centers, boxSize; tri::Bool = fal
     end
 
     FMMmatrices(Agg, Trans, Disagg, Znear, groups, P2, Q)
-end
-
-function inverseParticleScatteringMatrix(k0, kin, shapes, P, centers, φs, ids, θ_i = 0.0)
-    #returns sparse S matrix of all shapes. Inefficient because of repetitive information, but saves on time when performing repetitive MVP.
-    #TODO: speed up by only inverting each shape once, while investigating resulting error
-    Ns = size(centers,1)
-    W = 2*P+1
-    num = 0 #number of nnz elements
-    for ic = 1:Ns
-        num += (typeof(shapes[ids[ic]]) == ShapeParams ? W^2 : W)
-    end
-    Is = Array{Int64}(num)
-    Js = Array{Int64}(num)
-    Zs = Array{Complex{Float64}}(num)
-    #first solve for single scatterer densities)
-    scatteringMatrices,innerExpansions = particleExpansion(k0, kin, shapes, P, ids)
-    ind = 0
-    rng = 1:W^2
-    for ic = 1:Ns
-        if typeof(shapes[ids[ic]]) == ShapeParams
-            #avoid extra allocation
-            for ij = 1:W
-                rng_i = ij:W:W^2
-                Is[ind + rng_i] = ij + (ic-1)*W
-                rng_j = (ij-1)*W + (1:W)
-                Js[ind + rng_j] = ij + (ic-1)*W
-            end
-            if φs[ic] == 0.0
-                Zs[ind + (1:W^2)] = inv(scatteringMatrices[ids[ic]])
-                #Zs2[ind + (1:W^2)] = invs[ids[ic]]
-    		else
-    			Rot = spdiagm(Complex{Float64}[exp(-1.0im*φs[ic]*l) for l=-P:P]) #rotation matrix
-    			Zs[ind + (1:W^2)] = inv(Rot*(scatteringMatrices[ids[ic]]*conj(Rot)))
-                # for ix=1:W, iy=1:W
-                #     Zs2[ind + ix + (iy-1)*W] = invs[ids[ic]][ix,iy]*exp(-1.0im*φs[ic]*(ix-iy))
-                # end
-    		end
-            ind += W^2
-        else
-            #avoid extra allocation
-            for ij = 1:W
-                Is[ind + ij] = ij + (ic-1)*W
-                Js[ind + ij] = ij + (ic-1)*W
-            end
-            Zs[ind + (1:W)] = 1.0./diag(scatteringMatrices[ids[ic]])
-            ind += W
-        end
-	end
-    InvScatteringMatrix = sparse(Is,Js,Zs,W*Ns,W*Ns)
-    return InvScatteringMatrix,scatteringMatrices,innerExpansions
 end

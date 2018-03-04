@@ -1,4 +1,3 @@
-#TODO:If calling with gmres with initial guess of zero, supply that to save r0=b-A(x0)
 function FMM_mainMVP_pre!(output, beta, scatteringMatrices, φs::Vector{Float64}, ids::Vector{Int64}, P, mFMM, pre_agg, translated_sum)
     #@simd does not have a positive effect in 0.6.0
     #calculate matrix-vector product - devectorized with pre-preconditioning
@@ -9,9 +8,6 @@ function FMM_mainMVP_pre!(output, beta, scatteringMatrices, φs::Vector{Float64}
     fill!(pre_agg,0.0)
     #first preagg all
     for ig2 = 1:G
-        #this way is silly - no reason to store *WAY* too much aggregation data
-        #instead have one agg super matrix, and a matrix of the box-specific
-        #values.
         for is = 1:mFMM.groups[ig2].size
             indices = (mFMM.groups[ig2].point_ids[is]-1)*(2*P+1)
             for ii = 1:2*P+1
@@ -26,7 +22,7 @@ function FMM_mainMVP_pre!(output, beta, scatteringMatrices, φs::Vector{Float64}
         #translate plane waves from ig2 to ig1
         fill!(translated_sum,0.0)
         for ig2 = 1:G
-            if isempty(mFMM.Trans[(ig1-1)*G+ig2])#FMMnear(ig1,ig2) - either compute distance or check if Trans is empty
+            if isempty(mFMM.Trans[(ig1-1)*G + ig2])
                 continue
             else
                 for iQ = 1:mFMM.Q
@@ -82,9 +78,6 @@ function FMM_mainMVP_pre2!(output, beta, scatteringMatrices, φs::Vector{Float64
     fill!(pre_agg,0.0)
     #first preagg all
     for ig2 = 1:G
-        #this way is silly - no reason to store *WAY* too much aggregation data
-        #instead have one agg super matrix, and a matrix of the box-specific
-        #values.
         for is = 1:mFMM.groups[ig2].size
             indices = (mFMM.groups[ig2].point_ids[is]-1)*(2*P+1)
             for ii = 1:2*P+1
