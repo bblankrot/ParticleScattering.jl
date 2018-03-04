@@ -1,11 +1,20 @@
 """
-	optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids, fmmopts, optimopts, minimize, method)
+    optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids, fmmopts,
+        optimopts::Optim.Options, method::Optim.AbstractOptimizer;
+        minimize = true)
+
+Optimize the rotation angles of a particle collection for minimization or
+maximization of the field intensity at `points`, depending on `minimize`.
+`optimopts` and `method` define the optimization emthod, convergence criteria,
+and other optimization parameters.
+Returns an object of type `Optim.MultivariateOptimizationResults`.
 """
-function optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids, fmmopts, optimopts, minimize, method)
-    #optimization with gradient
+function optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids, fmmopts,
+                    optimopts::Optim.Options, method::Optim.AbstractOptimizer;
+                    minimize = true)
 
     #stuff that is done once
-    mFMM,scatteringMatrices,scatteringLU,buf =
+    mFMM, scatteringMatrices, scatteringLU, buf =
         prepare_fmm_reusal_φs(k0, kin, P, shapes, centers, ids, fmmopts)
     Ns = size(centers,1)
     H = optimizationHmatrix(points, centers, Ns, P, k0)
@@ -15,6 +24,7 @@ function optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids, fmmop
     shared_var = OptimBuffer(Ns,P,size(points,1))
     initial_φs = copy(φs0)
     last_φs = similar(initial_φs)
+    last_φs == initial_φs && (last_φs[1] += 1) #should never happen but has
 
     if minimize
         df = OnceDifferentiable(
@@ -118,12 +128,12 @@ function optimize_φ_g!(grad_stor, φs, shared_var, last_φs, α_inc, H, points,
     for n = 1:Ns
         #compute n-th gradient
         rng = (n-1)*(2*P+1) + (1:2*P+1)
-        rotateMultipole!(tempn,shared_var.β[rng],-φs[n],P)
+        rotateMultipole!(tempn, shared_var.β[rng], -φs[n], P)
         tempn[:] = scatteringLU[ids[n]]\tempn #LU decomp with pivoting
         tempn[:] .*= -D
-        v = view(shared_var.rhs_grad,rng)
+        v = view(shared_var.rhs_grad, rng)
         A_mul_B!(v, scatteringMatrices[ids[n]], tempn)
-        rotateMultipole!(v,φs[n],P)
+        rotateMultipole!(v, φs[n], P)
         v[:] += D.*shared_var.β[rng]
 
         shared_var.∂β[:,n], ch = gmres!(shared_var.∂β[:,n], MVP,
@@ -140,7 +150,7 @@ function optimize_φ_g!(grad_stor, φs, shared_var, last_φs, α_inc, H, points,
         v[:] = 0.0im
     end
 
-    grad_stor[:] = ifelse(minimize,2,-2)*
+    grad_stor[:] = ifelse(minimize, 2, -2)*
                     real(shared_var.∂β.'*(H*conj(shared_var.f)))
 end
 
@@ -167,11 +177,11 @@ end
 function prepare_fmm_reusal_φs(k0, kin, P, shapes, centers, ids, fmmopt)
     #setup FMM reusal
     Ns = size(centers,1)
-    (groups, boxSize) = divideSpace(centers, fmmopt)
-    (P2, Q) = FMMtruncation(fmmopt.acc, boxSize, k0)
+    groups, boxSize = divideSpace(centers, fmmopt)
+    P2, Q = FMMtruncation(fmmopt.acc, boxSize, k0)
     mFMM = FMMbuildMatrices(k0, P, P2, Q, groups, centers, boxSize, tri = true)
     scatteringMatrices,innerExpansions = particleExpansion(k0, kin, shapes, P, ids)
     scatteringLU = [lufact(scatteringMatrices[iid]) for iid = 1:length(shapes)]
     buf = FMMbuffer(Ns,P,Q,length(groups))
-    return mFMM,scatteringMatrices,scatteringLU,buf
+    return mFMM, scatteringMatrices, scatteringLU, buf
 end

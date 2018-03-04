@@ -80,7 +80,7 @@ errNs = errNs[1:inds]
 function findMinP(N, errN, shapefun, N_points, k0, kin; P_last = 1, P_max = 100)
 	E_multipole = Array{Complex{Float64}}(N_points)
 	errP = zeros(Float64, length(errN))
-	Pmin = zeros(Int64, length(errN))
+	Pmin = zeros(Int, length(errN))
 	for iN in eachindex(errN)
 		s = shapefun(N[iN])
 

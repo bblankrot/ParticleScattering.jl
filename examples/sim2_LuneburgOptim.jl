@@ -9,7 +9,7 @@ a_lens = 0.2*l0
 R_lens = 10*a_lens
 
 kin = k0*sqrt(er)
-N_cells = Int64(round(2*R_lens/a_lens))
+N_cells = Int(round(2*R_lens/a_lens))
 centers, ids_lnbrg, rs_lnbrg = luneburg_grid(R_lens, N_cells, er)
 φs = zeros(Float64, length(ids_lnbrg))
 θ_i = 0.0
@@ -17,8 +17,9 @@ P = 5
 
 fmm_options = FMMoptions(true, acc = 6, dx = 2*a_lens, method = "pre")
 
-optim_options =  Optim.Options(x_tol = 1e-6, iterations = 100, store_trace = true, extended_trace = true, show_trace = true, allow_f_increases = true)
-linesearch = LineSearches.BackTracking()
+optim_options =  Optim.Options(x_tol = 1e-6, iterations = 100,
+                        store_trace = true, extended_trace = true,
+                        show_trace = false, allow_f_increases = true)
 
 points = [R_lens 0.0]
 r_max = (a_lens/1.15/2)*ones(size(centers,1))
@@ -27,10 +28,10 @@ rs0 = (0.25*a_lens)*ones(size(centers,1))
 
 ids_max = collect(1:length(rs0))
 test_max = optimize_radius(rs0, r_min, r_max, points, ids_max, P, θ_i, k0, kin, #precompile
-                centers, fmm_options, optim_options, false, "BFGS", linesearch)
+                centers, fmm_options, optim_options, minimize = false)
 tic()
 test_max = optimize_radius(rs0, r_min, r_max, points, ids_max, P, θ_i, k0, kin,
-                centers, fmm_options, optim_options, false, "BFGS", linesearch)
+                centers, fmm_options, optim_options, minimize = false)
 optim_time = toq()
 rs_max = test_max.minimizer
 
@@ -103,7 +104,7 @@ pgf.save(output_dir * "/opt_r_conv.tex", ax ,include_preamble = false)
 ################ Testing with symmetry ######################
 assert(length(ids_max)==size(centers,1))
 centers_abs = centers[:,1] + 1im*abs.(centers[:,2])
-ids_sym, centers_abs = ParticleScattering.my_uniqueind(centers_abs)
+ids_sym, centers_abs = ParticleScattering.uniqueind(centers_abs)
 J = length(centers_abs)
 r_max = (a_lens/1.15/2)*ones(J)
 r_min = (a_lens*1e-3)*ones(J)
@@ -111,7 +112,7 @@ rs0 = (0.25*a_lens)*ones(J)
 
 tic()
 test_max_sym = optimize_radius(rs0, r_min, r_max, points, ids_sym, P, θ_i, k0, kin,
-                centers, fmm_options, optim_options, false, "BFGS", linesearch)
+                centers, fmm_options, optim_options, minimize = false)
 sym_time = toq()
 rs_sym = test_max_sym.minimizer
 JLD.@save output_dir * "/luneburg_optim_sym.jld" test_max_sym sym_time

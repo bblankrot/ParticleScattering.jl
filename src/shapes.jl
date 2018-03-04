@@ -173,7 +173,6 @@ Returns `true` if the shapes placed at `centers` are properly distanced
 (non-intersecting scattering disks).
 """
 function verify_min_distance(shapes, centers::Array{Float64,2}, ids)
-    #TODO: implement "FMM" version
     Ns = size(centers,1)
     for ic = 1:Ns, ic2 = ic+1:Ns
         d = sqrt((centers[ic,1] - centers[ic2,1])^2 +
@@ -190,7 +189,6 @@ Returns `true` if the shapes placed at `centers` are properly distanced
 disks.
 """
 function verify_min_distance(shapes, centers::Array{Float64,2}, ids, points::Array{Float64,2})
-    #TODO: implement "FMM" version
     Ns = size(centers,1)
     for ic = 1:Ns
         for ip = 1:size(points,1)
@@ -248,10 +246,10 @@ function luneburg_grid(R_lens, N_cells, er; levels = 0, TM = true)
         #uniform quantization
         rs = collect(linspace(minimum(r_cell), maximum(r_cell), levels))
         ddd = (r_cell - rs[1])/(rs[2] - rs[1])
-        ids = convert(Array{Int64,1},round(ddd)) + 1
+        ids = convert(Array{Int,1},round(ddd)) + 1
     else
         #only store unique vals
-        ids,rs = my_uniqueind(r_cell)
+        ids,rs = uniqueind(r_cell)
     end
     return centers, ids, rs
 end

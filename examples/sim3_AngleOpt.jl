@@ -29,7 +29,7 @@ P,errP = (12, 8.538711552646218e-7)#
 #P,errP = minimumP(k0, kin, shapes[1], tol = 1e-6, N_points = 20_000, P_min = 1, P_max = 120)
 
 φs = zeros(Float64,Ns)
-ids = ones(Int64,Ns)
+ids = ones(Int, Ns)
 
 fmm_options = FMMoptions(true, acc = 6, nx = 9, method="pre")
 
@@ -64,7 +64,7 @@ optim_method = Optim.BFGS(;linesearch = LineSearches.BackTracking())
 
 tic()
 test_max = optimize_φ(φs, points, P, θ_i, k0, kin, shapes,
-            centers, ids, fmm_options, optim_options, false, optim_method)
+            centers, ids, fmm_options, optim_options, optim_method; minimize = false)
 optim_time = toq()
 
 # %%
