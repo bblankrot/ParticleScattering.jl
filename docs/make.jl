@@ -12,13 +12,14 @@ makedocs(format = :html,
             "tutorial_optim_radius.md"
         ],
         "Choosing Minimal N and P" => "minimalNP.md",
-        "api.md"
+        "API" => "api.md"
     ]
 )
 
 deploydocs(
     repo   = "github.com/bblankrot/ParticleScattering.jl.git",
     target = "build",
+    julia = "0.6",
     deps   = nothing,
     make   = nothing
 )
