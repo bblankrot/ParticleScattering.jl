@@ -169,6 +169,7 @@ end
 
 """
     verify_min_distance(shapes, centers::Array{Float64,2}, ids)
+    verify_min_distance(sp::ScatteringProblem)
 Returns `true` if the shapes placed at `centers` are properly distanced
 (non-intersecting scattering disks).
 """
@@ -184,6 +185,7 @@ end
 
 """
     verify_min_distance(shapes, centers::Array{Float64,2}, ids, points::Array{Float64,2})
+    verify_min_distance(sp::ScatteringProblem, points)
 Returns `true` if the shapes placed at `centers` are properly distanced
 (non-intersecting scattering disks), and all `points` are outside the scattering
 disks.

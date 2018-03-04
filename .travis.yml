@@ -5,6 +5,9 @@ os:
   - osx
 julia:
   - 0.6
+branches:
+  except:
+    - dev
 notifications:
   email: false
 env:
