@@ -10,8 +10,7 @@ and other optimization parameters.
 Returns an object of type `Optim.MultivariateOptimizationResults`.
 """
 function optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids, fmmopts,
-                    optimopts::Optim.Options, method::Optim.AbstractOptimizer;
-                    minimize = true)
+                    optimopts::Optim.Options, method; minimize = true)
 
     #stuff that is done once
     mFMM, scatteringMatrices, scatteringLU, buf =
