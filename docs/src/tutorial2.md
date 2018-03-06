@@ -1,4 +1,4 @@
-# Tutorial 2: Accelerating Solutions with FMM
+# [Tutorial 2: Accelerating Solutions with FMM](@id tutorial2)
 
 In this tutorial, we examine scattering from several hundreds of particles, and
 use the built-in Fast Multipole Method (FMM) implementation to provide faster

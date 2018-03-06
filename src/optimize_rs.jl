@@ -11,9 +11,9 @@ Here, `ids` allows for grouping particles - for example, to maintain symmetry of
 the optimized device.
 `optimopts` defines the convergence criteria and other optimization parameters
 for both the inner and outer iterations. `method` can be either `"BFGS"` or
-`"LBFGS"`. See the `Fminbox` documentation for more details.
+`"LBFGS"`. See the `Optim.Fminbox` documentation for more details.
 
-Returns an object of type ??????
+Returns an object of type `Optim.MultivariateOptimizationResults`.
 """
 function optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin,
                         centers, fmmopts, optimopts::Optim.Options;
