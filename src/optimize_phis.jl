@@ -1,7 +1,6 @@
 """
     optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids, fmmopts,
-        optimopts::Optim.Options, method::Optim.AbstractOptimizer;
-        minimize = true)
+        optimopts::Optim.Options, minimize = true)
 
 Optimize the rotation angles of a particle collection for minimization or
 maximization of the field intensity at `points`, depending on `minimize`.
