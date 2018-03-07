@@ -5,11 +5,7 @@ optimizing the rotation angles of the particles (`φs`) to maximize the field
 intensity at a specific point.
 Depending on the scattering problem, wavelengths, and incident field,
 optimization can have a major or minor impact on the field.
-<<<<<<< HEAD
 The simplest way to perform this optimization is by calling [`optimize_φ`](@ref), which
-=======
-The simplest way to perform this optimization is by calling [`optim_φ`], which
->>>>>>> dev
 in turn utilizes `Optim`, a Julia package for nonlinear optimization. The type of
 objective function handled here is given by
 
@@ -133,5 +129,5 @@ axs[1][:set_ylim](ymax=40)
 ```
 
 ```@raw html
-<p style="text-align:center;"><img alt=optim_angle_conv src="./assets/optim_angle_conv.png" style="width:60%; height:auto; max-width:600px"></p>
+<p style="text-align:center;"><img alt=optim_angle_conv src="./assets/optim_angle_conv.png" style="width:70%; height:auto; max-width:600px"></p>
 ```
