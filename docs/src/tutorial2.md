@@ -1,4 +1,4 @@
-# Tutorial 2: Accelerating Solutions with FMM
+# [Tutorial 2: Accelerating Solutions with FMM](@id tutorial2)
 
 In this tutorial, we examine scattering from several hundreds of particles, and
 use the built-in Fast Multipole Method (FMM) implementation to provide faster
@@ -58,7 +58,7 @@ divideSpace(centers, fmm_options; drawGroups = true)
 
 In this plot, the red markers denote the group centers while stars denote
 particle centers (the particles can be drawn on top of this plot with
-`draw_shapes`). At first, it might look strange that most each particle lies
+`draw_shapes`). At first, it might look strange that parts of many particles lie
 outside the FMM group; however, the FMM is used only after the particles are
 converted to line sources, and are thus fully contained in the FMM grid.
 

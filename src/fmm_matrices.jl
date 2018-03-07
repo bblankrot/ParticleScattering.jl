@@ -136,12 +136,12 @@ function FMMnearMatrix(k, P, groups, centers, boxSize, num)
     Is = Array{Int}(num*W^2)
     Js = Array{Int}(num*W^2)
     Zs = Array{Complex{Float64}}(num*W^2)
+    bess = Array{Complex{Float64}}(2*P+1)
     mindist2 = 3*boxSize^2 #anywhere between 2 and 4
     ind = 0
     for ig1 = 1:G, ig2 = 1:G
         x = groups[ig1].center - groups[ig2].center
         sum(abs2,x) > mindist2 && continue
-
         #for each enclosed scatterer, build translation matrix
         for ic1 = 1:length(groups[ig1].point_ids)
             for ic2 = 1:length(groups[ig2].point_ids)
