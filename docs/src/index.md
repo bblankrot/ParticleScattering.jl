@@ -27,6 +27,7 @@ PGFPlotsX
 ## Getting Started
 
 Users are encouraged to follow the tutorials, as they provide a gradual
-introduction to this package. Complex and complete examples involving
-optimization are available in the [examples](https://github.com/bblankrot/ParticleScattering.jl/tree/master/examples)
+introduction to this package yet cover most of its functionality.
+Complex and complete examples involving optimization are available in the
+ [examples](https://github.com/bblankrot/ParticleScattering.jl/tree/master/examples)
 folder.

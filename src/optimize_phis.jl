@@ -12,6 +12,7 @@ function optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids, fmmop
                     optimopts::Optim.Options, method; minimize = true)
 
     #stuff that is done once
+    verify_min_distance(shapes, centers, ids, points) || error("Particles are too close.")
     mFMM, scatteringMatrices, scatteringLU, buf =
         prepare_fmm_reusal_φs(k0, kin, P, shapes, centers, ids, fmmopts)
     Ns = size(centers,1)
