@@ -32,6 +32,8 @@ function optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin,
     else
         assert(J == length(r_max))
     end
+    verify_min_distance([CircleParams(r_max[i]) for i = 1:J], centers, ids,
+        points) || error("Particles are too close.")
 
     #setup FMM reusal
     groups, boxSize = divideSpace(centers, fmmopts)
