@@ -25,7 +25,7 @@ Specifically, this error is measured on a circle of radius
 R_multipole*maximum(hypot.(s.ft[:,1],s.ft[:,2]))
 ```
 
-as this is the scattering disk on which the translation to cylindrical harmonics
+as this is the scattering disc on which the translation to cylindrical harmonics
 (Bessel & Hankel functions) are performed (and beyond which any gain or loss of
 accuracy due to `N` is mostly irrelevant).
 
