@@ -185,7 +185,8 @@ function innerFieldCircle(kin, gamma, center::Array{Float64,1}, points::Array{Fl
 	bess = [besselj(p,kin*rs_moved[ii]) for ii=1:len, p=0:P]
 	E = gamma[P + 1]*bess[:,1]
 	for p = 1:P
-		E += bess[:,p+1].*(gamma[p + P + 1]*exp.(1.0im*p*ts_moved) + (-1)^p*gamma[-p + P + 1]*exp.(-1.0im*p*ts_moved))
+		E += bess[:,p+1].*(gamma[p + P + 1]*exp.(1.0im*p*ts_moved) + 
+							(-1)^p*gamma[-p + P + 1]*exp.(-1.0im*p*ts_moved))
 	end
 	return E
 end

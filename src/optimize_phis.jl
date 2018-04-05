@@ -3,8 +3,8 @@
         optimopts::Optim.Options, minimize = true)
 
 Optimize the rotation angles of a particle collection for minimization or
-maximization of the field intensity at `points`, depending on `minimize`.
-`optimopts` and `method` define the optimization emthod, convergence criteria,
+maximization (depending on `minimize`) of the field intensity at `points`.
+`optimopts` and `method` define the optimization method, convergence criteria,
 and other optimization parameters.
 Returns an object of type `Optim.MultivariateOptimizationResults`.
 """

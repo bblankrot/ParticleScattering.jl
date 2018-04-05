@@ -10,7 +10,7 @@ Error is calculated on `N_points` points on the scattering disk (`s.R`), by
 assuming a fictitious line source and comparing its field to that produced
 by the resulting potential densities.
 
-Since for moderate wavelengths and errors, \$\varepsilon \\propto N^3\$, we
+Since the error scales with \$N^{-3}\$ for moderate wavelengths and errors, we
 estimate `N` using the error of `N_start`, then binary search based on that
 guess between `N_min` and `N_max`.
 """
