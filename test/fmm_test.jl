@@ -14,10 +14,10 @@
     φs = 2π*rand(M^2) #random rotation angles
     dist = 2*maximum(shapes[i].R for i=1:2)
     try
-    centers = randpoints(M^2, dist, 5λ0, 5λ0, [0.0 0.0],
+    centers = randpoints(M^2, dist, 5λ0, 5λ0, [0.0 0.0; 0.01+dist 0.01],
                 failures = 1_000)
     sp = ScatteringProblem(shapes, ids, centers, φs)
-    @test verify_min_distance(sp, [0.0 0.0])
+    @test verify_min_distance(sp, [0.0 0.0; 0.01+dist 0.01])
     catch
     warn("Could not find random points (1)")
     end

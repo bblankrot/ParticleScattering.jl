@@ -11,7 +11,7 @@ using IterativeSolvers, LinearMaps, Optim
 import LineSearches
 #For plotting with PyPlot
 using PyPlot, PyCall
-@pyimport matplotlib.patches as patch #circles,polygons
+@pyimport matplotlib.patches as patch #circles, polygons
 
 include("PS_types.jl")
 include("shapes.jl")
@@ -44,9 +44,6 @@ export ScatteringProblem, OptimBuffer, FMMoptions, R_multipole,
     ShapeParams, CircleParams, AbstractShapeParams
 #methods, utilities.jl
 export find_border, uniqueind
-
-### documented till here####
-
 #methods, optimize_phis.jl
 export optimize_φ
 #methods, optimize_rs.jl
@@ -60,10 +57,7 @@ include("visualization_pgf.jl")
 export plotNearField_pgf, drawShapes_pgf
 
 #temp
-include("optimize_rs_old.jl")
-
 export divideSpace, FMMtruncation, particleExpansion, FMMbuildMatrices
-
 export FMMbuffer, FMMmatrices
 
 end

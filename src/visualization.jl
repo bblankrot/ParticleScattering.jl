@@ -9,7 +9,7 @@ angle `θ_i` scattering from the ScatteringProblem `sp`, using matplotlib's
 `pcolormesh`. Can accept number of sampling points in each direction plus
 bounding box or calculate automatically.
 
-Uses the FMM options given by `opt` (default behavious is disabled FMM);
+Uses the FMM options given by `opt` (FMM is disabled by default);
 `use_multipole` dictates whether electric field is calculated using the
 multipole/cylindrical harmonics (true) or falls back on potential densities
 (false). Either way, the multiple-scattering system is solved in the cylindrical

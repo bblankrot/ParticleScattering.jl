@@ -126,7 +126,7 @@ function randpoints(M, dmin, width, height, points; failures = 100)
     dmin2 = dmin^2
     for i = 2:size(points,1), j = 1:i-1
         dist2 = sum(x -> x^2, points[i,:] - points[j,:])
-        dist2 <= dmin2 && error("randpoints: given points have distance > dmin")
+        dist2 <= dmin2 && error("randpoints: given points have distance <= dmin")
     end
 
     x_res = [rand(Float64)*width]
