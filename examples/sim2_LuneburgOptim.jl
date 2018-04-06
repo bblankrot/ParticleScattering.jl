@@ -134,3 +134,15 @@ Ez_4 = calc_near_field(k0, kin, 4, sp1, points, θ_i; opt = fmm_options)
 Ez_5 = calc_near_field(k0, kin, 5, sp1, points, θ_i; opt = fmm_options)
 Ez_6 = calc_near_field(k0, kin, 6, sp1, points, θ_i; opt = fmm_options)
 Ez_7 = calc_near_field(k0, kin, 7, sp1, points, θ_i; opt = fmm_options)
+
+
+
+#################TODO: REMOVE
+pgf.@pgf begin
+	plt = pgf.Plot(pgf.Coordinates([1;2],[2;3]))
+	ax = pgf.Axis({legend_pos = "north east",
+					legend_style = "font = \\footnotesize",
+					legend_cell_align = "left"},
+					plt)
+	push!(ax, pgf.Legend(["\$P\$fesafe"]))
+end

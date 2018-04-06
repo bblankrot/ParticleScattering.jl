@@ -126,24 +126,23 @@ pgf.@pgf begin
             width = "\\figurewidth",
             legend_pos = "north west",
             legend_style = "font = \\footnotesize"})
-    push!(ax, pgf.Plot(pgf.Coordinates(M_vec, res_vec),
-            {blue, "only marks", mark = "*"};
-            label = "Elapsed time (solution)"))
-            temp2 = floor(log10(10^a_total))
-            temp1 = 10^a_total/10^temp2
-    push!(ax, pgf.Plot(pgf.Coordinates(M_vec, res_ana),
-            {blue, thick, no_markers};
-            label = @sprintf("\$%.1f \\cdot 10^{%d} \\cdot M^{%.2f}\$",
-                temp1, temp2, b_total)))
-    push!(ax, pgf.Plot(pgf.Coordinates(M_vec, mvp_vec),
-            {red, only_marks, mark = "triangle*", mark_options = {fill = "red"}};
-            label= "Elapsed time (MVP)"))
-            temp2 = floor(log10(10^a_mvp))
-            temp1 = 10^a_mvp/10^temp2
-    push!(ax, pgf.Plot(pgf.Coordinates(M_vec, mvp_ana),
-            {red, thick, dashed, no_markers};
-            label = @sprintf("\$%.1f \\cdot 10^{%d} \\cdot M^{%.2f}\$",
-                temp1, temp2, b_mvp)))
+    push!(ax, pgf.Plot({blue, "only marks", mark = "*"},
+                        pgf.Coordinates(M_vec, res_vec)))
+    tmp_total = floor(log10(10^a_total))
+    push!(ax, pgf.Plot({blue, thick, no_markers},
+                        pgf.Coordinates(M_vec, res_ana)))
+    push!(ax, pgf.Plot({red, only_marks, mark = "triangle*",
+                        mark_options = {fill = "red"}},
+                        pgf.Coordinates(M_vec, mvp_vec)))
+    tmp_mvp = floor(log10(10^a_mvp))
+    push!(ax, pgf.Plot({red, thick, dashed, no_markers},
+                        pgf.Coordinates(M_vec, mvp_ana)))
+    push!(ax, pgf.Legend([
+                    "Elapsed time (solution)",
+                    @sprintf("\$%.1f \\cdot 10^{%d} \\cdot M^{%.2f}\$",
+                            10^a_total/10^tmp_total, tmp_total, b_total),
+                    "Elapsed time (MVP)",
+                    @sprintf("\$%.1f \\cdot 10^{%d} \\cdot M^{%.2f}\$",
+                            10^a_mvp/10^tmp_mvp, tmp_mvp, b_mvp)]))
 end
-
 pgf.save(dirname(@__FILE__) * "/sim1.tex", ax ,include_preamble = false)

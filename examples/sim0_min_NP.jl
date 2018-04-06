@@ -121,20 +121,16 @@ JLD.@load dirname(@__FILE__) * "/mindata_5_new.jld"
 JLD.@load dirname(@__FILE__) * "/mindata_s_new.jld"
 
 pgf.@pgf begin
-    N_plot5 = pgf.Plot(pgf.Coordinates(errN5,N5),
-        {blue, dashdotdotted, no_markers, thick},
-		label = "\$N_{\\mathrm{min}} \\, \\mathrm{(star)}\$")
-    P_plot5 = pgf.Plot(pgf.Coordinates(errN5,P5),
-        {"green!50!black", no_markers, thick},
-		label = "\$P_{\\mathrm{min}} \\, \\mathrm{(star)}\$")
-    N_plot = pgf.Plot(pgf.Coordinates(errNs,Ns),
-        {red, dotted, no_markers, thick},
-		label = "\$N_{\\mathrm{min}} \\, \\mathrm{(squircle)}\$")
-    P_plot = pgf.Plot(pgf.Coordinates(errNs,Ps),
-        {black, dashed, no_markers, thick},
-		label = "\$P_{\\mathrm{min}} \\, \\mathrm{(squircle)}\$")
-    ax = pgf.Axis([N_plot5, N_plot, P_plot5, P_plot],
-        {
+    N_plot5 = pgf.Plot({blue, dashdotdotted, no_markers, thick},
+						pgf.Coordinates(errN5,N5))
+	N_plot = pgf.Plot({red, dotted, no_markers, thick},
+						pgf.Coordinates(errNs,Ns))
+	P_plot5 = pgf.Plot({"green!50!black", no_markers, thick},
+						pgf.Coordinates(errN5,P5))
+    P_plot = pgf.Plot({black, dashed, no_markers, thick},
+						pgf.Coordinates(errNs,Ps))
+    ax = pgf.Axis(
+    	{
             xmin = 5e-10,
             xmax = 1e-1,
 			xlabel = "\$\\Delta u\$",
@@ -144,7 +140,13 @@ pgf.@pgf begin
             legend_pos = "north east",
             legend_style = "font = \\footnotesize",
 			legend_cell_align = "left"
-        })
+        },
+		[N_plot5, N_plot, P_plot5, P_plot],
+		pgf.Legend(["\$N_{\\mathrm{min}} \\, \\mathrm{(star)}\$",
+					"\$N_{\\mathrm{min}} \\, \\mathrm{(squircle)}\$",
+					"\$P_{\\mathrm{min}} \\, \\mathrm{(star)}\$",
+					"\$P_{\\mathrm{min}} \\, \\mathrm{(squircle)}\$"]))
+
 end
 pgf.save(dirname(@__FILE__) * "/tikz/minNP.tex", ax ,include_preamble = false)
 
@@ -152,9 +154,8 @@ shape = myshapefun5(200)
 pgf_shape = pgf.Coordinates([shape.ft[:,1];shape.ft[1,1]],
                             [shape.ft[:,2];shape.ft[1,2]])
 pgf.@pgf begin
-    ax2 = pgf.Axis(pgf.Plot(pgf_shape, {thick, black, no_markers, fill = "black!20"}),
-        {   axis_equal,
-            ticks = "none"})
+    ax2 = pgf.Axis({axis_equal, ticks = "none"}, pgf.Plot({thick, black,
+			no_markers, fill = "black!20"}, pgf_shape))
     Rd = shape.R
     push!(ax2, "\\addplot [black, dashed, thick, domain=0:2*pi,samples=100]({$(shape.R)*cos(deg(x))},{$(shape.R)*sin(deg(x))});")
     push!(ax2, "\\node at (axis cs: -0.28,-0.15) {\$D\$};")
@@ -169,10 +170,9 @@ shape = myshapefun_squircle(200)
 pgf_shape = pgf.Coordinates([shape.ft[:,1];shape.ft[1,1]],
                             [shape.ft[:,2];shape.ft[1,2]])
 pgf.@pgf begin
-    ax3 = pgf.Axis(pgf.Plot(pgf_shape, {thick, black, no_markers, fill = "black!20"}),
-        {   axis_equal,
-            ticks = "none"})
-    Rd = shape.R
+	ax3 = pgf.Axis({axis_equal, ticks = "none"}, pgf.Plot({thick, black,
+					no_markers, fill = "black!20", label="bla"}, pgf_shape))
+	Rd = shape.R
     push!(ax3, "\\addplot [black, dashed, thick, domain=0:2*pi,samples=100]({$(shape.R)*cos(deg(x))},{$(shape.R)*sin(deg(x))});")
     push!(ax3, "\\node at (axis cs: -0.28,-0.15) {\$D\$};")
     push!(ax3, "\\node at (axis cs: 0.25,-0.25) {\$k_0\$};")
