@@ -39,7 +39,6 @@ for i=1:simlen-1
 end
 dt0 /= simlen
 
-
 for is = 1:simlen, it = 1:trials
     #compute shape variables
     begin #setup
@@ -123,9 +122,10 @@ pgf.@pgf begin
             ylabel = "\$ \\mathrm{Run time} \\ [\\mathrm{s}]\$",
             xmode = "linear",
             ymode = "log",
-            width = "\\figurewidth",
+            width = "10cm",
             legend_pos = "north west",
-            legend_style = "font = \\footnotesize"})
+            legend_style = "font = \\footnotesize",
+            legend_cell_align = "left"})
     push!(ax, pgf.Plot({blue, "only marks", mark = "*"},
                         pgf.Coordinates(M_vec, res_vec)))
     tmp_total = floor(log10(10^a_total))

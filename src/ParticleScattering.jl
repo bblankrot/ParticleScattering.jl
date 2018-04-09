@@ -48,13 +48,11 @@ export find_border, uniqueind
 export optimize_φ
 #methods, optimize_rs.jl
 export optimize_radius
-
-
 # For advanced plotting with pgfplots
 import DataFrames, CSV, PGFPlotsX; const pgf = PGFPlotsX
 include("visualization_pgf.jl")
 #methods, visualization_pgf.jl
-export plotNearField_pgf, drawShapes_pgf
+export plot_near_field_pgf
 
 #temp
 export divideSpace, FMMtruncation, particleExpansion, FMMbuildMatrices

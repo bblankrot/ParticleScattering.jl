@@ -45,21 +45,21 @@ sp1 = ScatteringProblem([CircleParams(rs_lnbrg[i]) for i in eachindex(rs_lnbrg)]
         ids_lnbrg, centers, φs)
 Ez1 = plot_near_field(k0, kin, P, sp1, θ_i, x_points = 150, y_points = 150,
         opt = fmm_options, border = border)
-plotNearField_pgf(filename1, k0, kin, P, sp1, θ_i; opt = fmm_options,
+plot_near_field_pgf(filename1, k0, kin, P, sp1, θ_i; opt = fmm_options,
     x_points = 201, y_points = 201, border = border)
 
 sp2 = ScatteringProblem([CircleParams(rs_max[i]) for i in eachindex(rs_max)],
         ids_max, centers, φs)
 Ez2 = plot_near_field(k0, kin, P, sp2, θ_i, x_points = 150, y_points = 150,
             opt = fmm_options, border = border)
-plotNearField_pgf(filename2, k0, kin, P, sp2, θ_i; opt = fmm_options,
+plot_near_field_pgf(filename2, k0, kin, P, sp2, θ_i; opt = fmm_options,
     x_points = 201, y_points = 201, border = border)
 
 sp3 = ScatteringProblem([CircleParams(rs0[i]) for i in eachindex(rs0)],
         collect(1:length(rs0)), centers, φs)
 Ez3 = plot_near_field(k0, kin, P, sp3, θ_i, x_points = 150, y_points = 150,
         opt = fmm_options, border = border)
-plotNearField_pgf(filename3, k0, kin, P, sp3, θ_i; opt = fmm_options,
+plot_near_field_pgf(filename3, k0, kin, P, sp3, θ_i; opt = fmm_options,
     x_points = 201, y_points = 201, border = border)
 
 #plot convergence
@@ -81,23 +81,26 @@ JLD.@save output_dir * "/luneburg_optim.jld"
 
 import PGFPlotsX; const pgf = PGFPlotsX
 pgf.@pgf begin
-    fobj_plot = pgf.Plot(pgf.Coordinates(0:inner_iters-1, fobj),
-                {blue, thick, no_markers},
-                label = "\$f_{\\mathrm{obj}}\$")
-    gobj_plot = pgf.Plot(pgf.Coordinates(0:inner_iters-1, gobj),
-                {red, thick, dashed, no_markers},
-                label = "\$\\|\\mathbf{g}_{\\mathrm{obj}}\\|_{\\infty}\$")
-    fobj_outer = pgf.Plot(pgf.Coordinates((0:inner_iters-1)[rng], fobj[rng]),
-                {blue, only_marks, mark = "*", mark_options = {fill = "blue"}})
-    gobj_outer = pgf.Plot(pgf.Coordinates((0:inner_iters-1)[rng], gobj[rng]),
-                {red, only_marks, mark = "triangle*", mark_options = {fill = "red"}})
-    ax = pgf.Axis([fobj_plot;gobj_plot;fobj_outer;gobj_outer],
-        {
-            width = "\\figurewidth",
-            xlabel = "Iterations",
-            legend_pos = "north east",
-            legend_style = "font = \\footnotesize"
-        })
+    fobj_plot = pgf.Plot({blue, thick, no_markers},
+                        pgf.Coordinates(0:inner_iters-1, fobj))
+    gobj_plot = pgf.Plot({red, thick, dashed, no_markers},
+                        pgf.Coordinates(0:inner_iters-1, gobj))
+    fobj_outer = pgf.Plot({blue, only_marks, mark = "*",
+                            mark_options = {fill = "blue"}},
+                        pgf.Coordinates((0:inner_iters-1)[rng], fobj[rng]))
+    gobj_outer = pgf.Plot({red, only_marks, mark = "triangle*",
+                            mark_options = {fill = "red"}},
+                        pgf.Coordinates((0:inner_iters-1)[rng], gobj[rng]))
+    ax = pgf.Axis({ xmin = 0,
+                    width = "6cm",
+                    xlabel = "Iterations",
+                    legend_pos = "north east",
+                    legend_style = "font = \\footnotesize",
+                    legend_cell_align = "left"},
+                fobj_plot, gobj_plot, fobj_outer, gobj_outer)
+    push!(ax, pgf.Legend(["\$f_{\\mathrm{obj}}\$";
+                        "\$\\|\\mathbf{g}_{\\mathrm{obj}}\\|_{\\infty}\$"]))
+    ax
 end
 pgf.save(output_dir * "/opt_r_conv.tex", ax ,include_preamble = false)
 
@@ -134,15 +137,3 @@ Ez_4 = calc_near_field(k0, kin, 4, sp1, points, θ_i; opt = fmm_options)
 Ez_5 = calc_near_field(k0, kin, 5, sp1, points, θ_i; opt = fmm_options)
 Ez_6 = calc_near_field(k0, kin, 6, sp1, points, θ_i; opt = fmm_options)
 Ez_7 = calc_near_field(k0, kin, 7, sp1, points, θ_i; opt = fmm_options)
-
-
-
-#################TODO: REMOVE
-pgf.@pgf begin
-	plt = pgf.Plot(pgf.Coordinates([1;2],[2;3]))
-	ax = pgf.Axis({legend_pos = "north east",
-					legend_style = "font = \\footnotesize",
-					legend_cell_align = "left"},
-					plt)
-	push!(ax, pgf.Legend(["\$P\$fesafe"]))
-end

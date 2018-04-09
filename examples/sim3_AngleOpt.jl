@@ -74,18 +74,18 @@ plot_near_field(k0, kin, P, sp_before, θ_i,
                 x_points = 600, y_points = 200, border = plot_border);
 colorbar()
 clim([0;5])
-plotNearField_pgf(output_dir * "/opt_phi_before.tex", k0, kin, P,
-    sp_before, θ_i; opt = fmm_options, x_points = 600, y_points = 200,
-    border = plot_border, downsample = 4)
+plot_near_field_pgf(output_dir * "/opt_phi_before.tex", k0, kin, P,
+    sp_before, θ_i; opt = fmm_options, x_points = 150, y_points = 50,
+    border = plot_border, downsample = 10, include_preamble = true)
 
 sp_after = ScatteringProblem(shapes, ids, centers, test_max.minimizer)
 plot_near_field(k0, kin, P, sp_after, θ_i,
                 x_points = 600, y_points = 200, border = plot_border)
 colorbar()
 clim([0;5])
-plotNearField_pgf(output_dir * "/opt_phi_after.tex", k0, kin, P,
-    sp_after, θ_i; opt = fmm_options, x_points = 600, y_points = 200,
-    border = plot_border, downsample = 4)
+plot_near_field_pgf(output_dir * "/opt_phi_after.tex", k0, kin, P,
+    sp_after, θ_i; opt = fmm_options, x_points = 150, y_points = 50,
+    border = plot_border, downsample = 10, include_preamble = true)
 
 inner_iters = length(test_max.trace)
 fobj = -[test_max.trace[i].value for i=1:inner_iters]
@@ -95,20 +95,17 @@ figure()
 plot(0:inner_iters-1, fobj)
 plot(0:inner_iters-1, gobj)
 
-import PGFPlotsX; const pgf = PGFPlotsX
 pgf.@pgf begin
-    fobj_plot = pgf.Plot(pgf.Coordinates(0:inner_iters-1, fobj),
-                {blue, thick, no_markers},
-                label = "\$f_{\\mathrm{obj}}\$")
-    gobj_plot = pgf.Plot(pgf.Coordinates(0:inner_iters-1, gobj),
-                {red, thick, dashed, no_markers},
-                label = "\$\\|\\mathbf{g}_{\\mathrm{obj}}\\|\$")
-    ax = pgf.Axis([fobj_plot;gobj_plot],
-        {
-            width = "\\figurewidth",
-            xlabel = "Iterations",
-            legend_pos = "north east",
-            legend_style = "font = \\footnotesize"
-        })
+    fobj_plot = pgf.Plot({blue, thick, no_markers},
+                        pgf.Coordinates(0:inner_iters-1, fobj))
+    gobj_plot = pgf.Plot({red, thick, dashed, no_markers},
+                        pgf.Coordinates(0:inner_iters-1, gobj))
+    ax = pgf.Axis({ width = "6cm",
+                    xlabel = "Iterations",
+                    legend_pos = "north east",
+                    legend_style = "font = \\footnotesize"},
+                fobj_plot, gobj_plot)
+    push!(ax, pgf.Legend(["\$f_{\\mathrm{obj}}\$";
+                        "\$\\|\\mathbf{g}_{\\mathrm{obj}}\\|\$"]))
 end
 pgf.save(output_dir * "/opt_phi_conv.tex", ax ,include_preamble = false)
