@@ -76,6 +76,42 @@ function rect_grid(a::Integer, b::Integer, dx, dy)
 end
 
 """
+	hex_grid(a::Integer, b::Integer, d)
+
+Return `centers`, an `(M,2)` array  containing the points on a hexagonal lattice
+with horizontal rows, with `a` points in each row and `rows` rows, distanced `d`.
+If `minus1` is true, the last point in every odd row is omitted.
+"""
+function hex_grid(a::Integer, rows::Integer, d; minus1 = false)
+	h = d*sqrt(0.75) #row height
+	M = minus1 ? a*rows - div(rows,2) : a*rows
+	centers = Array{Float64}(M,2)
+	ind = 1
+	for r = 0:rows-1
+		if mod(r,2) == 0
+			for i = 1:a
+				centers[ind,1] = i*d
+				centers[ind,2] = (r - 1)*h
+				ind += 1
+			end
+		else
+			for i = 1:a-1
+				centers[ind,1] = (i + 0.5)*d
+				centers[ind,2] = (r - 1)*h
+				ind += 1
+			end
+			if !minus1
+				centers[ind,1] = (a + 0.5)*d
+				centers[ind,2] = (r - 1)*h
+				ind += 1
+			end
+		end
+	end
+	offset = mean(centers, 1)
+    centers .-= offset
+end
+
+"""
 	randpoints(M, dmin, width, height; failures = 100)
 
 Return `centers`, an `(M,2)` array containing `M` points distanced at least
@@ -129,8 +165,8 @@ function randpoints(M, dmin, width, height, points; failures = 100)
         dist2 <= dmin2 && error("randpoints: given points have distance <= dmin")
     end
 
-    x_res = [rand(Float64)*width]
-    y_res = [rand(Float64)*height]
+    x_res = Array{Float64}(0)
+    y_res = Array{Float64}(0)
     fail = 0
     while fail < failures && length(x_res) < M
         accepted = true

@@ -27,8 +27,8 @@ include("utilities.jl")
 include("minimum_N_P.jl")
 
 #methods, shapes.jl
-export rounded_star, squircle, ellipse, square_grid, rect_grid, randpoints,
-    luneburg_grid, verify_min_distance
+export rounded_star, squircle, ellipse, square_grid, rect_grid, hex_grid,
+    randpoints, luneburg_grid, verify_min_distance
 #methods, multipole.jl
 export solve_particle_scattering, scattered_field_multipole
 #methods, minimum_N_P.jl
