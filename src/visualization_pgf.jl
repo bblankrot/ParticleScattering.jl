@@ -1,4 +1,27 @@
-function plotNearField_pgf(filename, k0, kin, P, sp::ScatteringProblem, θ_i = 0;
+"""
+    plot_near_field_pgf(filename, k0, kin, P, sp::ScatteringProblem, θ_i = 0;
+                        opt::FMMoptions = FMMoptions(), use_multipole = true,
+                        x_points = 201, y_points = 201, border = find_border(sp),
+                        downsample = 1, include_preamble = false, normalize = 1.0)
+
+Plots the total electric field as a result of a plane wave with incident
+angle `θ_i` scattering from the ScatteringProblem `sp`, using pgfplots's
+`surf`. Can accept number of sampling points in each direction, and either
+a given `border` or calculate it automatically. The plots of the shapes (but not
+the field) can be downsampled by setting an integer `downsample`, since pgfplots
+slows down dramatically when drawing many shapes with many nodes.
+
+Uses the FMM options given by `opt` (FMM is disabled by default);
+`use_multipole` dictates whether electric field is calculated using the
+multipole/cylindrical harmonics (true) or falls back on potential densities
+(false). Either way, the multiple-scattering system is solved in the cylindrical
+harmonics space. Normalizes all distances and sizes in plot by `normalize`.
+
+Saves the generated pgfplots file to `filename`, with just a surrounding `tikzpicture`
+environment if `include_preamble=false`, and a compilable tandalone document
+otherwise.
+"""
+function plot_near_field_pgf(filename, k0, kin, P, sp::ScatteringProblem, θ_i = 0;
                             opt::FMMoptions = FMMoptions(), use_multipole = true,
                             x_points = 201, y_points = 201, border = find_border(sp),
                             downsample = 1, include_preamble = false, normalize = 1.0)
@@ -21,31 +44,30 @@ function plotNearField_pgf(filename, k0, kin, P, sp::ScatteringProblem, θ_i = 0
     dt = DataFrames.DataFrame(x = points[:,1]/normalize, y = points[:,2]/normalize, z = abs.(Ez))
     CSV.write(filename * ".dat", dt, delim = '\t')
     pgf.@pgf begin
-        p = pgf.Plot3(pgf.Table(basename(filename) * ".dat"),
-            {   surf,
-                no_markers,
-                shader = "interp",
-                "mesh/rows" = y_points}, incremental = false)
-        ax = pgf.Axis(p,
-         {  xmin = x_min/normalize,
-            xmax = x_max/normalize,
-            ymin = y_min/normalize,
-            ymax = y_max/normalize,
-            xlabel = "\$x\$",
-            ylabel = "\$y\$",
-            scale_only_axis,
-            width = "\\linewidth",
-            height = "$aspect*\\linewidth",
-            view = "{0}{90}",
-            "mesh/ordering" = "y varies",
-            colorbar,
-            point_meta_max = maximum(abs.(Ez))})
+        ax = pgf.Axis({ xmin = x_min/normalize,
+                        xmax = x_max/normalize,
+                        ymin = y_min/normalize,
+                        ymax = y_max/normalize,
+                        xlabel = "\$x/$normalize\$",
+                        ylabel = "\$y/$normalize\$",
+                        scale_only_axis,
+                        width = "\\linewidth",
+                        height = "$aspect*\\linewidth",
+                        view = "{0}{90}",
+                        "mesh/ordering" = "y varies",
+                        colorbar,
+                        point_meta_max = maximum(abs.(Ez))})
+        #new release of pgfplotsx isn't printing table correctly (too many newlines for pgfplots)
+        push!(ax, "\\addplot3[surf, no markers, shader={interp},
+                    mesh/rows={$(y_points)}] table{$(basename(filename)).dat};")
+
     end
-    drawShapes_pgf(shapes, centers, ids, φs, ax, 1.1*maximum(abs.(Ez)), downsample, normalize = normalize)
+    draw_shapes_pgf(shapes, centers, ids, φs, ax, 1.1*maximum(abs.(Ez)), downsample, normalize = normalize)
     pgf.save(filename, ax ,include_preamble = include_preamble)
 end
 
-function drawShapes_pgf(shapes, centers, ids, φs, ax, floating, downsample; normalize = 1.0)
+function draw_shapes_pgf(shapes, centers, ids, φs, ax, floating, downsample; normalize = 1.0)
+    #draw in 3d so it is "above" surf plot
     for ic = 1:size(centers,1)
         if typeof(shapes[ids[ic]]) == ShapeParams
             if φs[ic] == 0.0
@@ -54,9 +76,10 @@ function drawShapes_pgf(shapes, centers, ids, φs, ax, floating, downsample; nor
                 Rot = [cos(φs[ic]) sin(φs[ic]);-sin(φs[ic]) cos(φs[ic])]
                 ft_rot = shapes[ids[ic]].ft[1:downsample:end,:]*Rot .+ centers[ic,:]'
             end
-            push!(ax, pgf.Plot3(pgf.Coordinates([ft_rot[:,1];ft_rot[1,1]]/normalize,
-                [ft_rot[:,2];ft_rot[1,2]]/normalize, floating*ones(Float64,size(ft_rot,1)+1)),
-                "black", "no markers", "thick", incremental = false))
+            co = pgf.Coordinates([ft_rot[:,1];ft_rot[1,1]]/normalize,
+                                 [ft_rot[:,2];ft_rot[1,2]]/normalize,
+                                 floating*ones(size(ft_rot,1) + 1))
+            pgf.@pgf push!(ax, pgf.Plot3({black, no_markers, thick}, co))
         else
             x = centers[ic,1]/normalize
             y = centers[ic,2]/normalize

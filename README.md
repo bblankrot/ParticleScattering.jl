@@ -1,4 +1,4 @@
-# ParticleScattering.jl
+# ParticleScattering
 
 [![Travis](https://travis-ci.org/bblankrot/ParticleScattering.jl.svg?branch=master)](https://travis-ci.org/bblankrot/ParticleScattering.jl)
 [![AppVeyor](https://ci.appveyor.com/api/projects/status/p0p636vtrx95ch8m/branch/master?svg=true)](https://ci.appveyor.com/project/bblankrot/particlescattering-jl/branch/master)
@@ -11,11 +11,16 @@ those containing a large number of penetrable smooth
 particles. Provides the ability to optimize over the
 particle parameters for various design problems.
 
-# Installation
+### Installation
 
-Currently, only Julia 0.6 is supported, and the package must be installed
-manually. See directions at [the official Julia documentation](https://docs.julialang.org/en/stable/manual/packages/#Installing-Unregistered-Packages-1).
+ParticleScattering can be installed using `Pkg.add`. Currently, only Julia 0.6 is supported.
+
+```julia
+Pkg.add("ParticleScattering")
+using ParticleScattering
+```
 
 ### Community
 
-The easiest way to contribute is by opening issues! Of course, we'd be more than happy if you implement any fixes and send a PR. If you have any relevant scattering problems that would make good examples for the docs, feel free to open an issue for that as well.
+The easiest way to contribute is by opening issues! Of course, we'd be more than happy if you implement any fixes and send a PR.
+If you have any relevant scattering problems that would make good examples for the docs, feel free to open an issue for that as well.

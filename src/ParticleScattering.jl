@@ -27,8 +27,8 @@ include("utilities.jl")
 include("minimum_N_P.jl")
 
 #methods, shapes.jl
-export rounded_star, squircle, ellipse, square_grid, rect_grid, randpoints,
-    luneburg_grid, verify_min_distance
+export rounded_star, squircle, ellipse, square_grid, rect_grid, hex_grid,
+    randpoints, luneburg_grid, verify_min_distance
 #methods, multipole.jl
 export solve_particle_scattering, scattered_field_multipole
 #methods, minimum_N_P.jl
@@ -48,13 +48,11 @@ export find_border, uniqueind
 export optimize_φ
 #methods, optimize_rs.jl
 export optimize_radius
-
-
 # For advanced plotting with pgfplots
 import DataFrames, CSV, PGFPlotsX; const pgf = PGFPlotsX
 include("visualization_pgf.jl")
 #methods, visualization_pgf.jl
-export plotNearField_pgf, drawShapes_pgf
+export plot_near_field_pgf
 
 #temp
 export divideSpace, FMMtruncation, particleExpansion, FMMbuildMatrices

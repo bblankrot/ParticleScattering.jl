@@ -17,11 +17,10 @@ function get_potential(kout, kin, P, t, ft, dft)
 
     #assuming the wave is sampled on the shape
     nz = sqrt.(sum(abs2,ft,2))
+    θ = atan2.(ft[:,2], ft[:,1])
     ndz = sqrt.(sum(abs2,dft,2))
     nzndz = nz.*ndz
-    #precompute? or negative = (-1)^n positive?
-    #no precompute
-	wro = dft[:,2].*ft[:,1] - dft[:,1].*ft[:,2]
+    wro = dft[:,2].*ft[:,1] - dft[:,1].*ft[:,2]
 	zz = dft[:,1].*ft[:,1] + dft[:,2].*ft[:,2]
 
     bessp = besselj.(-P-1, kout*nz)
@@ -31,13 +30,46 @@ function get_potential(kout, kin, P, t, ft, dft)
     for p = -P:P
         bess[:] = besselj.(p, kout*nz)
 		du[:] = kout*bessp.*wro - (p*bess./nz).*(wro + 1im*zz)
-        rhs[:] = -[bess.*exp.(1.0im*p*t);
-               (du./nzndz).*exp.(1.0im*p*t)]
+        rhs[:] = -[bess.*exp.(1.0im*p*θ);
+               (du./nzndz).*exp.(1.0im*p*θ)]
         sigma_mu[:,p + P + 1] = LU\rhs
         copy!(bessp, bess)
     end
     return sigma_mu
 end
+#
+# function get_potential_deprecated(kout, kin, P, t, ft, dft)
+# #problematic assumption here that t=θ in the Jacobi-Anger expansion (for rhs).
+# #this means that we assume all shapes are given in polar form (r(θ)cosθ,r(θ)sinθ)),
+# #which is not the case for the simple ellipse (r1cosθ,r2sinθ).
+#     N = length(t) #N here is 2N elesewhere.
+#
+#     A = SDNTpotentialsdiff(kout, kin, t, ft, dft)
+#     LU = lufact(A)
+#
+#     sigma_mu = Array{Complex{Float64}}(2*N, 2*P+1)
+#
+#     #assuming the wave is sampled on the shape
+#     nz = sqrt.(sum(abs2,ft,2))
+#     ndz = sqrt.(sum(abs2,dft,2))
+#     nzndz = nz.*ndz
+#     wro = dft[:,2].*ft[:,1] - dft[:,1].*ft[:,2]
+# 	zz = dft[:,1].*ft[:,1] + dft[:,2].*ft[:,2]
+#
+#     bessp = besselj.(-P-1, kout*nz)
+#     bess = similar(bessp)
+#     du = Array{Complex{Float64}}(length(bessp))
+#     rhs = Array{Complex{Float64}}(2*length(bessp))
+#     for p = -P:P
+#         bess[:] = besselj.(p, kout*nz)
+# 		du[:] = kout*bessp.*wro - (p*bess./nz).*(wro + 1im*zz)
+#         rhs[:] = -[bess.*exp.(1.0im*p*t);
+#                (du./nzndz).*exp.(1.0im*p*t)]
+#         sigma_mu[:,p + P + 1] = LU\rhs
+#         copy!(bessp, bess)
+#     end
+#     return sigma_mu
+# end
 
 """
     get_potential(kout, kin, P, t, ft, dft) -> sigma_mu
@@ -201,10 +233,12 @@ function scatteredfield(sigma_mu, k, t, ft, dft, p)
     u_s = SDout*sigma_mu
 end
 
+
 function shapeMultipoleExpansion(k, t, ft, dft, P)
     #unlike others (so far), this does *not* assume t_j=pi*j/N
     N = div(length(t),2)
     nz = vec(sqrt.(sum(abs2,ft,2)))
+    θ = atan2.(ft[:,2], ft[:,1])
     ndz = vec(sqrt.(sum(abs2,dft,2)))
     AB = Array{Complex{Float64}}(2*P + 1, 4*N)
     bessp = besselj.(-P-1,k*nz)
@@ -212,20 +246,46 @@ function shapeMultipoleExpansion(k, t, ft, dft, P)
     for l = -P:0
         bess[:] = besselj.(l,k*nz)
         for j = 1:2*N
-            AB[l+P+1,j] = 0.25im*(π/N)*bess[j]*exp(-1.0im*l*t[j])*ndz[j]
-            l!=0 && (AB[-l+P+1,j] = 0.25im*((-1.0)^l*π/N)*bess[j]*exp(1.0im*l*t[j])*ndz[j])
+            AB[l+P+1,j] = 0.25im*(π/N)*bess[j]*exp(-1.0im*l*θ[j])*ndz[j]
+            l != 0 && (AB[-l+P+1,j] = 0.25im*((-1.0)^l*π/N)*bess[j]*exp(1.0im*l*θ[j])*ndz[j])
             wro = ft[j,1]*dft[j,2] - ft[j,2]*dft[j,1]
             zdz = -1.0im*(ft[j,1]*dft[j,1] + ft[j,2]*dft[j,2])
             b1 = (-l*bess[j]/nz[j])*(zdz + wro)
             b1_ = (-l*bess[j]/nz[j])*(zdz - wro)
             b2 = k*bessp[j]*wro
-            AB[l+P+1,j+2*N] = 0.25im*(π/N)*(exp(-1.0im*l*t[j])/nz[j])*(b1 + b2)
-            l!=0 && (AB[-l+P+1,j+2*N] = 0.25im*((-1.0)^l*π/N)*(exp(1.0im*l*t[j])/nz[j])*(-b1_ + b2))
+            AB[l+P+1,j+2*N] = 0.25im*(π/N)*(exp(-1.0im*l*θ[j])/nz[j])*(b1 + b2)
+            l != 0 && (AB[-l+P+1,j+2*N] = 0.25im*((-1.0)^l*π/N)*(exp(1.0im*l*θ[j])/nz[j])*(-b1_ + b2))
         end
         copy!(bessp,bess)
     end
     return AB
 end
+#
+# function shapeMultipoleExpansion_deprecated(k, t, ft, dft, P)
+#     #unlike others (so far), this does *not* assume t_j=pi*j/N
+#     N = div(length(t),2)
+#     nz = vec(sqrt.(sum(abs2,ft,2)))
+#     ndz = vec(sqrt.(sum(abs2,dft,2)))
+#     AB = Array{Complex{Float64}}(2*P + 1, 4*N)
+#     bessp = besselj.(-P-1,k*nz)
+#     bess = similar(bessp)
+#     for l = -P:0
+#         bess[:] = besselj.(l,k*nz)
+#         for j = 1:2*N
+#             AB[l+P+1,j] = 0.25im*(π/N)*bess[j]*exp(-1.0im*l*t[j])*ndz[j]
+#             l!=0 && (AB[-l+P+1,j] = 0.25im*((-1.0)^l*π/N)*bess[j]*exp(1.0im*l*t[j])*ndz[j])
+#             wro = ft[j,1]*dft[j,2] - ft[j,2]*dft[j,1]
+#             zdz = -1.0im*(ft[j,1]*dft[j,1] + ft[j,2]*dft[j,2])
+#             b1 = (-l*bess[j]/nz[j])*(zdz + wro)
+#             b1_ = (-l*bess[j]/nz[j])*(zdz - wro)
+#             b2 = k*bessp[j]*wro
+#             AB[l+P+1,j+2*N] = 0.25im*(π/N)*(exp(-1.0im*l*t[j])/nz[j])*(b1 + b2)
+#             l!=0 && (AB[-l+P+1,j+2*N] = 0.25im*((-1.0)^l*π/N)*(exp(1.0im*l*t[j])/nz[j])*(-b1_ + b2))
+#         end
+#         copy!(bessp,bess)
+#     end
+#     return AB
+# end
 
 function solvePotential_forError(kin, kout, shape, ls_pos, ls_amp, θ_i)
     #plane wave outside, line sources inside
