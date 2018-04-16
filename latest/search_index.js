@@ -21,7 +21,7 @@ var documenterSearchIndex = {"docs": [
     "page": "Home",
     "title": "Installation",
     "category": "section",
-    "text": "Currently, only Julia 0.6 is supported. Once Julia is set up, ParticleScattering can be installed by runningPkg.clone(https://github.com/bblankrot/ParticleScattering.jl.git)\nusing ParticleScatteringwhich also installs the following dependencies:IterativeSolvers\nLinearMaps\nOptim\nPyPlot\nDataFrames\nCSV\nPGFPlotsX"
+    "text": "ParticleScattering can be installed using Pkg.add. Currently, only Julia 0.6 is supported.Pkg.add(\"ParticleScattering\")\nusing ParticleScatteringwhich also installs the following dependencies:IterativeSolvers\nLinearMaps\nOptim\nPyPlot\nDataFrames\nCSV\nPGFPlotsX"
 },
 
 {
@@ -169,6 +169,22 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "new_shapes.html#",
+    "page": "Adding New Shapes",
+    "title": "Adding New Shapes",
+    "category": "page",
+    "text": ""
+},
+
+{
+    "location": "new_shapes.html#Adding-New-Shapes-1",
+    "page": "Adding New Shapes",
+    "title": "Adding New Shapes",
+    "category": "section",
+    "text": "ParticleScattering includes functions for drawing squircles, rounded stars, and ellipses. New shape functions can  be added, provided they have the following structure:function my_shape(args, N)\n    t = Float64[π*j/N for j = 0:(2*N-1)] # or t = 0:π/N:π*(2-1/N)\n    ft =  [x    y]\n    dft = [dx/dt    dy/dt]\n    ShapeParams(t, ft, dft)\nendWhere t is the parametrization variable, ft[i,:] = [x(t[i]) y(t[i])] contains the coordinates, and dft contains the derivative of ft with respect to t. In particular, the quadrature used by ParticleScattering assumes t are equidistantly distributed in 0 2pi), and that none of the points ft lie on the origin."
+},
+
+{
     "location": "api.html#",
     "page": "API",
     "title": "API",
@@ -313,6 +329,14 @@ var documenterSearchIndex = {"docs": [
 },
 
 {
+    "location": "api.html#ParticleScattering.hex_grid-Tuple{Integer,Integer,Any}",
+    "page": "API",
+    "title": "ParticleScattering.hex_grid",
+    "category": "method",
+    "text": "hex_grid(a::Integer, b::Integer, d)\n\nReturn centers, an (M,2) array  containing the points on a hexagonal lattice with horizontal rows, with a points in each row and rows rows, distanced d. If minus1 is true, the last point in every odd row is omitted.\n\n\n\n"
+},
+
+{
     "location": "api.html#ParticleScattering.luneburg_grid-Tuple{Any,Any,Any}",
     "page": "API",
     "title": "ParticleScattering.luneburg_grid",
@@ -366,6 +390,14 @@ var documenterSearchIndex = {"docs": [
     "title": "ParticleScattering.plot_near_field",
     "category": "function",
     "text": "plot_near_field(k0, kin, P, sp::ScatteringProblem, θ_i = 0;\n                    opt::FMMoptions = FMMoptions(), use_multipole = true,\n                    x_points = 201, y_points = 201, border = find_border(sp),\n                    normalize = 1.0)\n\nPlots the total electric field as a result of a plane wave with incident angle θ_i scattering from the ScatteringProblem sp, using matplotlib\'s pcolormesh. Can accept number of sampling points in each direction plus bounding box or calculate automatically.\n\nUses the FMM options given by opt (FMM is disabled by default); use_multipole dictates whether electric field is calculated using the multipole/cylindrical harmonics (true) or falls back on potential densities (false). Either way, the multiple-scattering system is solved in the cylindrical harmonics space. Normalizes all distances and sizes in plot (but not output) by normalize.\n\nReturns the calculated field in two formats:\n\n(points, Ez) where Ez[i] is the total electric field at points[i,:], and\n(xgrid,ygrid,zgrid), the format suitable for pcolormesh, where zgrid[i,j]\n\ncontains the field at (mean(xgrid[i, j:j+1]), mean(ygrid[i:i+1, j])).\n\n\n\n"
+},
+
+{
+    "location": "api.html#ParticleScattering.plot_near_field_pgf",
+    "page": "API",
+    "title": "ParticleScattering.plot_near_field_pgf",
+    "category": "function",
+    "text": "plot_near_field_pgf(filename, k0, kin, P, sp::ScatteringProblem, θ_i = 0;\n                    opt::FMMoptions = FMMoptions(), use_multipole = true,\n                    x_points = 201, y_points = 201, border = find_border(sp),\n                    downsample = 1, include_preamble = false, normalize = 1.0)\n\nPlots the total electric field as a result of a plane wave with incident angle θ_i scattering from the ScatteringProblem sp, using pgfplots\'s surf. Can accept number of sampling points in each direction, and either a given border or calculate it automatically. The plots of the shapes (but not the field) can be downsampled by setting an integer downsample, since pgfplots slows down dramatically when drawing many shapes with many nodes.\n\nUses the FMM options given by opt (FMM is disabled by default); use_multipole dictates whether electric field is calculated using the multipole/cylindrical harmonics (true) or falls back on potential densities (false). Either way, the multiple-scattering system is solved in the cylindrical harmonics space. Normalizes all distances and sizes in plot by normalize.\n\nSaves the generated pgfplots file to filename, with just a surrounding tikzpicture environment if include_preamble=false, and a compilable tandalone document otherwise.\n\n\n\n"
 },
 
 {
