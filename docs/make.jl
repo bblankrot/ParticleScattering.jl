@@ -13,6 +13,7 @@ makedocs(format = :html,
             "tutorial_optim_radius.md"
         ],
         "Choosing Minimal N and P" => "minimalNP.md",
+        "Adding New Shapes" => "new_shapes.md",
         "API" => "api.md"
     ]
 )

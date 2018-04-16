@@ -6,7 +6,8 @@
     N = 1000
     shapes = [squircle(1, N);
             rounded_star(0.8, 0.2, 3, N);
-            rounded_star(0.75, 0.25, 5, N)]
+            rounded_star(0.75, 0.25, 5, N);
+            ellipse(0.2, 0.9, N)]
     for s in shapes
         sigma_mu = get_potentialPW(k0, kin, s, θ_i)
         dx = 2*norm(s.ft[1,:] - s.ft[2,:])
