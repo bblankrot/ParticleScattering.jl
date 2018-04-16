@@ -7,9 +7,10 @@ particles. Provides the ability to optimize over particle parameters for various
 
 ## Installation
 
-Currently, only Julia 0.6 is supported. Once Julia is set up, ParticleScattering can be installed by running
+ParticleScattering can be installed using `Pkg.add`. Currently, only Julia 0.6 is supported.
+
 ```julia
-Pkg.clone(https://github.com/bblankrot/ParticleScattering.jl.git)
+Pkg.add("ParticleScattering")
 using ParticleScattering
 ```
 which also installs the following dependencies:
