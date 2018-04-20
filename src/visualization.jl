@@ -46,7 +46,7 @@ function plot_near_field(k0, kin, P, sp::ScatteringProblem, pw::PlaneWave;
     pcolormesh(xgrid/normalize, ygrid/normalize, abs.(zgrid))
 
     ax = gca()
-    draw_shapes(sp.shapes, sp.centers, sp.ids, sp.φs, ax; normalize = normalize)
+    draw_shapes(sp.shapes, sp.ids, sp.centers, sp.φs, ax = ax, normalize = normalize)
     xlim([x_min/normalize;x_max/normalize])
     ylim([y_min/normalize;y_max/normalize])
     tight_layout()
@@ -94,14 +94,14 @@ function plot_far_field(k0, kin, P, sp::ScatteringProblem, pw::PlaneWave;
 end
 
 """
-    draw_shapes(shapes, centers, ids, φs, ax = gca(); normalize = 1.0)
-    draw_shapes(sp, ax = gca(); normalize = 1.0)
+    draw_shapes(shapes, ids, centers, φs; ax = gca(), normalize = 1.0)
+    draw_shapes(sp; ax = gca(), normalize = 1.0)
 
 Draws all of the shapes in a given scattering problem in the PyPlot axis 'ax'.
 Parametrized shapes are drawn as polygons while circles are drawn using
 matplotlib's `patch.Circle`. Divides all lengths by 'normalize'.
 """
-function draw_shapes(shapes, centers, ids, φs, ax = gca(); normalize = 1.0)
+function draw_shapes(shapes, ids, centers, φs; ax = gca(), normalize = 1.0)
     #draw shapes
     for ic = 1:size(centers,1)
         if typeof(shapes[ids[ic]]) == ShapeParams
@@ -122,8 +122,8 @@ function draw_shapes(shapes, centers, ids, φs, ax = gca(); normalize = 1.0)
     end
 end
 
-draw_shapes(sp, ax = gca(); normalize = 1.0) = draw_shapes(sp.shapes,
-                    sp.centers, sp.ids, sp.φs, ax; normalize = normalize)
+draw_shapes(sp; ax = gca(), normalize = 1.0) = draw_shapes(sp.shapes,
+                    sp.ids, sp.centers, sp.φs; ax = ax, normalize = normalize)
 
 """
     calc_near_field(k0, kin, P, sp::ScatteringProblem, points, pw::PlaneWave;

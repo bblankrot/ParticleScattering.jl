@@ -1,4 +1,4 @@
-__precompile__(true)
+#__precompile__(true)
 
 """
 A Julia package for solving large-scale electromagnetic scattering problems in

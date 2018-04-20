@@ -84,7 +84,7 @@ fig, axs = subplots(ncols=3); msh = 0
 for (i, spi) in enumerate([sp;sp_min;sp_max])
     msh = axs[i][:pcolormesh](plts[i][2][1], plts[i][2][2], abs.(plts[i][2][3]),
                         vmin = 0, vmax = 3.4, cmap="viridis")
-    draw_shapes(spi.shapes, spi.centers, spi.ids, spi.φs, axs[i])
+    draw_shapes(spi, ax = axs[i])
     axs[i][:set_aspect]("equal", adjustable = "box")
     axs[i][:set_xlim]([border[1];border[2]])
     axs[i][:set_ylim]([border[3];border[4]])

@@ -45,21 +45,21 @@ sp1 = ScatteringProblem([CircleParams(rs_lnbrg[i]) for i in eachindex(rs_lnbrg)]
         ids_lnbrg, centers, φs)
 Ez1 = plot_near_field(k0, kin, P, sp1, PlaneWave(θ_i), x_points = 150, y_points = 150,
         opt = fmm_options, border = border)
-plot_near_field_pgf(filename1, k0, kin, P, sp1, θ_i; opt = fmm_options,
+plot_near_field_pgf(filename1, k0, kin, P, sp1, PlaneWave(θ_i); opt = fmm_options,
     x_points = 201, y_points = 201, border = border)
 
 sp2 = ScatteringProblem([CircleParams(rs_max[i]) for i in eachindex(rs_max)],
         ids_max, centers, φs)
 Ez2 = plot_near_field(k0, kin, P, sp2, PlaneWave(θ_i), x_points = 150, y_points = 150,
             opt = fmm_options, border = border)
-plot_near_field_pgf(filename2, k0, kin, P, sp2, θ_i; opt = fmm_options,
+plot_near_field_pgf(filename2, k0, kin, P, sp2, PlaneWave(θ_i); opt = fmm_options,
     x_points = 201, y_points = 201, border = border)
 
 sp3 = ScatteringProblem([CircleParams(rs0[i]) for i in eachindex(rs0)],
         collect(1:length(rs0)), centers, φs)
 Ez3 = plot_near_field(k0, kin, P, sp3, PlaneWave(θ_i), x_points = 150, y_points = 150,
         opt = fmm_options, border = border)
-plot_near_field_pgf(filename3, k0, kin, P, sp3, θ_i; opt = fmm_options,
+plot_near_field_pgf(filename3, k0, kin, P, sp3, PlaneWave(θ_i); opt = fmm_options,
     x_points = 201, y_points = 201, border = border)
 
 #plot convergence
