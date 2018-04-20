@@ -1,9 +1,9 @@
 """
-	solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0; get_inner = true, verbose = true) -> beta, inner
+	solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, pw::PlaneWave; get_inner = true, verbose = true) -> beta, inner
 
 Solve the scattering problem `sp` with outer wavenumber `k0`, inner wavenumber
 `kin`, `2P+1` cylindrical harmonics per inclusion and incident plane wave angle
-`θ_i`. Solves multiple-scattering equation directly.
+`pw.θi`. Solves multiple-scattering equation directly.
 Returns the cylindrical harmonics basis `beta` along with potential
 densities (in case of arbitrary inclusion) or inner cylindrical coefficients (in
 case of circular). By default, incident wave propagates left->right.
@@ -11,7 +11,7 @@ case of circular). By default, incident wave propagates left->right.
 Inner coefficients are only calculated if `get_inner` is true, and timing is
 printed if `verbose` is true.
 """
-function solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0;
+function solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, pw::PlaneWave;
 								get_inner = true, verbose = true)
 	# This function solves for the outgoing multipole coefficients in the presence
 	# of an incident plane wave.
@@ -20,13 +20,12 @@ function solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0
 	shapes = sp.shapes;	ids = sp.ids; centers = sp.centers; φs = sp.φs
 	Ns = size(sp)
 	#first solve for single scatterer densities
-	α = Complex{Float64}[exp(1.0im*p*(pi/2-θ_i)) for p=-P:P]
 	tic()
 	scatteringMatrices,innerExpansions = particleExpansion(k0, kin, shapes, P, ids)
 	dt1 = toq()
 	tic()
 	T = Array{Complex{Float64}}(Ns*(2*P+1),Ns*(2*P+1))
-	a = Array{Complex{Float64}}(Ns*(2*P+1))
+	a = u2α(k0, pw, centers, P)
 	Btemp = Array{Complex{Float64}}(2*P+1,2*P+1)
 	for ic1 = 1:Ns
 		rng1 = (ic1-1)*(2*P+1) + (1:2*P+1)
@@ -45,8 +44,77 @@ function solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0
 				T[rng1,rng2] = -RotScatMat*Btemp
 			end
 		end
-		phase = exp(1.0im*k0*(cos(θ_i)*centers[ic1,1] + sin(θ_i)*centers[ic1,2])) #phase shift added to move cylinder coords
-		a[rng1] = phase*(RotScatMat*α)
+		a[rng1] = RotScatMat*a[rng1]
+	end
+	dt2 = toq()
+	tic()
+	beta = T\a
+	dt3 = toq()
+	#recover full incoming expansion - in sigma_mu terms for parametrized shape,
+	#in multipole expansion for circle
+	if get_inner
+		tic()
+		#find LU factorization once for each shape
+        scatteringLU = [lufact(scatteringMatrices[iid]) for iid = 1:length(shapes)]
+		inner = Array{Vector{Complex{Float64}}}(Ns)
+		α_c = Array{Complex{Float64}}(2*P+1)
+		for ic = 1:Ns
+			rng = (ic-1)*(2*P+1) + (1:2*P+1)
+			if typeof(shapes[ids[ic]]) == ShapeParams
+				if φs[ic] == 0.0
+					α_c[:] = scatteringLU[ids[ic]]\beta[rng]
+				else
+					Rot = spdiagm(Complex{Float64}[exp(-1.0im*φs[ic]*l) for l=-P:P]) #rotation matrix
+					α_c[:] = scatteringLU[ids[ic]]\(conj(Rot)*beta[rng])
+				end
+				inner[ic] = innerExpansions[ids[ic]]*α_c
+			else
+				inner[ic] = innerExpansions[ids[ic]]*beta[rng]
+			end
+		end
+		dt4 = toq()
+	end
+	verbose && begin
+		println("Direct solution timing:")
+		println("Scattering matrix solution: $dt1 s")
+		println("Matrix construction: $dt2 s")
+		println("Matrix solution: $dt3 s")
+        get_inner && println("Retrieving inner coefficients: $dt4 s")
+    end
+	get_inner ? (return beta, inner) : (return beta)
+end
+
+function solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, ls::LineSource;
+								get_inner = true, verbose = true)
+
+	shapes = sp.shapes;	ids = sp.ids; centers = sp.centers; φs = sp.φs
+	Ns = size(sp)
+	#first solve for single scatterer densities
+	tic()
+	scatteringMatrices,innerExpansions = particleExpansion(k0, kin, shapes, P, ids)
+	dt1 = toq()
+	tic()
+	T = Array{Complex{Float64}}(Ns*(2*P+1),Ns*(2*P+1))
+	a = u2α(k0, ls, centers, P)
+	Btemp = Array{Complex{Float64}}(2*P+1,2*P+1)
+	for ic1 = 1:Ns
+		rng1 = (ic1-1)*(2*P+1) + (1:2*P+1)
+		if φs[ic1] == 0.0 || typeof(shapes[ids[ic1]]) == CircleParams
+			RotScatMat = scatteringMatrices[ids[ic1]]
+		else
+			Rot = spdiagm(Complex{Float64}[exp(-1.0im*φs[ic1]*l) for l=-P:P]) #rotation matrix
+			RotScatMat = Rot*(scatteringMatrices[ids[ic1]]*conj(Rot))
+		end
+		for ic2 = 1:Ns
+			rng2 = (ic2-1)*(2*P+1) + (1:2*P+1)
+			if ic1 == ic2
+				T[rng1,rng2] = eye(Complex{Float64},2*P+1)
+			else
+				M2Lmatrix!(Btemp, k0, P, centers[ic1,:] - centers[ic2,:])
+				T[rng1,rng2] = -RotScatMat*Btemp
+			end
+		end
+		a[rng1] = RotScatMat*a[rng1]
 	end
 	dt2 = toq()
 	tic()
@@ -185,7 +253,7 @@ function innerFieldCircle(kin, gamma, center::Array{Float64,1}, points::Array{Fl
 	bess = [besselj(p,kin*rs_moved[ii]) for ii=1:len, p=0:P]
 	E = gamma[P + 1]*bess[:,1]
 	for p = 1:P
-		E += bess[:,p+1].*(gamma[p + P + 1]*exp.(1.0im*p*ts_moved) + 
+		E += bess[:,p+1].*(gamma[p + P + 1]*exp.(1.0im*p*ts_moved) +
 							(-1)^p*gamma[-p + P + 1]*exp.(-1.0im*p*ts_moved))
 	end
 	return E

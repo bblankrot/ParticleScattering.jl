@@ -36,7 +36,7 @@ function plot_near_field_pgf(filename, k0, kin, P, sp::ScatteringProblem, θ_i =
     ygrid = repmat(y,1,x_points)
     points = [xgrid[:] ygrid[:]]
 
-    Ez = calc_near_field(k0, kin, P, sp, points, θ_i,
+    Ez = calc_near_field(k0, kin, P, sp, points, PlaneWave(θ_i),
                             use_multipole=use_multipole, opt = opt)
 
     aspect = (y_max - y_min)/(x_max - x_min)

@@ -1,9 +1,9 @@
 """
-	solve_particle_scattering_FMM(k0, kin, P, sp::ScatteringProblem, θ_i, opt::FMMoptions; plot_res = false, get_inner = true, verbose = true) -> result, inner
+	solve_particle_scattering_FMM(k0, kin, P, sp::ScatteringProblem, pw::PlaneWave, opt::FMMoptions; plot_res = false, get_inner = true, verbose = true) -> result, inner
 
 Solve the scattering problem `sp` with outer wavenumber `k0`, inner wavenumber
 `kin`, `2P+1` cylindrical harmonics per inclusion and incident plane wave angle
-`θ_i`. Utilizes FMM with options `opt` to solve multiple-scattering equation.
+`pw.θi`. Utilizes FMM with options `opt` to solve multiple-scattering equation.
 Returns the cylindrical harmonics basis `beta` along with convergence data in
 `result`. `inner` contains potential densities (in case of arbitrary inclusion)
 or inner cylindrical coefficients (in case of circular).
@@ -12,7 +12,7 @@ or inner cylindrical coefficients (in case of circular).
 only if `get_inner` is true, and timing is printed if `verbose` is true.
 """
 #TODO: return beta,inner,history
-function solve_particle_scattering_FMM(k0, kin, P, sp::ScatteringProblem, θ_i, opt::FMMoptions; plot_res = false, get_inner = true, verbose = true)
+function solve_particle_scattering_FMM(k0, kin, P, sp::ScatteringProblem, pw::PlaneWave, opt::FMMoptions; plot_res = false, get_inner = true, verbose = true)
 	assert(opt.FMM)
 	shapes = sp.shapes;	ids = sp.ids; centers = sp.centers; φs = sp.φs
     Ns = size(sp)
@@ -28,12 +28,10 @@ function solve_particle_scattering_FMM(k0, kin, P, sp::ScatteringProblem, θ_i, 
     dt1 = toq()
 
     tic()
-    α = Complex{Float64}[exp(1.0im*p*(π/2-θ_i)) for p=-P:P]
     #construct rhs
-    rhs = repeat(α, outer=[Ns])
+    rhs = u2α(k0, pw, centers, P)
     for ic = 1:Ns
         rng = (ic-1)*(2*P+1) + (1:2*P+1)
-        phase = exp(1.0im*k0*(cos(θ_i)*centers[ic,1] + sin(θ_i)*centers[ic,2])) #phase shift added to move cylinder coords
         #see if there is a faster alternative
         if φs[ic] == 0.0
             rhs[rng] = scatteringMatrices[ids[ic]]*rhs[rng]
@@ -43,7 +41,6 @@ function solve_particle_scattering_FMM(k0, kin, P, sp::ScatteringProblem, θ_i, 
             rhs[rng] = scatteringMatrices[ids[ic]]*rhs[rng]
             rotateMultipole!(view(rhs,rng),φs[ic],P)
         end
-        rhs[rng] .= rhs[rng]*phase
     end
     dt2 = toq()
 

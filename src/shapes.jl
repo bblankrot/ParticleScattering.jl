@@ -75,7 +75,7 @@ function rect_grid(a::Integer, b::Integer, dx, dy)
 end
 
 """
-	hex_grid(a::Integer, b::Integer, d)
+	hex_grid(a::Integer, rows::Integer, d; minus1 = false)
 
 Return `centers`, an `(M,2)` array  containing the points on a hexagonal lattice
 with horizontal rows, with `a` points in each row and `rows` rows, distanced `d`.

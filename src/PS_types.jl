@@ -174,3 +174,15 @@ end
 
 import Base.size
 size(q::ParticleScattering.ScatteringProblem) = length(q.ids)
+
+abstract type Einc end
+
+struct PlaneWave <: Einc
+	θi::Float64
+	PlaneWave(θi = 0) = new(θi)
+end
+
+struct LineSource <: Einc
+	x::Float64
+	y::Float64
+end

@@ -1,3 +1,5 @@
+__precompile__(true)
+
 """
 A Julia package for solving large-scale electromagnetic scattering problems in
 two dimensions; specifically, those containing a large number of penetrable
@@ -25,6 +27,7 @@ include("optimize_phis.jl")
 include("optimize_rs.jl")
 include("utilities.jl")
 include("minimum_N_P.jl")
+include("incident.jl")
 
 #methods, shapes.jl
 export rounded_star, squircle, ellipse, square_grid, rect_grid, hex_grid,
@@ -41,7 +44,7 @@ export solve_particle_scattering_FMM
 export get_potential, get_potentialPW, scatteredfield
 #types, PS_types.jl
 export ScatteringProblem, OptimBuffer, FMMoptions, R_multipole,
-    ShapeParams, CircleParams, AbstractShapeParams
+    ShapeParams, CircleParams, AbstractShapeParams, PlaneWave, LineSource
 #methods, utilities.jl
 export find_border, uniqueind
 #methods, optimize_phis.jl

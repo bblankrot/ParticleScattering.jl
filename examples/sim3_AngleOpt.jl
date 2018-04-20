@@ -70,7 +70,7 @@ optim_time = toq()
 # %%
 
 sp_before = ScatteringProblem(shapes, ids, centers, φs)
-plot_near_field(k0, kin, P, sp_before, θ_i,
+plot_near_field(k0, kin, P, sp_before, PlaneWave(θ_i),
                 x_points = 600, y_points = 200, border = plot_border);
 colorbar()
 clim([0;5])
@@ -79,7 +79,7 @@ plot_near_field_pgf(output_dir * "/opt_phi_before.tex", k0, kin, P,
     border = plot_border, downsample = 10, include_preamble = true)
 
 sp_after = ScatteringProblem(shapes, ids, centers, test_max.minimizer)
-plot_near_field(k0, kin, P, sp_after, θ_i,
+plot_near_field(k0, kin, P, sp_after, PlaneWave(θ_i),
                 x_points = 600, y_points = 200, border = plot_border)
 colorbar()
 clim([0;5])

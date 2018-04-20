@@ -178,9 +178,9 @@ function get_potentialPW(kout, kin, s, θ_i)
     LU = lufact(A)
 
 	ndft = sqrt.(sum(abs2,s.dft,2))
-    uinc = exp.(1.0im*kout*(cos(θ_i)*s.ft[:,1] + sin(θ_i)*s.ft[:,2]))
-    rhs = -[uinc;
-			(1.0im*kout*uinc).*((cos(θ_i)*s.dft[:,2] - sin(θ_i)*s.dft[:,1])./ndft)]
+    ui = exp.(1.0im*kout*(cos(θ_i)*s.ft[:,1] + sin(θ_i)*s.ft[:,2]))
+    rhs = -[ui;
+			(1.0im*kout*ui).*((cos(θ_i)*s.dft[:,2] - sin(θ_i)*s.dft[:,1])./ndft)]
 
     sigma_mu = LU\rhs
 end
@@ -307,10 +307,10 @@ function solvePotential_forError(kin, kout, shape, ls_pos, ls_amp, θ_i)
     end
 
     #outer plane wave
-    uinc = exp.(1.0im*kin*(cos(θ_i)*shape.ft[:,1] + sin(θ_i)*shape.ft[:,2]))
-    duinc = (1.0im*kin)*(uinc.*(cos(θ_i)*shape.dft[:,2] - sin(θ_i)*shape.dft[:,1])./ndft)
+    ui = exp.(1.0im*kin*(cos(θ_i)*shape.ft[:,1] + sin(θ_i)*shape.ft[:,2]))
+    dui = (1.0im*kin)*(ui.*(cos(θ_i)*shape.dft[:,2] - sin(θ_i)*shape.dft[:,1])./ndft)
 
-    rhs = -[uinc+uls;duinc+duls]
+    rhs = -[ui+uls;dui+duls]
     sigma_mu = LU\rhs
     return sigma_mu
 end
