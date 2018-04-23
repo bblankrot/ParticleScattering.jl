@@ -59,7 +59,7 @@ plot(points[:,1]/λ0, abs.(u))
 
 Similarly, a 2D plot can be drawn of the total field around the scatterer:
 ```julia
-plot_near_field(k0, kin, P, sp::ScatteringProblem, θ_i;
+plot_near_field(k0, kin, P, sp, θ_i;
     x_points = 201, y_points = 201, border = 0.5λ0*[-1;1;-1;1])
 ```
 
