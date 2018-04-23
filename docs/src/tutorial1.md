@@ -38,7 +38,7 @@ Now that the scattering problem is set up, we solve for the cylindrical harmonic
 coefficients and potential densities, respectively, by using
 
 ```julia
-beta,inner = solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i)
+beta,inner = solve_particle_scattering(k0, kin, P, sp, θ_i)
 ```
 
 These can be used to calculate the scattered field at any point in space using
