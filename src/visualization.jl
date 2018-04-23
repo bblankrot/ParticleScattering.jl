@@ -259,7 +259,7 @@ end
 function calc_far_field(k0, kin, P, points, sp::ScatteringProblem, pw::PlaneWave;
                         opt::FMMoptions = FMMoptions(), use_multipole = true)
     #calc only scattered field + assumes all points are outside shapes
-    shapes = sp.shapes; centers = sp.centers; ids = sp.ids, φs = sp.φs
+    shapes = sp.shapes; centers = sp.centers; ids = sp.ids; φs = sp.φs
     if opt.FMM
         result,sigma_mu =  solve_particle_scattering_FMM(k0, kin, P, sp, pw, opt)
         if result[2].isconverged == false
