@@ -1,9 +1,9 @@
 """
-	solve_particle_scattering_FMM(k0, kin, P, sp::ScatteringProblem, pw::PlaneWave, opt::FMMoptions; plot_res = false, get_inner = true, verbose = true) -> result, inner
+	solve_particle_scattering_FMM(k0, kin, P, sp::ScatteringProblem, u::Einc, opt::FMMoptions; plot_res = false, get_inner = true, verbose = true) -> result, inner
 
 Solve the scattering problem `sp` with outer wavenumber `k0`, inner wavenumber
-`kin`, `2P+1` cylindrical harmonics per inclusion and incident plane wave angle
-`pw.θi`. Utilizes FMM with options `opt` to solve multiple-scattering equation.
+`kin`, `2P+1` cylindrical harmonics per inclusion and incident TM field
+`u`. Utilizes FMM with options `opt` to solve multiple-scattering equation.
 Returns the cylindrical harmonics basis `beta` along with convergence data in
 `result`. `inner` contains potential densities (in case of arbitrary inclusion)
 or inner cylindrical coefficients (in case of circular).
@@ -12,7 +12,7 @@ or inner cylindrical coefficients (in case of circular).
 only if `get_inner` is true, and timing is printed if `verbose` is true.
 """
 #TODO: return beta,inner,history
-function solve_particle_scattering_FMM(k0, kin, P, sp::ScatteringProblem, pw::PlaneWave, opt::FMMoptions; plot_res = false, get_inner = true, verbose = true)
+function solve_particle_scattering_FMM(k0, kin, P, sp::ScatteringProblem, u::Einc, opt::FMMoptions; plot_res = false, get_inner = true, verbose = true)
 	assert(opt.FMM)
 	shapes = sp.shapes;	ids = sp.ids; centers = sp.centers; φs = sp.φs
     Ns = size(sp)
@@ -29,7 +29,7 @@ function solve_particle_scattering_FMM(k0, kin, P, sp::ScatteringProblem, pw::Pl
 
     tic()
     #construct rhs
-    rhs = u2α(k0, pw, centers, P)
+    rhs = u2α(k0, u, centers, P)
     for ic = 1:Ns
         rng = (ic-1)*(2*P+1) + (1:2*P+1)
         #see if there is a faster alternative

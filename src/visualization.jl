@@ -1,11 +1,11 @@
 """
-    plot_near_field(k0, kin, P, sp::ScatteringProblem, pw::PlaneWave;
+    plot_near_field(k0, kin, P, sp::ScatteringProblem, ui::Einc;
                         opt::FMMoptions = FMMoptions(), use_multipole = true,
                         x_points = 201, y_points = 201, border = find_border(sp),
                         normalize = 1.0)
 
 Plots the total electric field as a result of a plane wave with incident
-angle `pw.θi` scattering from the ScatteringProblem `sp`, using matplotlib's
+TM field `ui` scattering from the ScatteringProblem `sp`, using matplotlib's
 `pcolormesh`. Can accept number of sampling points in each direction plus
 bounding box or calculate automatically.
 
@@ -21,7 +21,7 @@ Returns the calculated field in two formats:
 2. `(xgrid,ygrid,zgrid)`, the format suitable for `pcolormesh`, where `zgrid[i,j]`
 contains the field at `(mean(xgrid[i, j:j+1]), mean(ygrid[i:i+1, j]))`.
 """
-function plot_near_field(k0, kin, P, sp::ScatteringProblem, pw::PlaneWave;
+function plot_near_field(k0, kin, P, sp::ScatteringProblem, ui::Einc;
                         opt::FMMoptions = FMMoptions(), use_multipole = true,
                         x_points = 201, y_points = 201, border = find_border(sp),
                         normalize = 1.0)
@@ -39,7 +39,7 @@ function plot_near_field(k0, kin, P, sp::ScatteringProblem, pw::PlaneWave;
     points = cat(2, vec(xgrid[1:y_points, 1:x_points]) + dx,
                 vec(ygrid[1:y_points, 1:x_points]) + dy)
 
-    Ez = calc_near_field(k0, kin, P, sp, points, pw,
+    Ez = calc_near_field(k0, kin, P, sp, points, ui,
             use_multipole = use_multipole, opt = opt)
     zgrid = reshape(Ez, y_points, x_points)
     figure()
@@ -131,7 +131,7 @@ draw_shapes(sp; ax = gca(), normalize = 1.0) = draw_shapes(sp.shapes,
                             verbose = true)
 
 Calculates the total electric field as a result of a plane wave with incident
-angle `pw.θi` scattering from the ScatteringProblem `sp`, at `points`.
+field `ui` scattering from the ScatteringProblem `sp`, at `points`.
 Uses the FMM options given by `opt` (default behavious is disabled FMM);
 `use_multipole` dictates whether electric field is calculated using the
 multipole/cylindrical harmonics (true) or falls back on potential densities
@@ -140,7 +140,7 @@ harmonics space, and the field by a particular scatterer inside its own scatteri
 discs is calculated by potential densities, as the cylindrical harmonics
 approximation is not valid there.
 """
-function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, pw::PlaneWave;
+function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, ui::Einc;
                             opt::FMMoptions = FMMoptions(), use_multipole = true,
                             verbose = true)
 
@@ -148,14 +148,14 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, pw::PlaneWav
     u = zeros(Complex{Float64},size(points,1))
     if opt.FMM
         result,sigma_mu =  solve_particle_scattering_FMM(k0, kin, P, sp,
-                            pw, opt, verbose = verbose)
+                            ui, opt, verbose = verbose)
         if result[2].isconverged == false
             warn("FMM process did not converge")
             return
         end
         beta = result[1]
     else
-        beta, sigma_mu = solve_particle_scattering(k0, kin, P, sp, pw)
+        beta, sigma_mu = solve_particle_scattering(k0, kin, P, sp, ui)
     end
 
     tic()
@@ -196,7 +196,7 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, pw::PlaneWav
         if any(rng_out)
             u[rng_out] += scatteredfield(sigma_mu[ic], k0, shapes[ids[ic]].t,
                             ft_rot, dft_rot, points[rng_out,:])
-            u[rng_out] += uinc(k0, points[rng_out,:], pw)
+            u[rng_out] += uinc(k0, points[rng_out,:], ui)
             for ic2 = 1:size(sp)
                 ic == ic2 && continue
                 if use_multipole
@@ -223,7 +223,7 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, pw::PlaneWav
     #now compute field outside all shapes
     rng = (tags .== 0)
     #incident field
-    u[rng] = uinc(k0, points[rng,:], pw)
+    u[rng] = uinc(k0, points[rng,:], ui)
     if use_multipole
         scattered_field_multipole!(u, k0, beta, P, centers, 1:size(sp), points, find(rng))
     else

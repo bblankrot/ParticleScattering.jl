@@ -1,11 +1,11 @@
 """
-    plot_near_field_pgf(filename, k0, kin, P, sp::ScatteringProblem, pw::PlaneWave;
+    plot_near_field_pgf(filename, k0, kin, P, sp::ScatteringProblem, ui::Einc;
                         opt::FMMoptions = FMMoptions(), use_multipole = true,
                         x_points = 201, y_points = 201, border = find_border(sp),
                         downsample = 1, include_preamble = false, normalize = 1.0)
 
-Plots the total electric field as a result of a plane wave with incident
-angle `pw.θi` scattering from the ScatteringProblem `sp`, using pgfplots's
+Plots the total electric field as a result of a plane wave with incident TM
+field `ui` scattering from the ScatteringProblem `sp`, using pgfplots's
 `surf`. Can accept number of sampling points in each direction, and either
 a given `border` or calculate it automatically. The plots of the shapes (but not
 the field) can be downsampled by setting an integer `downsample`, since pgfplots
@@ -21,7 +21,7 @@ Saves the generated pgfplots file to `filename`, with just a surrounding `tikzpi
 environment if `include_preamble=false`, and a compilable tandalone document
 otherwise.
 """
-function plot_near_field_pgf(filename, k0, kin, P, sp::ScatteringProblem, pw::PlaneWave;
+function plot_near_field_pgf(filename, k0, kin, P, sp::ScatteringProblem, ui::Einc;
                             opt::FMMoptions = FMMoptions(), use_multipole = true,
                             x_points = 201, y_points = 201, border = find_border(sp),
                             downsample = 1, include_preamble = false, normalize = 1.0)
@@ -36,7 +36,7 @@ function plot_near_field_pgf(filename, k0, kin, P, sp::ScatteringProblem, pw::Pl
     ygrid = repmat(y,1,x_points)
     points = [xgrid[:] ygrid[:]]
 
-    Ez = calc_near_field(k0, kin, P, sp, points, pw,
+    Ez = calc_near_field(k0, kin, P, sp, points, ui,
                             use_multipole=use_multipole, opt = opt)
 
     aspect = (y_max - y_min)/(x_max - x_min)

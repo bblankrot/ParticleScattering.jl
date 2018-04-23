@@ -18,7 +18,7 @@
         u_in = scatteredfield(sigma_mu, kin, s, p_in)
         u_out = scatteredfield(sigma_mu, k0, s, p_out)
         #some error is allowed as this quadrature is imprecise close to the boundary
-        u_inc = exp.(1.0im*k0*(cos(θ_i)*s.ft[:,1] + sin(θ_i)*s.ft[:,2]))
+        u_inc = uinc(k0, s.ft, PlaneWave(θ_i))
         @test norm(u_inc + u_out - u_in)/norm(u_inc) < 1e-3
     end
 end
