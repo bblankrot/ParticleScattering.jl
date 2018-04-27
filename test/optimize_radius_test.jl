@@ -29,7 +29,7 @@ import Optim
     assert(verify_min_distance([CircleParams(r_max[i]) for i = 1:J],
             centers, ids, points))
 
-    res = optimize_radius(rs0, r_min, r_max, points, ids, P, pw.θi, k0, kin,
+    res = optimize_radius(rs0, r_min, r_max, points, ids, P, pw, k0, kin,
             centers, fmm_options, optim_options, minimize = true)
     rs = res.minimizer
     @test res.x_converged
@@ -37,7 +37,7 @@ import Optim
     optim_options2 =  Optim.Options(f_tol = 1e-7, iterations = 10,
                             store_trace = true, show_trace = false,
                             allow_f_increases = true)
-    res2 = optimize_radius(rs0, r_min, r_max, points, ids, P, pw.θi, k0, kin,
+    res2 = optimize_radius(rs0, r_min, r_max, points, ids, P, pw, k0, kin,
             centers, fmm_options, optim_options2, minimize = false,
             method = "LBFGS")
     @test res2.f_converged

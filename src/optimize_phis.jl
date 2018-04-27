@@ -1,5 +1,5 @@
 """
-    optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids, fmmopts,
+    optimize_φ(φs0, points, P, ui::Einc, k0, kin, shapes, centers, ids, fmmopts,
         optimopts::Optim.Options, minimize = true)
 
 Optimize the rotation angles of a particle collection for minimization or
@@ -8,7 +8,7 @@ maximization (depending on `minimize`) of the field intensity at `points`.
 and other optimization parameters.
 Returns an object of type `Optim.MultivariateOptimizationResults`.
 """
-function optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids, fmmopts,
+function optimize_φ(φs0, points, P, ui::Einc, k0, kin, shapes, centers, ids, fmmopts,
                     optimopts::Optim.Options, method; minimize = true)
 
     #stuff that is done once
@@ -17,8 +17,8 @@ function optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids, fmmop
         prepare_fmm_reusal_φs(k0, kin, P, shapes, centers, ids, fmmopts)
     Ns = size(centers,1)
     H = optimizationHmatrix(points, centers, Ns, P, k0)
-    α_inc = Complex{Float64}[exp(1.0im*p*(0.5π - θ_i)) for p=-P:P]
-
+    α = u2α(k0, ui, centers, P)
+    uinc_ = uinc(k0, points, ui)
     # Allocate buffers
     shared_var = OptimBuffer(Ns,P,size(points,1))
     initial_φs = copy(φs0)
@@ -27,21 +27,21 @@ function optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids, fmmop
 
     if minimize
         df = OnceDifferentiable(
-            φs -> optimize_φ_f(φs, shared_var, last_φs, α_inc,
-                                    H, points, P, θ_i, Ns, k0, centers,
+            φs -> optimize_φ_f(φs, shared_var, last_φs, α,
+                                    H, points, P, uinc_, Ns, k0, centers,
                                     scatteringMatrices, ids, mFMM, fmmopts, buf),
             (grad_stor, φs) -> optimize_φ_g!(grad_stor, φs, shared_var,
-                                    last_φs, α_inc, H, points, P, θ_i,
+                                    last_φs, α, H, points, P, uinc_,
                                     Ns, k0, centers, scatteringMatrices,
                                     scatteringLU, ids, mFMM, fmmopts, buf, minimize),
                                     initial_φs)
     else
         df = OnceDifferentiable(
-            φs -> -optimize_φ_f(φs, shared_var, last_φs, α_inc,
-                                    H, points, P, θ_i, Ns, k0, centers,
+            φs -> -optimize_φ_f(φs, shared_var, last_φs, α,
+                                    H, points, P, uinc_, Ns, k0, centers,
                                     scatteringMatrices, ids, mFMM, fmmopts, buf),
             (grad_stor, φs) -> optimize_φ_g!(grad_stor, φs, shared_var,
-                                    last_φs, α_inc, H, points, P, θ_i,
+                                    last_φs, α, H, points, P, uinc_,
                                     Ns, k0, centers, scatteringMatrices,
                                     scatteringLU, ids, mFMM, fmmopts, buf, minimize),
                                     initial_φs)
@@ -49,7 +49,7 @@ function optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids, fmmop
     optimize(df, initial_φs, method, optimopts)
 end
 
-function optimize_φ_common!(φs, last_φs, shared_var, α_inc, H, points, P, θ_i, Ns, k0, centers, scatteringMatrices, ids, mFMM, opt, buf)
+function optimize_φ_common!(φs, last_φs, shared_var, α, H, points, P, uinc_, Ns, k0, centers, scatteringMatrices, ids, mFMM, opt, buf)
     if φs != last_φs
         copy!(last_φs, φs)
         #do whatever common calculations and save to shared_var
@@ -57,16 +57,13 @@ function optimize_φ_common!(φs, last_φs, shared_var, α_inc, H, points, P, θ
         for ic = 1:Ns
             rng = (ic-1)*(2*P+1) + (1:2*P+1)
             if φs[ic] == 0.0
-                buf.rhs[rng] = scatteringMatrices[ids[ic]]*α_inc
+                buf.rhs[rng] = scatteringMatrices[ids[ic]]*α[rng]
             else
                 #rotate without matrix
-                rotateMultipole!(view(buf.rhs,rng),α_inc,-φs[ic],P)
+                rotateMultipole!(view(buf.rhs,rng),view(α,rng),-φs[ic],P)
                 buf.rhs[rng] = scatteringMatrices[ids[ic]]*buf.rhs[rng]
                 rotateMultipole!(view(buf.rhs,rng),φs[ic],P)
             end
-            #phase shift added to move cylinder coords
-            phase = exp(1.0im*k0*(cos(θ_i)*centers[ic,1] + sin(θ_i)*centers[ic,2]))
-            buf.rhs[rng] *= phase
         end
 
         if opt.method == "pre"
@@ -90,20 +87,19 @@ function optimize_φ_common!(φs, last_φs, shared_var, α_inc, H, points, P, θ
         !ch.isconverged && error("FMM process did not converge")
 
         shared_var.f[:] = H.'*shared_var.β
-        shared_var.f[:] .+= exp.(1.0im*k0*(cos(θ_i)*points[:,1] +
-                                            sin(θ_i)*points[:,2])) #incident
+        shared_var.f .+= uinc_
     end
 end
 
-function optimize_φ_f(φs, shared_var, last_φs, α_inc, H, points, P, θ_i, Ns, k0, centers,scatteringMatrices, ids, mFMM, opt, buf)
-    optimize_φ_common!(φs, last_φs, shared_var, α_inc, H, points, P, θ_i, Ns,
+function optimize_φ_f(φs, shared_var, last_φs, α, H, points, P, uinc_, Ns, k0, centers,scatteringMatrices, ids, mFMM, opt, buf)
+    optimize_φ_common!(φs, last_φs, shared_var, α, H, points, P, uinc_, Ns,
         k0, centers,scatteringMatrices, ids, mFMM, opt, buf)
 
-    func = sum(abs2,shared_var.f)
+    func = sum(abs2, shared_var.f)
 end
 
-function optimize_φ_g!(grad_stor, φs, shared_var, last_φs, α_inc, H, points, P, θ_i, Ns, k0, centers, scatteringMatrices, scatteringLU, ids, mFMM, opt, buf, minimize)
-    optimize_φ_common!(φs, last_φs, shared_var, α_inc, H, points, P, θ_i, Ns,
+function optimize_φ_g!(grad_stor, φs, shared_var, last_φs, α, H, points, P, uinc_, Ns, k0, centers, scatteringMatrices, scatteringLU, ids, mFMM, opt, buf, minimize)
+    optimize_φ_common!(φs, last_φs, shared_var, α, H, points, P, uinc_, Ns,
         k0, centers,scatteringMatrices, ids, mFMM, opt, buf)
 
     if opt.method == "pre"

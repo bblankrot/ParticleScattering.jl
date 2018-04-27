@@ -27,10 +27,10 @@ import Optim
     optim_options = Optim.Options(f_tol = 1e-6, iterations = 50,
                         store_trace = true, show_trace = false)
     optim_method = Optim.BFGS(;linesearch = LineSearches.BackTracking())
-    res_min = optimize_φ(φs0, points, P, pw.θi, k0, kin, shapes, centers, ids, fmm_options,
+    res_min = optimize_φ(φs0, points, P, pw, k0, kin, shapes, centers, ids, fmm_options,
             optim_options, optim_method; minimize = true)
     @test res_min.f_converged
-    res_max = optimize_φ(φs0, points, P, pw.θi, k0, kin, shapes, centers, ids, fmm_options,
+    res_max = optimize_φ(φs0, points, P, pw, k0, kin, shapes, centers, ids, fmm_options,
             optim_options, optim_method; minimize = false)
     @test res_max.f_converged
     sp_min = ScatteringProblem(shapes, ids, centers, res_min.minimizer)
@@ -46,7 +46,7 @@ import Optim
     fobj0 = sum(abs2.(u_bef))
     fobj_min = sum(abs2.(u_min))
     fobj_max = sum(abs2.(u_max))
-
+    @test fobj_max > fobj0 && fobj_min < fobj0
     @test isapprox(res_min.trace[1].value, fobj0)
     @test isapprox(res_min.minimum, fobj_min)
     @test isapprox(-res_max.minimum, fobj_max)

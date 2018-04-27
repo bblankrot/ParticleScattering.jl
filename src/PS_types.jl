@@ -186,3 +186,17 @@ struct LineSource <: Einc
 	x::Float64
 	y::Float64
 end
+
+struct CurrentSource <: Einc
+	#ft is a *straight* line for integration simplicity
+	p::Array{Float64,2}
+	σ::Vector{Complex{Float64}}
+	len::Float64
+end
+
+function CurrentSource(x1, y1, x2, y2, σ)
+	len = sqrt((x2 - x1)^2 + (y2 - y1)^2)
+	t = linspace(0, 1, length(σ))
+	p = [(x2 - x1)*t + x1		(y2 - y1)*t + y1]
+	CurrentSource(p, σ, len)
+end

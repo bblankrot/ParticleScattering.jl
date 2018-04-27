@@ -51,6 +51,9 @@ export find_border, uniqueind
 export optimize_φ
 #methods, optimize_rs.jl
 export optimize_radius
+#methods, incident.jl
+export uinc
+
 # For advanced plotting with pgfplots
 import DataFrames, CSV, PGFPlotsX; const pgf = PGFPlotsX
 include("visualization_pgf.jl")

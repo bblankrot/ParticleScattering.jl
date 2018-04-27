@@ -61,7 +61,7 @@ assert(verify_min_distance([CircleParams(r_max[i]) for i = 1:J],
 The optimization process is initiated by running:
 
 ```julia
-res = optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin,
+res = optimize_radius(rs0, r_min, r_max, points, ids, P, pw, k0, kin,
                 centers, fmm_options, optim_options, minimize = true)
 rs = res.minimizer
 ```

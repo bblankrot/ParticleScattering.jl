@@ -58,9 +58,9 @@ optim_method = Optim.BFGS(;linesearch = LineSearches.BackTracking())
 We now run both minimization and maximization:
 
 ```julia
-res_min = optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids,
+res_min = optimize_φ(φs0, points, P, pw, k0, kin, shapes, centers, ids,
             fmm_options, optim_options, optim_method; minimize = true)
-res_max = optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids,
+res_max = optimize_φ(φs0, points, P, pw, k0, kin, shapes, centers, ids,
             fmm_options, optim_options, optim_method; minimize = false)
 sp_min = ScatteringProblem(shapes, ids, centers, res_min.minimizer)
 sp_max = ScatteringProblem(shapes, ids, centers, res_max.minimizer)

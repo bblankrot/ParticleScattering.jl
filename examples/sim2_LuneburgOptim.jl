@@ -27,10 +27,10 @@ r_min = (a_lens*1e-3)*ones(size(centers,1))
 rs0 = (0.25*a_lens)*ones(size(centers,1))
 
 ids_max = collect(1:length(rs0))
-test_max = optimize_radius(rs0, r_min, r_max, points, ids_max, P, θ_i, k0, kin, #precompile
+test_max = optimize_radius(rs0, r_min, r_max, points, ids_max, P, PlaneWave(θ_i), k0, kin, #precompile
                 centers, fmm_options, optim_options, minimize = false)
 tic()
-test_max = optimize_radius(rs0, r_min, r_max, points, ids_max, P, θ_i, k0, kin,
+test_max = optimize_radius(rs0, r_min, r_max, points, ids_max, P, PlaneWave(θ_i), k0, kin,
                 centers, fmm_options, optim_options, minimize = false)
 optim_time = toq()
 rs_max = test_max.minimizer
@@ -114,7 +114,7 @@ r_min = (a_lens*1e-3)*ones(J)
 rs0 = (0.25*a_lens)*ones(J)
 
 tic()
-test_max_sym = optimize_radius(rs0, r_min, r_max, points, ids_sym, P, θ_i, k0, kin,
+test_max_sym = optimize_radius(rs0, r_min, r_max, points, ids_sym, P, PlaneWave(θ_i), k0, kin,
                 centers, fmm_options, optim_options, minimize = false)
 sym_time = toq()
 rs_sym = test_max_sym.minimizer
