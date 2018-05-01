@@ -126,7 +126,7 @@ draw_shapes(sp; ax = gca(), normalize = 1.0) = draw_shapes(sp.shapes,
                     sp.ids, sp.centers, sp.φs; ax = ax, normalize = normalize)
 
 """
-    calc_near_field(k0, kin, P, sp::ScatteringProblem, points, pw::PlaneWave;
+    calc_near_field(k0, kin, P, sp::ScatteringProblem, points, ui::Einc;
                             opt::FMMoptions = FMMoptions(), use_multipole = true,
                             verbose = true)
 

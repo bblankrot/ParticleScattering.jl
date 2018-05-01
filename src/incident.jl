@@ -30,8 +30,10 @@ function u2α(k, u::LineSource, centers::Array{T,2}, P) where T <: Real
 	for ic = 1:size(centers,1)
 		R = hypot(centers[ic,1] - u.x, centers[ic,2] - u.y)
 		θ = atan2(centers[ic,2] - u.y, centers[ic,1] - u.x)
-		for p = -P:P
-			α[(ic-1)*(2P+1) + p + P + 1] = exp(-1im*p*θ)*besselh(-p, 1, k*R)
+		α[(ic-1)*(2P+1) + 0 + P + 1] = 0.25im*besselh(0, 1, k*R)
+		for p = 1:P
+			α[(ic-1)*(2P+1) - p + P + 1] = 0.25im*exp(1im*p*θ)*besselh(p, 1, k*R)
+			α[(ic-1)*(2P+1) + p + P + 1] = 0.25im*exp(-1im*p*θ)*besselh(-p, 1, k*R)
 		end
 	end
 	α
@@ -60,12 +62,15 @@ function u2α(k, u::CurrentSource, centers::Array{T,2}, P) where T <: Real
 	α = zeros(Complex{Float64}, size(centers,1)*(2P + 1))
 	c = 0.25im*u.len/length(u.σ)
 	for ic = 1:size(centers,1)
-		for in = 1:length(u.σ)
-			R = hypot(centers[ic,1] - u.p[in,1], centers[ic,2] - u.p[in,2])
-			θ = atan2(centers[ic,2] - u.p[in,2], centers[ic,1] - u.p[in,1])
-			for p = -P:P
-				α[(ic-1)*(2P+1) + p + P + 1] +=
-					c*u.σ[in]*besselh(-p, 1, k*R)*exp(-1im*p*θ)
+		for is = 1:length(u.σ)
+			R = hypot(centers[ic,1] - u.p[is,1], centers[ic,2] - u.p[is,2])
+			θ = atan2(centers[ic,2] - u.p[is,2], centers[ic,1] - u.p[is,1])
+
+			α[(ic-1)*(2P+1) + P + 1] +=	c*u.σ[is]*besselh(0, 1, k*R)
+			for p = 1:P
+				H = besselh(p, 1, k*R)
+				α[(ic-1)*(2P+1) - p + P + 1] +=	c*u.σ[is]*H*exp(1im*p*θ)
+				α[(ic-1)*(2P+1) + p + P + 1] +=	c*u.σ[is]*(-1)^p*H*exp(-1im*p*θ)
 			end
 		end
 	end

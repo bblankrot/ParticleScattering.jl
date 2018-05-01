@@ -44,7 +44,8 @@ export solve_particle_scattering_FMM
 export get_potential, get_potentialPW, scatteredfield
 #types, PS_types.jl
 export ScatteringProblem, OptimBuffer, FMMoptions, R_multipole,
-    ShapeParams, CircleParams, AbstractShapeParams, PlaneWave, LineSource
+    ShapeParams, CircleParams, AbstractShapeParams, PlaneWave, LineSource,
+    CurrentSource
 #methods, utilities.jl
 export find_border, uniqueind
 #methods, optimize_phis.jl
