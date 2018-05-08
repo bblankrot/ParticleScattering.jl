@@ -23,7 +23,7 @@ scattering disk.
 
 See also: `CircleParams`,`R_multipole`.
 """
-type ShapeParams <: AbstractShapeParams
+struct ShapeParams <: AbstractShapeParams
 	t::Array{Float64,1}
 	ft::Array{Float64,2}
 	dft::Array{Float64,2}
@@ -40,7 +40,7 @@ Returns object for a circular shape, containing its radius in the field `R`
 
 See also: `ShapeParams`,`R_multipole`.
 """
-type CircleParams <: AbstractShapeParams
+struct CircleParams <: AbstractShapeParams
 	R::Float64 #radius of multipole disk = radius of circle
 end
 

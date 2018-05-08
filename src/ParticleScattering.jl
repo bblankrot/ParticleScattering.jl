@@ -1,5 +1,3 @@
-#__precompile__(true)
-
 """
 A Julia package for solving large-scale electromagnetic scattering problems in
 two dimensions; specifically, those containing a large number of penetrable
@@ -9,7 +7,7 @@ for various design problems.
 module ParticleScattering
 
 #Core functionality
-using IterativeSolvers, LinearMaps, Optim
+using SpecialFunctions, IterativeSolvers, LinearMaps, Optim
 import LineSearches
 #For plotting with PyPlot
 using PyPlot, PyCall
@@ -45,7 +43,7 @@ export get_potential, get_potentialPW, scatteredfield
 #types, PS_types.jl
 export ScatteringProblem, OptimBuffer, FMMoptions, R_multipole,
     ShapeParams, CircleParams, AbstractShapeParams, PlaneWave, LineSource,
-    CurrentSource
+    CurrentSource, Einc
 #methods, utilities.jl
 export find_border, uniqueind
 #methods, optimize_phis.jl

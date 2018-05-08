@@ -298,7 +298,7 @@ function calc_far_field(k0, kin, P, points, sp::ScatteringProblem, pw::PlaneWave
     return Ez
 end
 
-function tagpoints(sp, points)
+function tagpoints_old(sp, points)
     shapes = sp.shapes;	ids = sp.ids; centers = sp.centers; φs = sp.φs
 
     tags = zeros(Integer, size(points,1))
@@ -310,6 +310,33 @@ function tagpoints(sp, points)
                 if typeof(shapes[ids[ic]]) == ShapeParams
                     if φs[ic] != 0.0 #rotate point backwards instead of shape forwards
                         Rot = [cos(-φs[ic]) -sin(-φs[ic]);sin(-φs[ic]) cos(-φs[ic])]
+                        X = Rot*X
+                    end
+                    tags[ix] = pInPolygon(X, shapes[ids[ic]].ft) ? ic : -ic
+        			break #can't be in two shapes
+                else #CircleParams
+                    tags[ix] = ic
+                    break #can't be in two shapes
+                end
+        	end
+        end
+    end
+    tags
+end
+
+function tagpoints(sp, points)
+    shapes = sp.shapes;	ids = sp.ids; centers = sp.centers; φs = sp.φs
+
+    tags = zeros(Integer, size(points,1))
+    X = Array{Float64}(2) #tmp arrays
+    for ix = 1:size(points,1) #need two loops due to "break"
+        for ic = 1:size(sp)
+            X[1] = points[ix,1] - centers[ic,1]
+            X[2] = points[ix,2] - centers[ic,2]
+            if hypot(X[1], X[2]) ≤ shapes[ids[ic]].R
+                if typeof(shapes[ids[ic]]) == ShapeParams
+                    if φs[ic] != 0.0 #rotate point backwards instead of shape forwards
+                        Rot = cartesianrotation(-φs[ic])
                         X = Rot*X
                     end
                     tags[ix] = pInPolygon(X, shapes[ids[ic]].ft) ? ic : -ic

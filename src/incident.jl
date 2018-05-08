@@ -99,3 +99,27 @@ function uinc(k, points::Array{T,1}, u::CurrentSource) where T <: Real
 	end
 	(0.25im*u.len/length(u.σ))*sum(besselh.(0, 1, k*r).*u.σ)
 end
+
+#compute error in field approximation (on multipole disk)
+function err_α(k, ui::Einc, P, shape, center)
+	#first assert shape and field source do not intersect
+	if isa(ui, LineSource)
+		hypot(center[1] - ui.x, center[2] - ui.y) <= shape.R && error("LineSource is in shape")
+	elseif isa(ui, CurrentSource)
+		#assuming straight line, see mathworld.wolfram.com/Circle-LineIntersection.html
+		x1 = ui.p[1,1] - center[1]
+		y1 = ui.p[1,2] - center[2]
+		x2 = ui.p[end,1] - center[1]
+		y2 = ui.p[end,2] - center[2]
+		dr2 = (x2 - x1)^2 + (y2 - y1)^2
+		D2 = (x1*y2 - x2*y1)^2
+		shape.R^2*dr2 - D2 < 0 || error("CurrentSource is in shape")
+	end
+
+	Nt = 10_000
+	θ = linspace(0, 2π, Nt)[1:end-1]
+	α = u2α(k, ui, center, P)
+	u_exact = uinc(k, center .+ shape.R*[cos.(θ) sin.(θ)], ui)
+	u_α = sum(α[p + P + 1]*besselj(p, k*shape.R)*exp.(1im*p*θ) for p = -P:P)
+	norm(u_α - u_exact)/norm(u_exact)
+end
