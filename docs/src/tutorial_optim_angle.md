@@ -1,6 +1,6 @@
 #  Tutorial 3: Angle Optimization
 
-In this tutorial, we build upon the [previous tutorial]@(ref tutorial2) by
+In this tutorial, we build upon the [previous tutorial](@ref tutorial2) by
 optimizing the rotation angles of the particles (`φs`) to maximize the field
 intensity at a specific point.
 Depending on the scattering problem, wavelengths, and incident field,
