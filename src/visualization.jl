@@ -334,16 +334,17 @@ function tagpoints(sp, points)
             X[1] = points[ix,1] - centers[ic,1]
             X[2] = points[ix,2] - centers[ic,2]
             if hypot(X[1], X[2]) ≤ shapes[ids[ic]].R
-                if isa(shapes[ids[ic]], ShapeParams)
+                if typeof(shapes[ids[ic]]) == ShapeParams
                     if φs[ic] != 0.0 #rotate point backwards instead of shape forwards
                         Rot = cartesianrotation(-φs[ic])
                         X = Rot*X
                     end
                     tags[ix] = pInPolygon(X, shapes[ids[ic]].ft) ? ic : -ic
+        			break #can't be in two shapes
                 else #CircleParams
                     tags[ix] = ic
+                    break #can't be in two shapes
                 end
-                break #can't be in two shapes
         	end
         end
     end

@@ -131,7 +131,7 @@ function optimize_φ_g!(grad_stor, φs, shared_var, last_φs, α, H, points, P, 
         rotateMultipole!(v, φs[n], P)
         v[:] += D.*shared_var.β[rng]
 
-        shared_var.∂β[:,n], ch = gmres!(view(shared_var.∂β,:,n), MVP,
+        shared_var.∂β[:,n], ch = gmres!(shared_var.∂β[:,n], MVP,
                                     shared_var.rhs_grad, restart = Ns*(2*P+1),
                                     tol = 10*opt.tol, log = true,
 									initially_zero = true)

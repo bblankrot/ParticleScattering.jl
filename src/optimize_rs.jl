@@ -81,13 +81,15 @@ function optimize_radius(rs0, r_min, r_max, points, ids, P, ui, k0, kin,
     outer_iterations = optimopts.iterations
 
     if method == "LBFGS"
-        optimize(df, r_min, r_max, initial_rs,
-            Fminbox(LBFGS(linesearch = LineSearches.BackTracking())),
-            optimopts)
+        optimize(df, initial_rs, r_min, r_max, Fminbox{LBFGS}();
+            optimizer_o = optimopts, iterations = outer_iterations,
+            linesearch = LineSearches.BackTracking(), x_tol = optimopts.x_tol,
+            f_tol = optimopts.f_tol, g_tol = optimopts.g_tol)
     elseif method == "BFGS"
-        optimize(df, r_min, r_max, initial_rs,
-            Fminbox(BFGS(linesearch = LineSearches.BackTracking())),
-            optimopts)
+        optimize(df, initial_rs, r_min, r_max, Fminbox{BFGS}();
+            optimizer_o = optimopts, iterations = outer_iterations,
+            linesearch = LineSearches.BackTracking(), x_tol = optimopts.x_tol,
+            f_tol = optimopts.f_tol, g_tol = optimopts.g_tol)
     end
 end
 
@@ -96,7 +98,7 @@ function optimize_radius_common!(rs, last_rs, shared_var, φs, α, H, points, P,
         copy!(last_rs, rs)
         #do whatever common calculations and save to shared_var
         #construct rhs
-        for id in unique(ids)
+        for id in ids
             try
                 updateCircleScatteringDerivative!(scatteringMatrices[id], dS_S[id], k0, kin, rs[id], P)
             catch

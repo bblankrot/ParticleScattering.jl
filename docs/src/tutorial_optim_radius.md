@@ -46,10 +46,9 @@ structure, assert that this point will remain outside the particles regardless
 of their size, and set the lower and upper bounds for each circle:
 
 ```julia
-optim_options =  Optim.Options(x_tol = 1e-6, outer_x_tol = 1e-6,
-                            iterations = 5, outer_iterations = 5,
-                            store_trace = true, show_trace = true,
-                            allow_f_increases = true)
+optim_options =  Optim.Options(x_tol = 1e-6, iterations = 5,
+                               store_trace = true, show_trace = true,
+                               allow_f_increases = true)
 
 points = [4a 0.0]
 r_max = (0.4*a)*ones(J)

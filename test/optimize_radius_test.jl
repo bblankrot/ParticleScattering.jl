@@ -18,9 +18,9 @@ import Optim
     φs = zeros(M)
 
     fmm_options = FMMoptions(true, acc = 6, dx = 2a)
-    optim_options =  Optim.Options(x_tol = 1e-4, outer_x_tol = 1e-4,
-                            iterations = 10, outer_iterations = 10,
-                            store_trace = true, allow_f_increases = true)
+    optim_options =  Optim.Options(x_tol = 1e-6, iterations = 10,
+                            store_trace = true, show_trace = false,
+                            allow_f_increases = true)
 
     points = [3a 0.0]
     r_max = (0.4*a)*ones(J)
@@ -34,8 +34,7 @@ import Optim
     rs = res.minimizer
     @test res.x_converged
 
-    optim_options2 =  Optim.Options(f_tol = 1e-7, outer_f_tol = 1e-7,
-                            iterations = 10, outer_iterations = 10,
+    optim_options2 =  Optim.Options(f_tol = 1e-7, iterations = 10,
                             store_trace = true, show_trace = false,
                             allow_f_increases = true)
     res2 = optimize_radius(rs0, r_min, r_max, points, ids, P, ui, k0, kin,
