@@ -17,7 +17,8 @@ P = 5
 
 fmm_options = FMMoptions(true, acc = 6, dx = 2*a_lens, method = "pre")
 
-optim_options =  Optim.Options(x_tol = 1e-6, iterations = 100,
+optim_options =  Optim.Options(x_tol = 1e-6, outer_x_tol = 1e-6,
+                        iterations = 100, outer_iterations = 100,
                         store_trace = true, extended_trace = true,
                         show_trace = false, allow_f_increases = true)
 
