@@ -5,7 +5,7 @@ import Optim
     λ0 = 1 #doesn't matter since everything is normalized to λ0
     k0 = 2π/λ0
     kin = 0.5k0
-    θ_i = 0.0
+    pw = PlaneWave(0.0)
     M = 20
 
     sfun(N) = rounded_star(0.35λ0, 0.1λ0, 4, N)
@@ -27,26 +27,26 @@ import Optim
     optim_options = Optim.Options(f_tol = 1e-6, iterations = 50,
                         store_trace = true, show_trace = false)
     optim_method = Optim.BFGS(;linesearch = LineSearches.BackTracking())
-    res_min = optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids, fmm_options,
+    res_min = optimize_φ(φs0, points, P, pw, k0, kin, shapes, centers, ids, fmm_options,
             optim_options, optim_method; minimize = true)
     @test res_min.f_converged
-    res_max = optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids, fmm_options,
+    res_max = optimize_φ(φs0, points, P, pw, k0, kin, shapes, centers, ids, fmm_options,
             optim_options, optim_method; minimize = false)
     @test res_max.f_converged
     sp_min = ScatteringProblem(shapes, ids, centers, res_min.minimizer)
     sp_max = ScatteringProblem(shapes, ids, centers, res_max.minimizer)
 
-    u_bef = calc_near_field(k0, kin, P, sp, points, θ_i; opt = fmm_options,
+    u_bef = calc_near_field(k0, kin, P, sp, points, pw;
+            opt = fmm_options, verbose = false)
+    u_min = calc_near_field(k0, kin, P, sp_min, points, pw; opt = fmm_options,
             verbose = false)
-    u_min = calc_near_field(k0, kin, P, sp_min, points, θ_i; opt = fmm_options,
-            verbose = false)
-    u_max = calc_near_field(k0, kin, P, sp_max, points, θ_i; opt = fmm_options,
+    u_max = calc_near_field(k0, kin, P, sp_max, points, pw; opt = fmm_options,
             verbose = false)
 
     fobj0 = sum(abs2.(u_bef))
     fobj_min = sum(abs2.(u_min))
     fobj_max = sum(abs2.(u_max))
-
+    @test fobj_max > fobj0 && fobj_min < fobj0
     @test isapprox(res_min.trace[1].value, fobj0)
     @test isapprox(res_min.minimum, fobj_min)
     @test isapprox(-res_max.minimum, fobj_max)

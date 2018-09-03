@@ -7,7 +7,7 @@ for various design problems.
 module ParticleScattering
 
 #Core functionality
-using IterativeSolvers, LinearMaps, Optim
+using SpecialFunctions, IterativeSolvers, LinearMaps, Optim
 import LineSearches
 #For plotting with PyPlot
 using PyPlot, PyCall
@@ -25,6 +25,7 @@ include("optimize_phis.jl")
 include("optimize_rs.jl")
 include("utilities.jl")
 include("minimum_N_P.jl")
+include("incident.jl")
 
 #methods, shapes.jl
 export rounded_star, squircle, ellipse, square_grid, rect_grid, hex_grid,
@@ -41,13 +42,17 @@ export solve_particle_scattering_FMM
 export get_potential, get_potentialPW, scatteredfield
 #types, PS_types.jl
 export ScatteringProblem, OptimBuffer, FMMoptions, R_multipole,
-    ShapeParams, CircleParams, AbstractShapeParams
+    ShapeParams, CircleParams, AbstractShapeParams, PlaneWave, LineSource,
+    CurrentSource, Einc
 #methods, utilities.jl
 export find_border, uniqueind
 #methods, optimize_phis.jl
 export optimize_φ
 #methods, optimize_rs.jl
 export optimize_radius
+#methods, incident.jl
+export uinc
+
 # For advanced plotting with pgfplots
 import DataFrames, CSV, PGFPlotsX; const pgf = PGFPlotsX
 include("visualization_pgf.jl")

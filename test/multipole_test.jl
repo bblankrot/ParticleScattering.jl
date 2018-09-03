@@ -16,7 +16,7 @@
     points = λ0*[5 0; -2 3]
 
     verify_min_distance(shapes, centers, ids, points)
-    β1, σ1 = solve_particle_scattering(k0, kin, P, sp, θ_i;
+    β1, σ1 = solve_particle_scattering(k0, kin, P, sp, PlaneWave(θ_i);
         get_inner = true, verbose = false)
     Ez1 = scattered_field_multipole(k0, β1, centers, points)
 
@@ -29,7 +29,7 @@
     sp2 = ScatteringProblem(shapes2, ids, centers2, φs2)
     points2 = points*([cos(θ_r) -sin(θ_r); sin(θ_r) cos(θ_r)].')
 
-    β2, σ2 = solve_particle_scattering(k0, kin, P, sp2, θ_i + θ_r;
+    β2, σ2 = solve_particle_scattering(k0, kin, P, sp2, PlaneWave(θ_i + θ_r);
         get_inner = true, verbose = true)
     Ez2 = scattered_field_multipole(k0, β2, centers2, points2)
 

@@ -23,7 +23,7 @@ scattering disk.
 
 See also: `CircleParams`,`R_multipole`.
 """
-type ShapeParams <: AbstractShapeParams
+struct ShapeParams <: AbstractShapeParams
 	t::Array{Float64,1}
 	ft::Array{Float64,2}
 	dft::Array{Float64,2}
@@ -40,7 +40,7 @@ Returns object for a circular shape, containing its radius in the field `R`
 
 See also: `ShapeParams`,`R_multipole`.
 """
-type CircleParams <: AbstractShapeParams
+struct CircleParams <: AbstractShapeParams
 	R::Float64 #radius of multipole disk = radius of circle
 end
 
@@ -174,3 +174,47 @@ end
 
 import Base.size
 size(q::ParticleScattering.ScatteringProblem) = length(q.ids)
+
+abstract type Einc end
+
+"""
+	PlaneWave(θi)
+
+Constructor for the `PlaneWave` incident field type, where `θi` is the angle between
+the wavevector and the x-axis.
+"""
+struct PlaneWave <: Einc
+	θi::Float64
+	PlaneWave(θi = 0) = new(θi)
+end
+
+"""
+	LineSource(x, y)
+
+Constructor for the `LineSource` type, where `(x0,y0)` is the coordinate of the
+current filament.
+"""
+struct LineSource <: Einc
+	x::Float64
+	y::Float64
+end
+
+struct CurrentSource <: Einc
+	#p is a *straight* line for integration simplicity
+	p::Array{Float64,2}
+	σ::Vector{Complex{Float64}}
+	len::Float64
+end
+
+"""
+	CurrentSource(x1, y1, x2, y2, σ)
+
+Constructor for the `CurrentSource` type, where `(x1,y1)` and `(x2,y2)` denote the
+start and end points of the source, and `σ` contains the potential density.
+"""
+function CurrentSource(x1, y1, x2, y2, σ)
+	len = sqrt((x2 - x1)^2 + (y2 - y1)^2)
+	t = linspace(0, 1, length(σ))
+	p = [(x2 - x1)*t + x1		(y2 - y1)*t + y1]
+	CurrentSource(p, σ, len)
+end

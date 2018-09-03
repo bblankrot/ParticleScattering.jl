@@ -43,7 +43,7 @@ begin
     if draw_fig
         figure()
         #draw shapes and points
-        draw_shapes(shapes, centers, ids, φs)
+        draw_shapes(shapes, ids, centers, φs)
         plot(points[:,1], points[:,2], "r*")
         tight_layout()
         ax = gca()
@@ -63,28 +63,28 @@ optim_options =  Optim.Options(f_tol = 1e-6,
 optim_method = Optim.BFGS(;linesearch = LineSearches.BackTracking())
 
 tic()
-test_max = optimize_φ(φs, points, P, θ_i, k0, kin, shapes,
+test_max = optimize_φ(φs, points, P, PlaneWave(θ_i), k0, kin, shapes,
             centers, ids, fmm_options, optim_options, optim_method; minimize = false)
 optim_time = toq()
 
 # %%
 
 sp_before = ScatteringProblem(shapes, ids, centers, φs)
-plot_near_field(k0, kin, P, sp_before, θ_i,
+plot_near_field(k0, kin, P, sp_before, PlaneWave(θ_i),
                 x_points = 600, y_points = 200, border = plot_border);
 colorbar()
 clim([0;5])
 plot_near_field_pgf(output_dir * "/opt_phi_before.tex", k0, kin, P,
-    sp_before, θ_i; opt = fmm_options, x_points = 150, y_points = 50,
+    sp_before, PlaneWave(θ_i); opt = fmm_options, x_points = 150, y_points = 50,
     border = plot_border, downsample = 10, include_preamble = true)
 
 sp_after = ScatteringProblem(shapes, ids, centers, test_max.minimizer)
-plot_near_field(k0, kin, P, sp_after, θ_i,
+plot_near_field(k0, kin, P, sp_after, PlaneWave(θ_i),
                 x_points = 600, y_points = 200, border = plot_border)
 colorbar()
 clim([0;5])
 plot_near_field_pgf(output_dir * "/opt_phi_after.tex", k0, kin, P,
-    sp_after, θ_i; opt = fmm_options, x_points = 150, y_points = 50,
+    sp_after, PlaneWave(θ_i); opt = fmm_options, x_points = 150, y_points = 50,
     border = plot_border, downsample = 10, include_preamble = true)
 
 inner_iters = length(test_max.trace)

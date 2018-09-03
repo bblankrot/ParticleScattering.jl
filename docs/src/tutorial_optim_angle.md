@@ -24,6 +24,7 @@ First we set up our scattering problem:
 k0 = 2π/λ0
 kin = 0.5k0
 θ_i = 0 #incident wave e^{i k_0 (1/sqrt{2},1/sqrt{2}) \cdot \mathbf{r}}
+pw = PlaneWave(θ_i)
 M = 20
 shapes = [rounded_star(0.35λ0, 0.1λ0, 4, 202)]
 P = 12
@@ -57,9 +58,9 @@ optim_method = Optim.BFGS(;linesearch = LineSearches.BackTracking())
 We now run both minimization and maximization:
 
 ```julia
-res_min = optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids,
+res_min = optimize_φ(φs0, points, P, pw, k0, kin, shapes, centers, ids,
             fmm_options, optim_options, optim_method; minimize = true)
-res_max = optimize_φ(φs0, points, P, θ_i, k0, kin, shapes, centers, ids,
+res_max = optimize_φ(φs0, points, P, pw, k0, kin, shapes, centers, ids,
             fmm_options, optim_options, optim_method; minimize = false)
 sp_min = ScatteringProblem(shapes, ids, centers, res_min.minimizer)
 sp_max = ScatteringProblem(shapes, ids, centers, res_max.minimizer)
@@ -71,11 +72,11 @@ following PyPlot code:
 
 ```julia
 plts = Array{Any}(3)
-plts[1] = plot_near_field(k0, kin, P, sp, θ_i, x_points = 100, y_points = 300,
+plts[1] = plot_near_field(k0, kin, P, sp, pw, x_points = 100, y_points = 300,
         opt = fmm_options, border = find_border(sp, points))
-plts[2] = plot_near_field(k0, kin, P, sp_min, θ_i, x_points = 100, y_points = 300,
+plts[2] = plot_near_field(k0, kin, P, sp_min, pw, x_points = 100, y_points = 300,
         opt = fmm_options, border = find_border(sp, points))
-plts[3] = plot_near_field(k0, kin, P, sp_max, θ_i, x_points = 100, y_points = 300,
+plts[3] = plot_near_field(k0, kin, P, sp_max, pw, x_points = 100, y_points = 300,
         opt = fmm_options, border = find_border(sp, points))
 close("all")
 
@@ -83,7 +84,7 @@ fig, axs = subplots(ncols=3); msh = 0
 for (i, spi) in enumerate([sp;sp_min;sp_max])
     msh = axs[i][:pcolormesh](plts[i][2][1], plts[i][2][2], abs.(plts[i][2][3]),
                         vmin = 0, vmax = 3.4, cmap="viridis")
-    draw_shapes(spi.shapes, spi.centers, spi.ids, spi.φs, axs[i])
+    draw_shapes(spi, ax = axs[i])
     axs[i][:set_aspect]("equal", adjustable = "box")
     axs[i][:set_xlim]([border[1];border[2]])
     axs[i][:set_ylim]([border[3];border[4]])

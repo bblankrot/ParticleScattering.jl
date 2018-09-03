@@ -40,9 +40,15 @@
     @test norm(mFMM1.Znear - mFMM2.Znear, Inf) == 0
 
     points = [linspace(-λ0*M, λ0*M, 200) zeros(200)]
-    u1 = calc_near_field(k0, kin, P, sp, points, θ_i; opt = fmm_options,
+    u1 = calc_near_field(k0, kin, P, sp, points, PlaneWave(θ_i); opt = fmm_options,
             verbose = false)
-    u2 = calc_near_field(k0, kin, P, sp, points, θ_i; opt = fmm_options,
+    u2 = calc_near_field(k0, kin, P, sp, points, PlaneWave(θ_i); opt = fmm_options,
             verbose = true, use_multipole = false)
     @test norm(u1 - u2)/norm(u1) < 1e-6
+
+    u3 = calc_near_field(k0, kin, P, sp, points, LineSource(-0.8λ0,-λ0); opt = fmm_options,
+            verbose = false)
+    u4 = calc_near_field(k0, kin, P, sp, points, LineSource(-0.8λ0,-λ0); opt = fmm_options,
+            verbose = true, use_multipole = false)
+    @test norm(u3 - u4)/norm(u3) < 1e-6
 end

@@ -1,5 +1,5 @@
 """
-    optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin, centers,
+    optimize_radius(rs0, r_min, r_max, points, ids, P, ui, k0, kin, centers,
         fmmopts, optimopts::Optim.Options; minimize = true, method = "BFGS")
 
 Optimize the radii of circular particles for minimization or maximization of the
@@ -15,7 +15,7 @@ for both the inner and outer iterations. `method` can be either `"BFGS"` or
 
 Returns an object of type `Optim.MultivariateOptimizationResults`.
 """
-function optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin,
+function optimize_radius(rs0, r_min, r_max, points, ids, P, ui, k0, kin,
                         centers, fmmopts, optimopts::Optim.Options;
                         minimize = true, method = "BFGS")
     Ns = size(centers,1)
@@ -46,7 +46,8 @@ function optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin,
 
     #stuff that is done once
     H = optimizationHmatrix(points, centers, Ns, P, k0)
-    α_inc = Complex{Float64}[exp(1.0im*p*(π/2-θ_i)) for p=-P:P]
+    α = u2α(k0, ui, centers, P)
+    uinc_ = uinc(k0, points, ui)
     φs = zeros(Float64,Ns)
 
     # Allocate buffers
@@ -57,21 +58,21 @@ function optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin,
 
     if minimize
         df = OnceDifferentiable(rs -> optimize_radius_f(rs, last_rs, shared_var,
-                                        φs, α_inc, H, points, P, θ_i, Ns, k0,
+                                        φs, α, H, points, P, uinc_, Ns, k0,
                                         kin, centers,scatteringMatrices, dS_S,
                                         ids, mFMM, fmmopts, buf),
                     (grad_stor, rs) -> optimize_radius_g!(grad_stor, rs, last_rs,
-                                        shared_var, φs, α_inc, H, points, P, θ_i,
+                                        shared_var, φs, α, H, points, P, uinc_,
                                         Ns, k0, kin, centers, scatteringMatrices,
                                         dS_S, ids, mFMM, fmmopts, buf, minimize),
                                         initial_rs)
     else
         df = OnceDifferentiable(rs -> -optimize_radius_f(rs, last_rs, shared_var,
-                                        φs, α_inc, H, points, P, θ_i, Ns, k0,
+                                        φs, α, H, points, P, uinc_, Ns, k0,
                                         kin, centers,scatteringMatrices, dS_S,
                                         ids, mFMM, fmmopts, buf),
                     (grad_stor, rs) -> optimize_radius_g!(grad_stor, rs, last_rs,
-                                        shared_var, φs, α_inc, H, points, P, θ_i,
+                                        shared_var, φs, α, H, points, P, uinc_,
                                         Ns, k0, kin, centers, scatteringMatrices,
                                         dS_S, ids, mFMM, fmmopts, buf, minimize),
                                         initial_rs)
@@ -92,12 +93,12 @@ function optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin,
     end
 end
 
-function optimize_radius_common!(rs, last_rs, shared_var, φs, α_inc, H, points, P, θ_i, Ns, k0, kin, centers, scatteringMatrices, dS_S, ids, mFMM, opt, buf)
+function optimize_radius_common!(rs, last_rs, shared_var, φs, α, H, points, P, uinc_, Ns, k0, kin, centers, scatteringMatrices, dS_S, ids, mFMM, opt, buf)
     if (rs != last_rs)
         copy!(last_rs, rs)
         #do whatever common calculations and save to shared_var
         #construct rhs
-        for id in ids
+        for id in unique(ids)
             try
                 updateCircleScatteringDerivative!(scatteringMatrices[id], dS_S[id], k0, kin, rs[id], P)
             catch
@@ -107,10 +108,7 @@ function optimize_radius_common!(rs, last_rs, shared_var, φs, α_inc, H, points
         end
         for ic = 1:Ns
             rng = (ic-1)*(2*P+1) + (1:2*P+1)
-            buf.rhs[rng] = scatteringMatrices[ids[ic]]*α_inc
-            #phase shift added to move cylinder coords
-            phase = exp(1.0im*k0*(cos(θ_i)*centers[ic,1] + sin(θ_i)*centers[ic,2]))
-            buf.rhs[rng] .*= phase
+            buf.rhs[rng] = scatteringMatrices[ids[ic]]*α[rng]
         end
 
         if opt.method == "pre"
@@ -132,18 +130,18 @@ function optimize_radius_common!(rs, last_rs, shared_var, φs, α_inc, H, points
             error("FMM process did not converge")
         end
         shared_var.f[:] = H.'*shared_var.β
-        shared_var.f[:] += exp.(1.0im*k0*(cos(θ_i)*points[:,1] + sin(θ_i)*points[:,2])) #incident
+        shared_var.f .+= uinc_ #incident
     end
 end
 
-function optimize_radius_f(rs, last_rs, shared_var, φs, α_inc, H, points, P, θ_i, Ns, k0, kin, centers, scatteringMatrices, dS_S, ids, mFMM, opt, buf)
-    optimize_radius_common!(rs, last_rs, shared_var, φs, α_inc, H, points, P, θ_i, Ns, k0, kin, centers, scatteringMatrices, dS_S, ids, mFMM, opt, buf)
+function optimize_radius_f(rs, last_rs, shared_var, φs, α, H, points, P, uinc_, Ns, k0, kin, centers, scatteringMatrices, dS_S, ids, mFMM, opt, buf)
+    optimize_radius_common!(rs, last_rs, shared_var, φs, α, H, points, P, uinc_, Ns, k0, kin, centers, scatteringMatrices, dS_S, ids, mFMM, opt, buf)
 
-    func = sum(abs2,shared_var.f)
+    func = sum(abs2, shared_var.f)
 end
 
-function optimize_radius_g!(grad_stor, rs, last_rs, shared_var, φs, α_inc, H, points, P, θ_i, Ns, k0, kin, centers, scatteringMatrices, dS_S, ids, mFMM, opt, buf, minimize)
-    optimize_radius_common!(rs, last_rs, shared_var, φs, α_inc, H, points, P, θ_i, Ns, k0, kin, centers, scatteringMatrices, dS_S, ids, mFMM, opt, buf)
+function optimize_radius_g!(grad_stor, rs, last_rs, shared_var, φs, α, H, points, P, uinc_, Ns, k0, kin, centers, scatteringMatrices, dS_S, ids, mFMM, opt, buf, minimize)
+    optimize_radius_common!(rs, last_rs, shared_var, φs, α, H, points, P, uinc_, Ns, k0, kin, centers, scatteringMatrices, dS_S, ids, mFMM, opt, buf)
 
     if opt.method == "pre"
         MVP = LinearMap{eltype(buf.rhs)}((output_, x_) -> FMM_mainMVP_pre!(output_,

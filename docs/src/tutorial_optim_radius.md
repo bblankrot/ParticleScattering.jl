@@ -16,6 +16,7 @@ k0 = 2π
 kin = sqrt(er)*k0
 a = 0.2*2π/k0     #wavelength/5
 θ_i = 0.0
+pw = PlaneWave(θ_i)
 P = 5
 centers = square_grid(5, a)
 φs = zeros(size(centers,1))
@@ -60,7 +61,7 @@ assert(verify_min_distance([CircleParams(r_max[i]) for i = 1:J],
 The optimization process is initiated by running:
 
 ```julia
-res = optimize_radius(rs0, r_min, r_max, points, ids, P, θ_i, k0, kin,
+res = optimize_radius(rs0, r_min, r_max, points, ids, P, pw, k0, kin,
                 centers, fmm_options, optim_options, minimize = true)
 rs = res.minimizer
 ```
@@ -70,14 +71,14 @@ initial and optimized radii:
 
 ```julia
 sp1 = ScatteringProblem([CircleParams(rs0[i]) for i = 1:J], ids, centers, φs)
-plot_near_field(k0, kin, P, sp1, θ_i, x_points = 150, y_points = 150,
+plot_near_field(k0, kin, P, sp1, pw, x_points = 150, y_points = 150,
         opt = fmm_options, border = 0.9*[-1;1;-1;1], normalize = a)
 colorbar()
 clim([0;2.5])
 xlabel("x/a")
 ylabel("y/a")
 sp2 = ScatteringProblem([CircleParams(rs[i]) for i = 1:J], ids, centers, φs)
-plot_near_field(k0, kin, P, sp2, θ_i, x_points = 150, y_points = 150,
+plot_near_field(k0, kin, P, sp2, pw, x_points = 150, y_points = 150,
         opt = fmm_options, border = 0.9*[-1;1;-1;1], normalize = a)
 colorbar()
 clim([0;2.5])

@@ -1,9 +1,9 @@
 """
-	solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0; get_inner = true, verbose = true) -> beta, inner
+	solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, u::Einc; get_inner = true, verbose = true) -> beta, inner
 
 Solve the scattering problem `sp` with outer wavenumber `k0`, inner wavenumber
-`kin`, `2P+1` cylindrical harmonics per inclusion and incident plane wave angle
-`θ_i`. Solves multiple-scattering equation directly.
+`kin`, `2P+1` cylindrical harmonics per inclusion and incident TM field
+`u`. Solves multiple-scattering equation directly.
 Returns the cylindrical harmonics basis `beta` along with potential
 densities (in case of arbitrary inclusion) or inner cylindrical coefficients (in
 case of circular). By default, incident wave propagates left->right.
@@ -11,22 +11,17 @@ case of circular). By default, incident wave propagates left->right.
 Inner coefficients are only calculated if `get_inner` is true, and timing is
 printed if `verbose` is true.
 """
-function solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0;
+function solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, u::Einc;
 								get_inner = true, verbose = true)
-	# This function solves for the outgoing multipole coefficients in the presence
-	# of an incident plane wave.
-	# incident wave direction - from left to right is 0:
-	# e^{ik(\cos(\θ_i),\sin(\θ_i)) \cdot \mathbf{r}}
 	shapes = sp.shapes;	ids = sp.ids; centers = sp.centers; φs = sp.φs
 	Ns = size(sp)
 	#first solve for single scatterer densities
-	α = Complex{Float64}[exp(1.0im*p*(pi/2-θ_i)) for p=-P:P]
 	tic()
 	scatteringMatrices,innerExpansions = particleExpansion(k0, kin, shapes, P, ids)
 	dt1 = toq()
 	tic()
 	T = Array{Complex{Float64}}(Ns*(2*P+1),Ns*(2*P+1))
-	a = Array{Complex{Float64}}(Ns*(2*P+1))
+	a = u2α(k0, u, centers, P)
 	Btemp = Array{Complex{Float64}}(2*P+1,2*P+1)
 	for ic1 = 1:Ns
 		rng1 = (ic1-1)*(2*P+1) + (1:2*P+1)
@@ -45,8 +40,7 @@ function solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, θ_i = 0.0
 				T[rng1,rng2] = -RotScatMat*Btemp
 			end
 		end
-		phase = exp(1.0im*k0*(cos(θ_i)*centers[ic1,1] + sin(θ_i)*centers[ic1,2])) #phase shift added to move cylinder coords
-		a[rng1] = phase*(RotScatMat*α)
+		a[rng1] = RotScatMat*a[rng1]
 	end
 	dt2 = toq()
 	tic()
@@ -185,7 +179,7 @@ function innerFieldCircle(kin, gamma, center::Array{Float64,1}, points::Array{Fl
 	bess = [besselj(p,kin*rs_moved[ii]) for ii=1:len, p=0:P]
 	E = gamma[P + 1]*bess[:,1]
 	for p = 1:P
-		E += bess[:,p+1].*(gamma[p + P + 1]*exp.(1.0im*p*ts_moved) + 
+		E += bess[:,p+1].*(gamma[p + P + 1]*exp.(1.0im*p*ts_moved) +
 							(-1)^p*gamma[-p + P + 1]*exp.(-1.0im*p*ts_moved))
 	end
 	return E

@@ -69,7 +69,7 @@ Calculating and plotting the near or far fields with FMM is just as in the
 `FMMoptions` object:
 
 ```julia
-plot_near_field(k0, kin, P, sp, θ_i, opt = fmm_options,
+plot_near_field(k0, kin, P, sp, PlaneWave(θ_i), opt = fmm_options,
                 border = [-12;12;-10;10], x_points = 480, y_points = 400)
 colorbar()
 ```
@@ -111,9 +111,9 @@ inners = Array{Vector}(Pmax)
 inners_FMM = Array{Vector}(Pmax)
 fmmopts = ParticleScattering.FMMoptions(true, nx = 1, acc = 9)
 for P = 1:Pmax
-	betas[P], inners[P] = solve_particle_scattering(k0, kin, P, sp, 0.0;
+	betas[P], inners[P] = solve_particle_scattering(k0, kin, P, sp, PlaneWave();
                             verbose = false)
-	res, inners_FMM[P] = solve_particle_scattering_FMM(k0, kin, P, sp, 0.0,
+	res, inners_FMM[P] = solve_particle_scattering_FMM(k0, kin, P, sp, PlaneWave(),
                             fmmopts; verbose = false)
 	betas_FMM[P] = res[1]
 end

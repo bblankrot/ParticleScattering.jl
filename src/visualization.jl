@@ -1,11 +1,11 @@
 """
-    plot_near_field(k0, kin, P, sp::ScatteringProblem, θ_i = 0;
+    plot_near_field(k0, kin, P, sp::ScatteringProblem, ui::Einc;
                         opt::FMMoptions = FMMoptions(), use_multipole = true,
                         x_points = 201, y_points = 201, border = find_border(sp),
                         normalize = 1.0)
 
 Plots the total electric field as a result of a plane wave with incident
-angle `θ_i` scattering from the ScatteringProblem `sp`, using matplotlib's
+TM field `ui` scattering from the ScatteringProblem `sp`, using matplotlib's
 `pcolormesh`. Can accept number of sampling points in each direction plus
 bounding box or calculate automatically.
 
@@ -21,7 +21,7 @@ Returns the calculated field in two formats:
 2. `(xgrid,ygrid,zgrid)`, the format suitable for `pcolormesh`, where `zgrid[i,j]`
 contains the field at `(mean(xgrid[i, j:j+1]), mean(ygrid[i:i+1, j]))`.
 """
-function plot_near_field(k0, kin, P, sp::ScatteringProblem, θ_i = 0;
+function plot_near_field(k0, kin, P, sp::ScatteringProblem, ui::Einc;
                         opt::FMMoptions = FMMoptions(), use_multipole = true,
                         x_points = 201, y_points = 201, border = find_border(sp),
                         normalize = 1.0)
@@ -39,14 +39,14 @@ function plot_near_field(k0, kin, P, sp::ScatteringProblem, θ_i = 0;
     points = cat(2, vec(xgrid[1:y_points, 1:x_points]) + dx,
                 vec(ygrid[1:y_points, 1:x_points]) + dy)
 
-    Ez = calc_near_field(k0, kin, P, sp, points, θ_i,
-            use_multipole=use_multipole, opt = opt)
+    Ez = calc_near_field(k0, kin, P, sp, points, ui,
+            use_multipole = use_multipole, opt = opt)
     zgrid = reshape(Ez, y_points, x_points)
     figure()
     pcolormesh(xgrid/normalize, ygrid/normalize, abs.(zgrid))
 
     ax = gca()
-    draw_shapes(sp.shapes, sp.centers, sp.ids, sp.φs, ax; normalize = normalize)
+    draw_shapes(sp.shapes, sp.ids, sp.centers, sp.φs, ax = ax, normalize = normalize)
     xlim([x_min/normalize;x_max/normalize])
     ylim([y_min/normalize;y_max/normalize])
     tight_layout()
@@ -55,15 +55,14 @@ function plot_near_field(k0, kin, P, sp::ScatteringProblem, θ_i = 0;
 end
 
 """
-    plot_far_field(k0, kin, P, sp::ScatteringProblem, θ_i = 0;
+    plot_far_field(k0, kin, P, sp::ScatteringProblem, pw::PlaneWave;
                         opt::FMMoptions = FMMoptions(), use_multipole = true,
                         plot_points = 200)
 
-Plots the echo width (radar cross section in two dimensions) for a given
-scattering problem. `opt`, `use_multipole` are as in `plot_near_field`. Also
-returns the echo width.
+Plots and returns the echo width (radar cross section in two dimensions) for a
+given scattering problem. `opt`, `use_multipole` are as in `plot_near_field`.
 """
-function plot_far_field(k0, kin, P, sp::ScatteringProblem, θ_i = 0;
+function plot_far_field(k0, kin, P, sp::ScatteringProblem, pw::PlaneWave;
                     opt::FMMoptions = FMMoptions(), use_multipole = true,
                     plot_points = 200)
 
@@ -80,7 +79,7 @@ function plot_far_field(k0, kin, P, sp::ScatteringProblem, θ_i = 0;
     y_far = y_center + Rfar*sin.(theta_far)
     points = [x_far y_far]
 
-    Ez = calculateFarField(k0, kin, P, points, sp, θ_i,
+    Ez = calc_far_field(k0, kin, P, points, sp, pw,
             use_multipole = use_multipole, opt = opt)
     Ez[:] = (k0*Rfar)*abs2.(Ez)
     #plot echo width
@@ -95,12 +94,14 @@ function plot_far_field(k0, kin, P, sp::ScatteringProblem, θ_i = 0;
 end
 
 """
-    draw_shapes(shapes, centers, ids, φs, ax = gca())
+    draw_shapes(shapes, ids, centers, φs; ax = gca(), normalize = 1.0)
+    draw_shapes(sp; ax = gca(), normalize = 1.0)
 
-Draws all of the shapes in a given scattering problem. Parametrized shapes are
-drawn as polygons while circles are drawn using matplotlib's `patch.Circle`.
+Draws all of the shapes in a given scattering problem in the PyPlot axis 'ax'.
+Parametrized shapes are drawn as polygons while circles are drawn using
+matplotlib's `patch.Circle`. Divides all lengths by 'normalize'.
 """
-function draw_shapes(shapes, centers, ids, φs, ax = gca(); normalize = 1.0)
+function draw_shapes(shapes, ids, centers, φs; ax = gca(), normalize = 1.0)
     #draw shapes
     for ic = 1:size(centers,1)
         if typeof(shapes[ids[ic]]) == ShapeParams
@@ -121,13 +122,16 @@ function draw_shapes(shapes, centers, ids, φs, ax = gca(); normalize = 1.0)
     end
 end
 
+draw_shapes(sp; ax = gca(), normalize = 1.0) = draw_shapes(sp.shapes,
+                    sp.ids, sp.centers, sp.φs; ax = ax, normalize = normalize)
+
 """
-    calc_near_field(k0, kin, P, sp::ScatteringProblem, points, θ_i;
+    calc_near_field(k0, kin, P, sp::ScatteringProblem, points, ui::Einc;
                             opt::FMMoptions = FMMoptions(), use_multipole = true,
                             verbose = true)
 
 Calculates the total electric field as a result of a plane wave with incident
-angle `θ_i` scattering from the ScatteringProblem `sp`, at `points`.
+field `ui` scattering from the ScatteringProblem `sp`, at `points`.
 Uses the FMM options given by `opt` (default behavious is disabled FMM);
 `use_multipole` dictates whether electric field is calculated using the
 multipole/cylindrical harmonics (true) or falls back on potential densities
@@ -136,22 +140,22 @@ harmonics space, and the field by a particular scatterer inside its own scatteri
 discs is calculated by potential densities, as the cylindrical harmonics
 approximation is not valid there.
 """
-function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, θ_i;
+function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, ui::Einc;
                             opt::FMMoptions = FMMoptions(), use_multipole = true,
                             verbose = true)
 
     shapes = sp.shapes;	ids = sp.ids; centers = sp.centers; φs = sp.φs
     u = zeros(Complex{Float64},size(points,1))
     if opt.FMM
-        result,sigma_mu =  solve_particle_scattering_FMM(k0, kin, P, sp, θ_i, opt,
-                            verbose = verbose)
+        result,sigma_mu =  solve_particle_scattering_FMM(k0, kin, P, sp,
+                            ui, opt, verbose = verbose)
         if result[2].isconverged == false
             warn("FMM process did not converge")
             return
         end
         beta = result[1]
     else
-        beta, sigma_mu = solve_particle_scattering(k0, kin, P, sp, θ_i)
+        beta, sigma_mu = solve_particle_scattering(k0, kin, P, sp, ui)
     end
 
     tic()
@@ -192,8 +196,7 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, θ_i;
         if any(rng_out)
             u[rng_out] += scatteredfield(sigma_mu[ic], k0, shapes[ids[ic]].t,
                             ft_rot, dft_rot, points[rng_out,:])
-            u[rng_out] += exp.(1.0im*k0*(cos(θ_i)*points[rng_out,1] +
-                                        sin(θ_i)*points[rng_out,2])) #incident
+            u[rng_out] += uinc(k0, points[rng_out,:], ui)
             for ic2 = 1:size(sp)
                 ic == ic2 && continue
                 if use_multipole
@@ -220,7 +223,7 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, θ_i;
     #now compute field outside all shapes
     rng = (tags .== 0)
     #incident field
-    u[rng] = exp.(1.0im*k0*(cos(θ_i)*points[rng,1] + sin(θ_i)*points[rng,2]))
+    u[rng] = uinc(k0, points[rng,:], ui)
     if use_multipole
         scattered_field_multipole!(u, k0, beta, P, centers, 1:size(sp), points, find(rng))
     else
@@ -253,19 +256,19 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, θ_i;
     return u
 end
 
-function calculateFarField(k0, kin, P, points, sp::ScatteringProblem, θ_i;
+function calc_far_field(k0, kin, P, points, sp::ScatteringProblem, pw::PlaneWave;
                         opt::FMMoptions = FMMoptions(), use_multipole = true)
     #calc only scattered field + assumes all points are outside shapes
-    shapes = sp.shapes; centers = sp.centers; ids = sp.ids, φs = sp.φs
+    shapes = sp.shapes; centers = sp.centers; ids = sp.ids; φs = sp.φs
     if opt.FMM
-        result,sigma_mu =  solve_particle_scattering_FMM(k0, kin, P, sp, θ_i, opt)
+        result,sigma_mu =  solve_particle_scattering_FMM(k0, kin, P, sp, pw, opt)
         if result[2].isconverged == false
             warn("FMM process did not converge")
             return
         end
         beta = result[1]
     else
-        beta, sigma_mu = solve_particle_scattering(k0, kin, P, sp, θ_i)
+        beta, sigma_mu = solve_particle_scattering(k0, kin, P, sp, pw)
     end
     Ez = zeros(Complex{Float64}, size(points,1))
     if use_multipole
@@ -295,7 +298,7 @@ function calculateFarField(k0, kin, P, points, sp::ScatteringProblem, θ_i;
     return Ez
 end
 
-function tagpoints(sp, points)
+function tagpoints_old(sp, points)
     shapes = sp.shapes;	ids = sp.ids; centers = sp.centers; φs = sp.φs
 
     tags = zeros(Integer, size(points,1))
@@ -307,6 +310,33 @@ function tagpoints(sp, points)
                 if typeof(shapes[ids[ic]]) == ShapeParams
                     if φs[ic] != 0.0 #rotate point backwards instead of shape forwards
                         Rot = [cos(-φs[ic]) -sin(-φs[ic]);sin(-φs[ic]) cos(-φs[ic])]
+                        X = Rot*X
+                    end
+                    tags[ix] = pInPolygon(X, shapes[ids[ic]].ft) ? ic : -ic
+        			break #can't be in two shapes
+                else #CircleParams
+                    tags[ix] = ic
+                    break #can't be in two shapes
+                end
+        	end
+        end
+    end
+    tags
+end
+
+function tagpoints(sp, points)
+    shapes = sp.shapes;	ids = sp.ids; centers = sp.centers; φs = sp.φs
+
+    tags = zeros(Integer, size(points,1))
+    X = Array{Float64}(2) #tmp arrays
+    for ix = 1:size(points,1) #need two loops due to "break"
+        for ic = 1:size(sp)
+            X[1] = points[ix,1] - centers[ic,1]
+            X[2] = points[ix,2] - centers[ic,2]
+            if hypot(X[1], X[2]) ≤ shapes[ids[ic]].R
+                if typeof(shapes[ids[ic]]) == ShapeParams
+                    if φs[ic] != 0.0 #rotate point backwards instead of shape forwards
+                        Rot = cartesianrotation(-φs[ic])
                         X = Rot*X
                     end
                     tags[ix] = pInPolygon(X, shapes[ids[ic]].ft) ? ic : -ic

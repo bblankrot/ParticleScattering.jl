@@ -24,7 +24,7 @@ relationship between these parameters and the various resulting errors, see
 k0 = 2π/λ0
 kin = 3k0
 θ_i = 0.0 #incident wave is left->right
-
+pw = PlaneWave(θ_i)
 N = 260
 P = 10
 shapes = [rounded_star(0.1λ0, 0.05λ0, 5, N)]
@@ -38,7 +38,7 @@ Now that the scattering problem is set up, we solve for the cylindrical harmonic
 coefficients and potential densities, respectively, by using
 
 ```julia
-beta,inner = solve_particle_scattering(k0, kin, P, sp, θ_i)
+beta,inner = solve_particle_scattering(k0, kin, P, sp, pw)
 ```
 
 These can be used to calculate the scattered field at any point in space using
@@ -51,7 +51,7 @@ appropriate method:
 ```julia
 #calculate field on the x-axis passing through the particle
 points = [linspace(-0.5λ0, 0.5λ0, 200)  zeros(200)]
-u = calc_near_field(k0, kin, P, sp, points, θ_i)
+u = calc_near_field(k0, kin, P, sp, points, pw)
 ```
 
 We use `PyPlot` to display the result:
@@ -64,7 +64,7 @@ plot(points[:,1]/λ0, abs.(u))
 
 Similarly, a 2D plot can be drawn of the total field around the scatterer:
 ```julia
-plot_near_field(k0, kin, P, sp, θ_i;
+plot_near_field(k0, kin, P, sp, pw;
     x_points = 201, y_points = 201, border = 0.5λ0*[-1;1;-1;1])
 ```
 
@@ -107,7 +107,7 @@ lead to unnecessary computations.
 
 Plotting the near field with the code
 ```julia
-data = plot_near_field(k0, kin, P, sp, θ_i)
+data = plot_near_field(k0, kin, P, sp, PlaneWave(θ_i))
 colorbar()
 ```
 yields the following near-field plot:
