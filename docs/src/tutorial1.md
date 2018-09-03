@@ -52,6 +52,11 @@ appropriate method:
 #calculate field on the x-axis passing through the particle
 points = [linspace(-0.5λ0, 0.5λ0, 200)  zeros(200)]
 u = calc_near_field(k0, kin, P, sp, points, pw)
+```
+
+We use `PyPlot` to display the result:
+```julia
+using PyPlot
 plot(points[:,1]/λ0, abs.(u))
 ```
 
@@ -59,7 +64,7 @@ plot(points[:,1]/λ0, abs.(u))
 
 Similarly, a 2D plot can be drawn of the total field around the scatterer:
 ```julia
-plot_near_field(k0, kin, P, sp::ScatteringProblem, pw;
+plot_near_field(k0, kin, P, sp, pw;
     x_points = 201, y_points = 201, border = 0.5λ0*[-1;1;-1;1])
 ```
 

@@ -20,7 +20,7 @@ bibliography: paper.bib
 
 # Summary
 
-[ParticleScattering](https://github.com/bblankrot/ParticleScattering.jl) is a Julia package for computing the electromagnetic fields scattered by a large number of two-dimensional particles, as well as optimizing particle parameters for various applications.
+[ParticleScattering](https://github.com/bblankrot/ParticleScattering.jl) is a Julia [@ar:julia2017] package for computing the electromagnetic fields scattered by a large number of two-dimensional particles, as well as optimizing particle parameters for various applications.
 Such problems naturally arise in the design and analysis of metamaterials, including photonic crystals [@ar:alldielectric].
 Unlike most solvers for these problems, ours does not require a periodic structure and is scalable to a large number of particles.
 In particular, this software is designed for scattering problems involving TM plane waves impinging on a collection of homogeneous dielectric particles with arbitrary smooth shapes.
