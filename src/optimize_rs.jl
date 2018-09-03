@@ -98,7 +98,7 @@ function optimize_radius_common!(rs, last_rs, shared_var, φs, α, H, points, P,
         copy!(last_rs, rs)
         #do whatever common calculations and save to shared_var
         #construct rhs
-        for id in ids
+        for id in unique(ids)
             try
                 updateCircleScatteringDerivative!(scatteringMatrices[id], dS_S[id], k0, kin, rs[id], P)
             catch
