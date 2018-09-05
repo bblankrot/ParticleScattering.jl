@@ -12,12 +12,14 @@ the optimized device.
 `optimopts` defines the convergence criteria and other optimization parameters
 for both the inner and outer iterations. `method` can be either `"BFGS"` or
 `"LBFGS"`. See the `Optim.Fminbox` documentation for more details.
+`adjoint` dictates whether the gradient is calculated using the adjoint method
+(faster) or directly.
 
 Returns an object of type `Optim.MultivariateOptimizationResults`.
 """
 function optimize_radius(rs0, r_min, r_max, points, ids, P, ui, k0, kin,
                         centers, fmmopts, optimopts::Optim.Options;
-                        minimize = true, method = "BFGS")
+                        minimize = true, method = "BFGS", adjoint = true)
     Ns = size(centers,1)
     J = length(rs0)
 
@@ -56,27 +58,22 @@ function optimize_radius(rs0, r_min, r_max, points, ids, P, ui, k0, kin,
     initial_rs = copy(rs0)
     last_rs = similar(initial_rs)
 
-    if minimize
-        df = OnceDifferentiable(rs -> optimize_radius_f(rs, last_rs, shared_var,
-                                        φs, α, H, points, P, uinc_, Ns, k0,
-                                        kin, centers,scatteringMatrices, dS_S,
-                                        ids, mFMM, fmmopts, buf),
-                    (grad_stor, rs) -> optimize_radius_g!(grad_stor, rs, last_rs,
-                                        shared_var, φs, α, H, points, P, uinc_,
-                                        Ns, k0, kin, centers, scatteringMatrices,
-                                        dS_S, ids, mFMM, fmmopts, buf, minimize),
-                                        initial_rs)
+    if adjoint
+        gopt! = (grad_stor, rs) -> optimize_radius_adj_g!(grad_stor, rs, last_rs,
+                                    shared_var, φs, α, H, points, P, uinc_,
+                                    Ns, k0, kin, centers, scatteringMatrices,
+                                    dS_S, ids, mFMM, fmmopts, buf, minimize)
     else
-        df = OnceDifferentiable(rs -> -optimize_radius_f(rs, last_rs, shared_var,
+        gopt! = (grad_stor, rs) -> optimize_radius_g!(grad_stor, rs, last_rs,
+                                    shared_var, φs, α, H, points, P, uinc_,
+                                    Ns, k0, kin, centers, scatteringMatrices,
+                                    dS_S, ids, mFMM, fmmopts, buf, minimize)
+    end
+    fopt = rs -> ifelse(minimize,1,-1)*optimize_radius_f(rs, last_rs, shared_var,
                                         φs, α, H, points, P, uinc_, Ns, k0,
                                         kin, centers,scatteringMatrices, dS_S,
-                                        ids, mFMM, fmmopts, buf),
-                    (grad_stor, rs) -> optimize_radius_g!(grad_stor, rs, last_rs,
-                                        shared_var, φs, α, H, points, P, uinc_,
-                                        Ns, k0, kin, centers, scatteringMatrices,
-                                        dS_S, ids, mFMM, fmmopts, buf, minimize),
-                                        initial_rs)
-    end
+                                        ids, mFMM, fmmopts, buf)
+    df = OnceDifferentiable(fopt, gopt!, initial_rs)
 
     if method == "LBFGS"
         optimize(df, r_min, r_max, initial_rs,
@@ -177,6 +174,43 @@ function optimize_radius_g!(grad_stor, rs, last_rs, shared_var, φs, α, H, poin
     end
 
     grad_stor[:] = ifelse(minimize,2,-2)*real(shared_var.∂β.'*(H*conj(shared_var.f)))
+end
+
+function optimize_radius_adj_g!(grad_stor, rs, last_rs, shared_var, φs, α, H, points, P, uinc_, Ns, k0, kin, centers, scatteringMatrices, dS_S, ids, mFMM, opt, buf, minimize)
+    optimize_radius_common!(rs, last_rs, shared_var, φs, α, H, points, P, uinc_, Ns, k0, kin, centers, scatteringMatrices, dS_S, ids, mFMM, opt, buf)
+
+    MVP = LinearMap{eltype(buf.rhs)}(
+            (output_, x_) -> FMM_mainMVP_transpose!(output_, x_,
+                                scatteringMatrices, φs, ids, P, mFMM,
+                                buf.pre_agg, buf.trans),
+            Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
+
+    #build rhs of adjoint problem
+    shared_var.rhs_grad[:] = -(H*conj(shared_var.f))
+    #solve adjoint problem
+    λadj, ch = gmres(MVP, shared_var.rhs_grad, restart = Ns*(2*P+1),
+                    tol = opt.tol, log = true)
+    # λadj, ch = gmres!(λadj, MVP, shared_var.rhs_grad, restart = Ns*(2*P+1),
+    #                 tol = opt.tol, log = true, initially_zero = true)
+    if ch.isconverged == false
+        display("FMM process did not converge for adjoint system.")
+        error("..")
+    end
+
+    for n = 1:length(rs)
+        #compute n-th gradient - here we must pay the price for symmetry
+        #as more than one beta is affected. Overwrites rhs_grad.
+        for ic = 1:Ns
+            rng = (ic-1)*(2*P+1) + (1:2*P+1)
+            if ids[ic] == n
+                shared_var.rhs_grad[rng] = dS_S[n]*shared_var.β[rng]
+            else
+                shared_var.rhs_grad[rng] = 0.0
+            end
+        end
+
+        grad_stor[n] = ifelse(minimize,-2,2)*real(λadj.'*shared_var.rhs_grad)
+    end
 end
 
 function updateCircleScatteringDerivative!(S, dS_S, kout, kin, R, P)

@@ -6,10 +6,12 @@ Optimize the rotation angles of a particle collection for minimization or
 maximization (depending on `minimize`) of the field intensity at `points`.
 `optimopts` and `method` define the optimization method, convergence criteria,
 and other optimization parameters.
+`adjoint` dictates whether the gradient is calculated using the adjoint method
+(faster) or directly.
 Returns an object of type `Optim.MultivariateOptimizationResults`.
 """
 function optimize_φ(φs0, points, P, ui::Einc, k0, kin, shapes, centers, ids, fmmopts,
-                    optimopts::Optim.Options, method; minimize = true)
+                    optimopts::Optim.Options, method; minimize = true, adjoint = true)
 
     #stuff that is done once
     verify_min_distance(shapes, centers, ids, points) || error("Particles are too close.")
@@ -25,27 +27,22 @@ function optimize_φ(φs0, points, P, ui::Einc, k0, kin, shapes, centers, ids, f
     last_φs = similar(initial_φs)
     last_φs == initial_φs && (last_φs[1] += 1) #should never happen but has
 
-    if minimize
-        df = OnceDifferentiable(
-            φs -> optimize_φ_f(φs, shared_var, last_φs, α,
-                                    H, points, P, uinc_, Ns, k0, centers,
-                                    scatteringMatrices, ids, mFMM, fmmopts, buf),
-            (grad_stor, φs) -> optimize_φ_g!(grad_stor, φs, shared_var,
-                                    last_φs, α, H, points, P, uinc_,
-                                    Ns, k0, centers, scatteringMatrices,
-                                    scatteringLU, ids, mFMM, fmmopts, buf, minimize),
-                                    initial_φs)
+    fopt = φs -> ifelse(minimize,1,-1)*optimize_φ_f(φs, shared_var, last_φs, α,
+                                        H, points, P, uinc_, Ns, k0, centers,
+                                        scatteringMatrices, ids, mFMM, fmmopts,
+                                        buf)
+    if adjoint
+        gopt! = (grad_stor, φs) -> optimize_φ_adj_g!(grad_stor, φs, shared_var,
+                                    last_φs, α, H, points, P, uinc_, Ns, k0,
+                                    centers, scatteringMatrices, scatteringLU,
+                                    ids, mFMM, fmmopts, buf, minimize)
     else
-        df = OnceDifferentiable(
-            φs -> -optimize_φ_f(φs, shared_var, last_φs, α,
-                                    H, points, P, uinc_, Ns, k0, centers,
-                                    scatteringMatrices, ids, mFMM, fmmopts, buf),
-            (grad_stor, φs) -> optimize_φ_g!(grad_stor, φs, shared_var,
-                                    last_φs, α, H, points, P, uinc_,
-                                    Ns, k0, centers, scatteringMatrices,
-                                    scatteringLU, ids, mFMM, fmmopts, buf, minimize),
-                                    initial_φs)
+        gopt! = (grad_stor, φs) -> optimize_φ_g!(grad_stor, φs, shared_var,
+                                    last_φs, α, H, points, P, uinc_, Ns, k0,
+                                    centers, scatteringMatrices, scatteringLU,
+                                    ids, mFMM, fmmopts, buf, minimize)
     end
+    df = OnceDifferentiable(fopt, gopt!, initial_φs)
     optimize(df, initial_φs, method, optimopts)
 end
 
@@ -147,6 +144,49 @@ function optimize_φ_g!(grad_stor, φs, shared_var, last_φs, α, H, points, P, 
 
     grad_stor[:] = ifelse(minimize, 2, -2)*
                     real(shared_var.∂β.'*(H*conj(shared_var.f)))
+end
+
+
+function optimize_φ_adj_g!(grad_stor, φs, shared_var, last_φs, α, H, points, P, uinc_, Ns, k0, centers, scatteringMatrices, scatteringLU, ids, mFMM, opt, buf, minimize)
+    optimize_φ_adj_common!(φs, last_φs, shared_var, α, H, points, P, uinc_, Ns,
+        k0, centers,scatteringMatrices, ids, mFMM, opt, buf)
+
+    MVP = LinearMap{eltype(buf.rhs)}(
+            (output_, x_) -> FMM_mainMVP_transpose!(output_, x_,
+                                scatteringMatrices, φs, ids, P, mFMM,
+                                buf.pre_agg, buf.trans),
+            Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
+
+    #build rhs of adjoint problem
+    shared_var.rhs_grad[:] = -(H*conj(shared_var.f))
+    #solve adjoint problem
+    λadj, ch = gmres(MVP, shared_var.rhs_grad, restart = Ns*(2*P+1),
+                    tol = opt.tol, log = true)
+    # λadj, ch = gmres!(λadj, MVP, shared_var.rhs_grad, restart = Ns*(2*P+1),
+    #                 tol = opt.tol, log = true, initially_zero = true)
+    if ch.isconverged == false
+        display("FMM process did not converge for adjoint system.")
+        error("..")
+    end
+
+    #note: this assumes that there are exactly 2P+1 non zero elements in ∂X. If
+    #not, v must be (2P+1)Ns × 1.
+    D = -1.0im*collect(-P:P)
+    v = Array{Complex{Float64}}(2P+1) #TODO: minimize dynamic alloc
+    for n = 1:Ns
+        #compute n-th element of gradient
+        rng = (n-1)*(2*P+1) + (1:2*P+1)
+        rotateMultipole!(v, view(shared_var.β,rng), -φs[n], P)
+        v[:] = scatteringLU[ids[n]]\v #LU decomp with pivoting
+        v[:] .*= -D
+        v[:] = scatteringMatrices[ids[n]]*v
+        rotateMultipole!(v, φs[n], P)
+        v[:] += D.*shared_var.β[rng]
+
+        grad_stor[n] = ifelse(minimize, -2, 2)*real(view(λadj,rng).'*v)
+        #prepare for next one
+        v[:] = 0.0im
+    end
 end
 
 function optimizationHmatrix(points, centers, Ns, P, k0)

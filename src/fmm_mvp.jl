@@ -147,6 +147,7 @@ function FMM_mainMVP_transpose!(output, beta, scatteringMatrices, φs::Vector{Fl
     #Xβ storage can be moved outward, but for now this preallocation prevents most
     #dynamic mem alloc by this MVP
     Xβ = Array{Complex{Float64}}(length(beta))
+    temp = Array{Complex{Float64}}(2*P+1)
     for ic = 1:length(ids)
         rng = (ic-1)*(2*P+1) + (1:2*P+1)
         v = view(Xβ, rng)
@@ -154,9 +155,9 @@ function FMM_mainMVP_transpose!(output, beta, scatteringMatrices, φs::Vector{Fl
             At_mul_B!(v, scatteringMatrices[ids[ic]], view(beta, rng))
         else
             #rotate without matrix - transposed
-            psss.rotateMultipole!(temp, view(beta, rng), φs[ic], P)
+            rotateMultipole!(temp, view(beta, rng), φs[ic], P)
             At_mul_B!(v, scatteringMatrices[ids[ic]], temp)
-            psss.rotateMultipole!(v, -φs[ic], P)
+            rotateMultipole!(v, -φs[ic], P)
         end
     end
 
