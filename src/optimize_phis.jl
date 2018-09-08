@@ -148,7 +148,7 @@ end
 
 
 function optimize_φ_adj_g!(grad_stor, φs, shared_var, last_φs, α, H, points, P, uinc_, Ns, k0, centers, scatteringMatrices, scatteringLU, ids, mFMM, opt, buf, minimize)
-    optimize_φ_adj_common!(φs, last_φs, shared_var, α, H, points, P, uinc_, Ns,
+    optimize_φ_common!(φs, last_φs, shared_var, α, H, points, P, uinc_, Ns,
         k0, centers,scatteringMatrices, ids, mFMM, opt, buf)
 
     MVP = LinearMap{eltype(buf.rhs)}(
