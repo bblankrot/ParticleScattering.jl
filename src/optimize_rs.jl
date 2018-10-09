@@ -34,8 +34,8 @@ function optimize_radius(rs0, r_min, r_max, points, ids, P, ui, k0, kin,
     else
         assert(J == length(r_max))
     end
-    verify_min_distance([CircleParams(r_max[i]) for i = 1:J], centers, ids,
-        points) || error("Particles are too close.")
+    verify_min_distance(CircleParams.(r_max), centers, ids,
+        points) || error("Particles are too close or r_max are too large.")
 
     #setup FMM reusal
     groups, boxSize = divideSpace(centers, fmmopts)
@@ -56,7 +56,7 @@ function optimize_radius(rs0, r_min, r_max, points, ids, P, ui, k0, kin,
     buf = FMMbuffer(Ns,P,Q,length(groups))
     shared_var = OptimBuffer(Ns,P,size(points,1),J)
     initial_rs = copy(rs0)
-    last_rs = similar(initial_rs)
+    last_rs = similar(initial_rs); last_rs[1] = NaN; assert(last_rs != initial_rs) #initial_rs, last_rs must be different before first iteration
 
     if adjoint
         gopt! = (grad_stor, rs) -> optimize_radius_adj_g!(grad_stor, rs, last_rs,

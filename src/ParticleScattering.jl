@@ -63,4 +63,6 @@ export plot_near_field_pgf
 export divideSpace, FMMtruncation, particleExpansion, FMMbuildMatrices
 export FMMbuffer, FMMmatrices
 
+include("optimize_rs_mf.jl")
+export optimize_rs_mf
 end
