@@ -59,13 +59,8 @@ function optimize_rs_mf_common!(rs, last_rs, shared_var, φs, α,
         #construct rhs
         for ik in eachindex(k0)
             for id in unique(ids)
-                try
-                    updateCircleScatteringDerivative!(scatteringMatrices[ik][id],
-                        dS_S[ik][id], k0[ik], kin[ik], rs[id], P)
-                catch
-                    warn("Could not calculate derivatives for id=$id,k0=$k0,kin=$kin,R=$(rs[id])")
-                    rethrow()
-                end
+                updateCircleScatteringDerivative!(scatteringMatrices[ik][id],
+                    dS_S[ik][id], k0[ik], kin[ik], rs[id], P)
             end
             for ic = 1:Ns
                 rng = (ic-1)*(2*P+1) + (1:2*P+1)

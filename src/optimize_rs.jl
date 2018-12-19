@@ -213,9 +213,9 @@ function optimize_radius_adj_g!(grad_stor, rs, last_rs, shared_var, φs, α, H, 
     end
 end
 
-function updateCircleScatteringDerivative!(S, dS_S, kout, kin, R, P)
+function updateCircleScatteringDerivative!(S, dS_S, kout, kin, R::Real, P)
     #non-vectorized, reuses bessel
-
+    R > 0 || throw(DomainError(R, "`R` must be positive."))
     pre_J0 = besselj(-1,kout*R)
     pre_J1 = besselj(-1,kin*R)
     pre_H = besselh(-1,kout*R)
@@ -245,37 +245,37 @@ function updateCircleScatteringDerivative!(S, dS_S, kout, kin, R, P)
     end
 end
 
-function gradient_radius(rs, points, ids, P, ui, k0, kin, centers, fmmopts, minimize)
-    Ns = size(centers,1)
-    J = length(rs)
-
-    assert(maximum(ids) <= J)
-    verify_min_distance(CircleParams.(rs), centers, ids,
-        points) || error("Particles are too close.")
-
-    #setup FMM reusal
-    groups, boxSize = divideSpace(centers, fmmopts)
-    P2, Q = FMMtruncation(fmmopts.acc, boxSize, k0)
-    mFMM = FMMbuildMatrices(k0, P, P2, Q, groups, centers, boxSize, tri = true)
-
-    #allocate derivative
-    scatteringMatrices = [speye(Complex{Float64}, 2*P+1) for ic = 1:J]
-    dS_S = [speye(Complex{Float64}, 2*P+1) for ic = 1:J]
-
-    #stuff that is done once
-    H = optimizationHmatrix(points, centers, Ns, P, k0)
-    α = u2α(k0, ui, centers, P)
-    uinc_ = uinc(k0, points, ui)
-    φs = zeros(Float64,Ns)
-
-    # Allocate buffers
-    buf = FMMbuffer(Ns,P,Q,length(groups))
-    shared_var = OptimBuffer(Ns,P,size(points,1),J)
-    last_rs = similar(rs); all(last_rs .== rs) && (last_rs[1] += 1)
-
-    grad_stor = Array{Float64}(J)
-    optimize_radius_adj_g!(grad_stor, rs, last_rs, shared_var, φs, α, H, points,
-        P, uinc_, Ns, k0, kin, centers, scatteringMatrices, dS_S, ids, mFMM,
-        fmmopts, buf, minimize)
-    grad_stor
-end
+# function gradient_radius(rs, points, ids, P, ui, k0, kin, centers, fmmopts, minimize)
+#     Ns = size(centers,1)
+#     J = length(rs)
+#
+#     assert(maximum(ids) <= J)
+#     verify_min_distance(CircleParams.(rs), centers, ids,
+#         points) || error("Particles are too close.")
+#
+#     #setup FMM reusal
+#     groups, boxSize = divideSpace(centers, fmmopts)
+#     P2, Q = FMMtruncation(fmmopts.acc, boxSize, k0)
+#     mFMM = FMMbuildMatrices(k0, P, P2, Q, groups, centers, boxSize, tri = true)
+#
+#     #allocate derivative
+#     scatteringMatrices = [speye(Complex{Float64}, 2*P+1) for ic = 1:J]
+#     dS_S = [speye(Complex{Float64}, 2*P+1) for ic = 1:J]
+#
+#     #stuff that is done once
+#     H = optimizationHmatrix(points, centers, Ns, P, k0)
+#     α = u2α(k0, ui, centers, P)
+#     uinc_ = uinc(k0, points, ui)
+#     φs = zeros(Float64,Ns)
+#
+#     # Allocate buffers
+#     buf = FMMbuffer(Ns,P,Q,length(groups))
+#     shared_var = OptimBuffer(Ns,P,size(points,1),J)
+#     last_rs = similar(rs); all(last_rs .== rs) && (last_rs[1] += 1)
+#
+#     grad_stor = Array{Float64}(J)
+#     optimize_radius_adj_g!(grad_stor, rs, last_rs, shared_var, φs, α, H, points,
+#         P, uinc_, Ns, k0, kin, centers, scatteringMatrices, dS_S, ids, mFMM,
+#         fmmopts, buf, minimize)
+#     grad_stor
+# end

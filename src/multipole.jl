@@ -96,13 +96,17 @@ function M2Lmatrix!(T, k, P, d)
 	end
 end
 
-function scattered_field_multipole(k0, beta, centers::Array{Float64,2}, points::Array{Float64,2})
+function scattered_field_multipole(k0, beta, centers::Array{Float64,2}, points::Array{Float64,2}; recurrence = false)
 	Ns = size(centers,1)
 	P = div(div(length(beta),Ns)-1,2)
 	len = size(points,1)
 	Esc = zeros(Complex{Float64}, len)
 
-	scattered_field_multipole!(Esc, k0, beta, P, centers, 1:Ns, points, 1:len)
+	if recurrence
+		scattered_field_multipole_recurrence!(Esc, k0, beta, P, centers, 1:Ns, points, 1:len)
+	else
+		scattered_field_multipole!(Esc, k0, beta, P, centers, 1:Ns, points, 1:len)
+	end
 	return Esc
 end
 
@@ -115,13 +119,36 @@ function scattered_field_multipole!(Esc::Array{Complex{Float64},1}, k0, beta, P,
 
 			rs_moved = hypot(points_moved1, points_moved2)
 			ts_moved = atan2(points_moved2, points_moved1)
-			try
-				Esc[ip] += beta[ind]*besselh(0, 1, k0*rs_moved)
-			catch
+			if rs_moved == 0
 				error("rs_moved == 0, center=$(centers[ic,:]), point=$(points[ip,:]), k0 = $k0, ic=$ic, ip=$ip")
 			end
+			Esc[ip] += beta[ind]*besselh(0, 1, k0*rs_moved)
 			for p = 1:P
 				Esc[ip] += besselh(p, 1, k0*rs_moved)*(beta[p + ind]*exp(1im*p*ts_moved) + (-1)^p*beta[-p + ind]*exp(-1im*p*ts_moved))
+			end
+		end
+	end
+end
+
+function scattered_field_multipole_recurrence!(Esc::Array{Complex{Float64},1}, k0, beta, P, centers::Array{Float64,2}, ind_centers, points::Array{Float64,2}, ind_points)
+	for ic in ind_centers
+		ind = (ic-1)*(2*P+1) + P + 1
+		for ip in ind_points
+			points_moved1 = points[ip,1] - centers[ic,1]
+			points_moved2 = points[ip,2] - centers[ic,2]
+
+			rs_moved = hypot(points_moved1, points_moved2)
+			ts_moved = atan2(points_moved2, points_moved1)
+			if rs_moved == 0
+				error("rs_moved == 0, center=$(centers[ic,:]), point=$(points[ip,:]), k0 = $k0, ic=$ic, ip=$ip")
+			end
+			Hₚ₋₂ = besselh(-1, 1, k0*rs_moved)
+			Hₚ₋₁ = besselh(0, 1, k0*rs_moved)
+			Esc[ip] += beta[ind]*Hₚ₋₁
+			for p = 1:P
+				Hₚ = (2*(p-1)/(k0*rs_moved))*Hₚ₋₁ - Hₚ₋₂
+				Esc[ip] += Hₚ*(beta[p + ind]*exp(1im*p*ts_moved) + (-1)^p*beta[-p + ind]*exp(-1im*p*ts_moved))
+				Hₚ₋₂ = Hₚ₋₁; Hₚ₋₁ = Hₚ
 			end
 		end
 	end

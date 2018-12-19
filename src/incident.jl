@@ -1,3 +1,5 @@
+const eta0 = 4π*299792458e-7
+
 #plane wave
 function u2α(k, u::PlaneWave, centers::Array{T,2}, P) where T <: Real
 	#build incoming coefficients for plane wave incident field
@@ -57,7 +59,7 @@ function uinc(k, points::Array{T,1}, u::LineSource) where T <: Real
 	0.25im*besselh(0, 1, k*r)
 end
 
-#current source
+#current source TODO: simple avg->trap rule
 function u2α(k, u::CurrentSource, centers::Array{T,2}, P) where T <: Real
 	α = zeros(Complex{Float64}, size(centers,1)*(2P + 1))
 	c = 0.25im*u.len/length(u.σ)
@@ -122,4 +124,63 @@ function err_α(k, ui::Einc, P, shape, center)
 	u_exact = uinc(k, center .+ shape.R*[cos.(θ) sin.(θ)], ui)
 	u_α = sum(α[p + P + 1]*besselj(p, k*shape.R)*exp.(1im*p*θ) for p = -P:P)
 	norm(u_α - u_exact)/norm(u_exact)
+end
+
+
+function hxinc(k, p, u::PlaneWave)
+    (sin(u.θi)/eta0)*exp.(1.0im*k*(cos(u.θi)*p[:,1] + sin(u.θi)*p[:,2]))
+end
+
+function hyinc(k, p, u::PlaneWave)
+    (-cos(u.θi)/eta0)*exp.(1.0im*k*(cos(u.θi)*p[:,1] + sin(u.θi)*p[:,2]))
+end
+
+function hxinc(k, p, u::LineSource)
+    R = sqrt.((view(p,:,1) - u.x).^2 + (view(p,:,2) - u.y).^2)
+    if any(R .== 0)
+		warn("Hinc: encountered singularity in incident field, returned NaN")
+		R[R.==0] = NaN
+	end
+    h = (0.25/eta0./R).*besselh.(1,k*R).*(u.y - view(p,:,2))
+end
+
+function hyinc(k, p, u::LineSource)
+    R = sqrt.((view(p,:,1) - u.x).^2 + (view(p,:,2) - u.y).^2)
+    if any(R .== 0)
+		warn("Hinc: encountered singularity in incident field, returned NaN")
+		R[R.==0] = NaN
+	end
+    h = (0.25/eta0./R).*besselh.(1,k*R).*(view(p,:,1) - u.x)
+end
+
+#these untested
+function hxinc(k, points, u::CurrentSource)
+    res = Array{Complex{Float64}}(size(points, 1))
+	r = Array{Float64}(size(u.p, 1))
+    y = Array{Float64}(size(u.p, 1))
+	for i = 1:size(points, 1)
+		y .= points[i,2] - u.p[:,2]
+        r .= hypot.(points[i,1] - u.p[:,1], y)
+		if any(r .== 0) #point is on source
+			warn("Hinc: encountered singularity in incident field, returned NaN")
+			res[i] = NaN
+		end
+		res[i] = (-0.25*u.len/length(u.σ)/eta0)*sum(besselh.(1, 1, k*r).*u.σ.*y./r)
+	end
+	res
+end
+function hyinc(k, points, u::CurrentSource)
+    res = Array{Complex{Float64}}(size(points, 1))
+	r = Array{Float64}(size(u.p, 1))
+    x = Array{Float64}(size(u.p, 1))
+	for i = 1:size(points, 1)
+		x .= points[i,1] - u.p[:,1]
+        r .= hypot.(x, points[i,2] - u.p[:,2])
+		if any(r .== 0) #point is on source
+			warn("Hinc: encountered singularity in incident field, returned NaN")
+			res[i] = NaN
+		end
+		res[i] = (0.25*u.len/length(u.σ)/eta0)*sum(besselh.(1, 1, k*r).*u.σ.*x./r)
+	end
+	res
 end

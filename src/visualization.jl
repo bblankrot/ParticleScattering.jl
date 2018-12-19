@@ -1,6 +1,6 @@
 """
     plot_near_field(k0, kin, P, sp::ScatteringProblem, ui::Einc;
-                        opt::FMMoptions = FMMoptions(), use_multipole = true,
+                        opt::FMMoptions = FMMoptions(), method = "multipole",
                         x_points = 201, y_points = 201, border = find_border(sp),
                         normalize = 1.0)
 
@@ -10,9 +10,10 @@ TM field `ui` scattering from the ScatteringProblem `sp`, using matplotlib's
 bounding box or calculate automatically.
 
 Uses the FMM options given by `opt` (FMM is disabled by default);
-`use_multipole` dictates whether electric field is calculated using the
-multipole/cylindrical harmonics (true) or falls back on potential densities
-(false). Either way, the multiple-scattering system is solved in the cylindrical
+`method = "multipole"` dictates whether electric field is calculated using the
+multipole/cylindrical harmonics, uses a faster but less accurate Hankel recurrence
+formula (`"recurrence"`), or falls back on potential densities (`"density"`).
+Either way, the multiple-scattering system is solved in the cylindrical
 harmonics space. Normalizes all distances and sizes in plot (but not output) by
 `normalize`.
 
@@ -22,7 +23,7 @@ Returns the calculated field in two formats:
 contains the field at `(mean(xgrid[i, j:j+1]), mean(ygrid[i:i+1, j]))`.
 """
 function plot_near_field(k0, kin, P, sp::ScatteringProblem, ui::Einc;
-                        opt::FMMoptions = FMMoptions(), use_multipole = true,
+                        opt::FMMoptions = FMMoptions(), method = "multipole",
                         x_points = 201, y_points = 201, border = find_border(sp),
                         normalize = 1.0)
 
@@ -40,7 +41,7 @@ function plot_near_field(k0, kin, P, sp::ScatteringProblem, ui::Einc;
                 vec(ygrid[1:y_points, 1:x_points]) + dy)
 
     Ez = calc_near_field(k0, kin, P, sp, points, ui,
-            use_multipole = use_multipole, opt = opt)
+            method = method, opt = opt)
     zgrid = reshape(Ez, y_points, x_points)
     figure()
     pcolormesh(xgrid/normalize, ygrid/normalize, abs.(zgrid))
@@ -127,21 +128,22 @@ draw_shapes(sp; ax = gca(), normalize = 1.0) = draw_shapes(sp.shapes,
 
 """
     calc_near_field(k0, kin, P, sp::ScatteringProblem, points, ui::Einc;
-                            opt::FMMoptions = FMMoptions(), use_multipole = true,
+                            opt::FMMoptions = FMMoptions(), method = "multipole",
                             verbose = true)
 
 Calculates the total electric field as a result of a plane wave with incident
 field `ui` scattering from the ScatteringProblem `sp`, at `points`.
-Uses the FMM options given by `opt` (default behavious is disabled FMM);
-`use_multipole` dictates whether electric field is calculated using the
-multipole/cylindrical harmonics (true) or falls back on potential densities
-(false). Either way, the multiple-scattering system is solved in the cylindrical
+Uses the FMM options given by `opt` (default behaviour is disabled FMM);
+`method = "multipole"` dictates whether electric field is calculated using the
+multipole/cylindrical harmonics, uses a faster but less accurate Hankel recurrence
+formula (`"recurrence"`), or falls back on potential densities (`"density"`).
+Either way, the multiple-scattering system is solved in the cylindrical
 harmonics space, and the field by a particular scatterer inside its own scattering
 discs is calculated by potential densities, as the cylindrical harmonics
 approximation is not valid there.
 """
 function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, ui::Einc;
-                            opt::FMMoptions = FMMoptions(), use_multipole = true,
+                            opt::FMMoptions = FMMoptions(), method = "multipole",
                             verbose = true)
 
     shapes = sp.shapes;	ids = sp.ids; centers = sp.centers; φs = sp.φs
@@ -199,8 +201,11 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, ui::Einc;
             u[rng_out] += uinc(k0, points[rng_out,:], ui)
             for ic2 = 1:size(sp)
                 ic == ic2 && continue
-                if use_multipole
+                if method == "multipole"
                     scattered_field_multipole!(u, k0, beta, P, centers, ic2, points,
+                        find(rng_out))
+                elseif method == "recurrence"
+                    scattered_field_multipole_recurrence!(u, k0, beta, P, centers, ic2, points,
                         find(rng_out))
                 else
                     if φs[ic2] == 0.0
@@ -224,8 +229,10 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, ui::Einc;
     rng = (tags .== 0)
     #incident field
     u[rng] = uinc(k0, points[rng,:], ui)
-    if use_multipole
+    if method == "multipole"
         scattered_field_multipole!(u, k0, beta, P, centers, 1:size(sp), points, find(rng))
+    elseif method == "recurrence"
+        scattered_field_multipole_recurrence!(u, k0, beta, P, centers, 1:size(sp), points, find(rng))
     else
         for ic = 1:size(centers,1)
             if typeof(shapes[ids[ic]]) == ShapeParams

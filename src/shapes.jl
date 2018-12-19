@@ -77,8 +77,8 @@ end
 """
 	hex_grid(a::Integer, rows::Integer, d; minus1 = false)
 
-Return `centers`, an `(M,2)` array  containing the points on a hexagonal lattice
-with horizontal rows, with `a` points in each row and `rows` rows, distanced `d`.
+Return `centers`, an `(M,2)` array containing points on a hexagonal lattice
+with horizontal rows, with `a` points distanced `d` in each row and `rows` rows.
 If `minus1` is true, the last point in every odd row is omitted.
 """
 function hex_grid(a::Integer, rows::Integer, d; minus1 = false)
