@@ -154,7 +154,8 @@ function optimize_pwr_rs_g!(grad_stor, rs, last_rs, opb, power_buffer, ids, scat
                             initially_zero = true) #no restart
         for n = 1:length(rs)
             #compute n-th gradient - here we must pay the price for symmetry
-            #as more than one β is affected. Overwrites rhs_grad. TODO:
+            #as more than one β is affected. Overwrites rhs_grad (ok because
+            #there is seperate one for each i). TODO:
             #rhs_grad is still usually sparse - utilize this to reduce complexity
             #here O(N^2) -> O(N)
             for ic = 1:Ns
@@ -186,22 +187,6 @@ function calc_multi_pwr!(power_buffer, opb)
     end
 end
 
-# function calc_multi_pwr_bad_quad!(power_buffer, opb)
-#     for sv in power_buffer
-#         len = length(sv.HEz)
-#         Sn = Array{Complex{Float64}}(len) # S⋅n
-#         βi = opb[sv.iₚ].β
-#         for ip = 1:len
-#             sv.Ez[ip] = sv.HEz[ip].'*βi + sv.Ez_inc[ip]
-#             sv.Hx[ip] = sv.HHx[ip].'*βi + sv.Hx_inc[ip]
-#             sv.Hy[ip] = sv.HHy[ip].'*βi + sv.Hy_inc[ip]
-#             Sn[ip] = -0.5*real(sv.Ez[ip]*conj(sv.Hy[ip]))*sv.nhat[ip,1]
-#             Sn[ip] += 0.5*real(sv.Ez[ip]*conj(sv.Hx[ip]))*sv.nhat[ip,2]
-#         end
-#         sv.pow = sum(Sn)*sv.l/len
-#     end
-# end
-
 function dPdβ_pwr!(sv::PowerBuffer)
     len = length(sv.Ez) #num of points
     fill!(sv.∂pow, 0.0)
@@ -214,16 +199,3 @@ function dPdβ_pwr!(sv::PowerBuffer)
                                     conj(sv.Ez[ip])*sv.HHx[ip])
     end
 end
-#
-# function dPdβ_pwr_bad_quad!(sv::PowerBuffer)
-#     len = length(sv.Ez) #num of points
-#     fill!(sv.∂pow, 0.0)
-#     #this is a sum of real and imaginary parts, hence the additional 1/2 factor
-#     for ip = 1:len
-#         cf = 1.0*sv.l/len
-#         sv.∂pow .+= (-0.25*cf*sv.nhat[ip,1])*(conj(sv.Hy[ip])*sv.HEz[ip] +
-#                                     conj(sv.Ez[ip])*sv.HHy[ip])
-#         sv.∂pow .+= (0.25*cf*sv.nhat[ip,2])*(conj(sv.Hx[ip])*sv.HEz[ip] +
-#                                     conj(sv.Ez[ip])*sv.HHx[ip])
-#     end
-# end

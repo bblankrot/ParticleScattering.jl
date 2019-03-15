@@ -73,4 +73,6 @@ export calc_power
 
 include("optimize_rs_pwr.jl")
 export PowerBuffer, OptimProblemBuffer, optMatrixPwr, optimize_pwr_rs_f, optimize_pwr_rs_g!
+include("optimize_phis_pwr.jl")
+export optimize_pwr_φ_f, optimize_pwr_φ_g!
 end

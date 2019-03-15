@@ -184,7 +184,7 @@ function optimize_φ_adj_g!(grad_stor, φs, shared_var, last_φs, α, H, points,
         v[:] += D.*shared_var.β[rng]
 
         grad_stor[n] = ifelse(minimize, -2, 2)*real(view(λadj,rng).'*v)
-        #prepare for next one
+        #prepare for next one - #TODO: check why this is here
         v[:] = 0.0im
     end
 end
