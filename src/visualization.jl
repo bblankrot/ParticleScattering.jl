@@ -57,14 +57,14 @@ end
 
 """
     plot_far_field(k0, kin, P, sp::ScatteringProblem, pw::PlaneWave;
-                        opt::FMMoptions = FMMoptions(), use_multipole = true,
+                        opt::FMMoptions = FMMoptions(), method = "multipole",
                         plot_points = 200)
 
 Plots and returns the echo width (radar cross section in two dimensions) for a
-given scattering problem. `opt`, `use_multipole` are as in `plot_near_field`.
+given scattering problem. `opt`, `method` are as in `plot_near_field`.
 """
 function plot_far_field(k0, kin, P, sp::ScatteringProblem, pw::PlaneWave;
-                    opt::FMMoptions = FMMoptions(), use_multipole = true,
+                    opt::FMMoptions = FMMoptions(), method = "multipole",
                     plot_points = 200)
 
     Rmax = maximum(s.R for s in sp.shapes)
@@ -81,7 +81,7 @@ function plot_far_field(k0, kin, P, sp::ScatteringProblem, pw::PlaneWave;
     points = [x_far y_far]
 
     Ez = calc_far_field(k0, kin, P, points, sp, pw,
-            use_multipole = use_multipole, opt = opt)
+            method = method, opt = opt)
     Ez[:] = (k0*Rfar)*abs2.(Ez)
     #plot echo width
     figure()
@@ -264,7 +264,7 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, ui::Einc;
 end
 
 function calc_far_field(k0, kin, P, points, sp::ScatteringProblem, pw::PlaneWave;
-                        opt::FMMoptions = FMMoptions(), use_multipole = true)
+                        opt::FMMoptions = FMMoptions(), method = "multipole")
     #calc only scattered field + assumes all points are outside shapes
     shapes = sp.shapes; centers = sp.centers; ids = sp.ids; φs = sp.φs
     if opt.FMM
@@ -278,9 +278,13 @@ function calc_far_field(k0, kin, P, points, sp::ScatteringProblem, pw::PlaneWave
         beta, sigma_mu = solve_particle_scattering(k0, kin, P, sp, pw)
     end
     Ez = zeros(Complex{Float64}, size(points,1))
-    if use_multipole
+
+    if method == "multipole"
         scattered_field_multipole!(Ez, k0, beta, P, centers, 1:size(sp),
             points, 1:size(points,1))
+    elseif method == "recurrence"
+        scattered_field_multipole_recurrence!(Ez, k0, beta, P, centers,
+            1:size(sp), points, 1:size(points,1))
     else
         for ic = 1:size(sp)
             if typeof(shapes[ids[ic]]) == ShapeParams
