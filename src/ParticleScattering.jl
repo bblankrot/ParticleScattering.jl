@@ -55,12 +55,6 @@ export uinc, hxinc, hyinc
 #consts, incident.jl
 export eta0
 
-# For advanced plotting with pgfplots
-import DataFrames, CSV, PGFPlotsX; const pgf = PGFPlotsX
-include("visualization_pgf.jl")
-#methods, visualization_pgf.jl
-export plot_near_field_pgf
-
 #temp
 export divideSpace, FMMtruncation, particleExpansion, FMMbuildMatrices
 export FMMbuffer, FMMmatrices
