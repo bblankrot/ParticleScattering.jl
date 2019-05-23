@@ -293,7 +293,7 @@ var documenterSearchIndex = {"docs": [
     "page": "API",
     "title": "ParticleScattering.LineSource",
     "category": "type",
-    "text": "LineSource(x, y)\n\nConstructor for the LineSource type, where (x0,y0) is the coordinate of the current filament.\n\n\n\n"
+    "text": "LineSource(x, y)\n\nConstructor for the LineSource type, where (x,y) is the coordinate of the current filament.\n\n\n\n"
 },
 
 {
@@ -333,7 +333,7 @@ var documenterSearchIndex = {"docs": [
     "page": "API",
     "title": "ParticleScattering.calc_near_field",
     "category": "method",
-    "text": "calc_near_field(k0, kin, P, sp::ScatteringProblem, points, ui::Einc;\n                        opt::FMMoptions = FMMoptions(), use_multipole = true,\n                        verbose = true)\n\nCalculates the total electric field as a result of a plane wave with incident field ui scattering from the ScatteringProblem sp, at points. Uses the FMM options given by opt (default behavious is disabled FMM); use_multipole dictates whether electric field is calculated using the multipole/cylindrical harmonics (true) or falls back on potential densities (false). Either way, the multiple-scattering system is solved in the cylindrical harmonics space, and the field by a particular scatterer inside its own scattering discs is calculated by potential densities, as the cylindrical harmonics approximation is not valid there.\n\n\n\n"
+    "text": "calc_near_field(k0, kin, P, sp::ScatteringProblem, points, ui::Einc;\n                        opt::FMMoptions = FMMoptions(), method = \"multipole\",\n                        verbose = true)\n\nCalculates the total electric field as a result of a plane wave with incident field ui scattering from the ScatteringProblem sp, at points. Uses the FMM options given by opt (default behaviour is disabled FMM); method = \"multipole\" dictates whether electric field is calculated using the multipole/cylindrical harmonics, uses a faster but less accurate Hankel recurrence formula (\"recurrence\"), or falls back on potential densities (\"density\"). Either way, the multiple-scattering system is solved in the cylindrical harmonics space, and the field by a particular scatterer inside its own scattering discs is calculated by potential densities, as the cylindrical harmonics approximation is not valid there.\n\n\n\n"
 },
 
 {
@@ -397,7 +397,7 @@ var documenterSearchIndex = {"docs": [
     "page": "API",
     "title": "ParticleScattering.hex_grid",
     "category": "method",
-    "text": "hex_grid(a::Integer, rows::Integer, d; minus1 = false)\n\nReturn centers, an (M,2) array  containing the points on a hexagonal lattice with horizontal rows, with a points in each row and rows rows, distanced d. If minus1 is true, the last point in every odd row is omitted.\n\n\n\n"
+    "text": "hex_grid(a::Integer, rows::Integer, d; minus1 = false)\n\nReturn centers, an (M,2) array containing points on a hexagonal lattice with horizontal rows, with a points distanced d in each row and rows rows. If minus1 is true, the last point in every odd row is omitted.\n\n\n\n"
 },
 
 {
@@ -429,7 +429,7 @@ var documenterSearchIndex = {"docs": [
     "page": "API",
     "title": "ParticleScattering.optimize_radius",
     "category": "method",
-    "text": "optimize_radius(rs0, r_min, r_max, points, ids, P, ui, k0, kin, centers,\n    fmmopts, optimopts::Optim.Options; minimize = true, method = \"BFGS\")\n\nOptimize the radii of circular particles for minimization or maximization of the field intensity at points, depending on minimize. Uses Optim\'s Fminbox box-contrained optimization to contain radii in feasible rangle, given in scalar or vector form by r_min and r_max.\n\nHere, ids allows for grouping particles - for example, to maintain symmetry of the optimized device. optimopts defines the convergence criteria and other optimization parameters for both the inner and outer iterations. method can be either \"BFGS\" or \"LBFGS\". See the Optim.Fminbox documentation for more details.\n\nReturns an object of type Optim.MultivariateOptimizationResults.\n\n\n\n"
+    "text": "optimize_radius(rs0, r_min, r_max, points, ids, P, ui, k0, kin, centers,\n    fmmopts, optimopts::Optim.Options; minimize = true, method = \"BFGS\")\n\nOptimize the radii of circular particles for minimization or maximization of the field intensity at points, depending on minimize. Uses Optim\'s Fminbox box-contrained optimization to contain radii in feasible rangle, given in scalar or vector form by r_min and r_max.\n\nHere, ids allows for grouping particles - for example, to maintain symmetry of the optimized device. optimopts defines the convergence criteria and other optimization parameters for both the inner and outer iterations. method can be either \"BFGS\" or \"LBFGS\". See the Optim.Fminbox documentation for more details. adjoint dictates whether the gradient is calculated using the adjoint method (faster) or directly.\n\nReturns an object of type Optim.MultivariateOptimizationResults.\n\n\n\n"
 },
 
 {
@@ -437,7 +437,7 @@ var documenterSearchIndex = {"docs": [
     "page": "API",
     "title": "ParticleScattering.optimize_φ",
     "category": "method",
-    "text": "optimize_φ(φs0, points, P, ui::Einc, k0, kin, shapes, centers, ids, fmmopts,\n    optimopts::Optim.Options, minimize = true)\n\nOptimize the rotation angles of a particle collection for minimization or maximization (depending on minimize) of the field intensity at points. optimopts and method define the optimization method, convergence criteria, and other optimization parameters. Returns an object of type Optim.MultivariateOptimizationResults.\n\n\n\n"
+    "text": "optimize_φ(φs0, points, P, ui::Einc, k0, kin, shapes, centers, ids, fmmopts,\n    optimopts::Optim.Options, minimize = true)\n\nOptimize the rotation angles of a particle collection for minimization or maximization (depending on minimize) of the field intensity at points. optimopts and method define the optimization method, convergence criteria, and other optimization parameters. adjoint dictates whether the gradient is calculated using the adjoint method (faster) or directly. Returns an object of type Optim.MultivariateOptimizationResults.\n\n\n\n"
 },
 
 {
@@ -445,7 +445,7 @@ var documenterSearchIndex = {"docs": [
     "page": "API",
     "title": "ParticleScattering.plot_far_field",
     "category": "method",
-    "text": "plot_far_field(k0, kin, P, sp::ScatteringProblem, pw::PlaneWave;\n                    opt::FMMoptions = FMMoptions(), use_multipole = true,\n                    plot_points = 200)\n\nPlots and returns the echo width (radar cross section in two dimensions) for a given scattering problem. opt, use_multipole are as in plot_near_field.\n\n\n\n"
+    "text": "plot_far_field(k0, kin, P, sp::ScatteringProblem, pw::PlaneWave;\n                    opt::FMMoptions = FMMoptions(), method = \"multipole\",\n                    plot_points = 200)\n\nPlots and returns the echo width (radar cross section in two dimensions) for a given scattering problem. opt, method are as in plot_near_field.\n\n\n\n"
 },
 
 {
@@ -453,15 +453,7 @@ var documenterSearchIndex = {"docs": [
     "page": "API",
     "title": "ParticleScattering.plot_near_field",
     "category": "method",
-    "text": "plot_near_field(k0, kin, P, sp::ScatteringProblem, ui::Einc;\n                    opt::FMMoptions = FMMoptions(), use_multipole = true,\n                    x_points = 201, y_points = 201, border = find_border(sp),\n                    normalize = 1.0)\n\nPlots the total electric field as a result of a plane wave with incident TM field ui scattering from the ScatteringProblem sp, using matplotlib\'s pcolormesh. Can accept number of sampling points in each direction plus bounding box or calculate automatically.\n\nUses the FMM options given by opt (FMM is disabled by default); use_multipole dictates whether electric field is calculated using the multipole/cylindrical harmonics (true) or falls back on potential densities (false). Either way, the multiple-scattering system is solved in the cylindrical harmonics space. Normalizes all distances and sizes in plot (but not output) by normalize.\n\nReturns the calculated field in two formats:\n\n(points, Ez) where Ez[i] is the total electric field at points[i,:], and\n(xgrid,ygrid,zgrid), the format suitable for pcolormesh, where zgrid[i,j]\n\ncontains the field at (mean(xgrid[i, j:j+1]), mean(ygrid[i:i+1, j])).\n\n\n\n"
-},
-
-{
-    "location": "api.html#ParticleScattering.plot_near_field_pgf-Tuple{Any,Any,Any,Any,ParticleScattering.ScatteringProblem,ParticleScattering.Einc}",
-    "page": "API",
-    "title": "ParticleScattering.plot_near_field_pgf",
-    "category": "method",
-    "text": "plot_near_field_pgf(filename, k0, kin, P, sp::ScatteringProblem, ui::Einc;\n                    opt::FMMoptions = FMMoptions(), use_multipole = true,\n                    x_points = 201, y_points = 201, border = find_border(sp),\n                    downsample = 1, include_preamble = false, normalize = 1.0)\n\nPlots the total electric field as a result of a plane wave with incident TM field ui scattering from the ScatteringProblem sp, using pgfplots\'s surf. Can accept number of sampling points in each direction, and either a given border or calculate it automatically. The plots of the shapes (but not the field) can be downsampled by setting an integer downsample, since pgfplots slows down dramatically when drawing many shapes with many nodes.\n\nUses the FMM options given by opt (FMM is disabled by default); use_multipole dictates whether electric field is calculated using the multipole/cylindrical harmonics (true) or falls back on potential densities (false). Either way, the multiple-scattering system is solved in the cylindrical harmonics space. Normalizes all distances and sizes in plot by normalize.\n\nSaves the generated pgfplots file to filename, with just a surrounding tikzpicture environment if include_preamble=false, and a compilable tandalone document otherwise.\n\n\n\n"
+    "text": "plot_near_field(k0, kin, P, sp::ScatteringProblem, ui::Einc;\n                    opt::FMMoptions = FMMoptions(), method = \"multipole\",\n                    x_points = 201, y_points = 201, border = find_border(sp),\n                    normalize = 1.0)\n\nPlots the total electric field as a result of a plane wave with incident TM field ui scattering from the ScatteringProblem sp, using matplotlib\'s pcolormesh. Can accept number of sampling points in each direction plus bounding box or calculate automatically.\n\nUses the FMM options given by opt (FMM is disabled by default); method = \"multipole\" dictates whether electric field is calculated using the multipole/cylindrical harmonics, uses a faster but less accurate Hankel recurrence formula (\"recurrence\"), or falls back on potential densities (\"density\"). Either way, the multiple-scattering system is solved in the cylindrical harmonics space. Normalizes all distances and sizes in plot (but not output) by normalize.\n\nReturns the calculated field in two formats:\n\n(points, Ez) where Ez[i] is the total electric field at points[i,:], and\n(xgrid,ygrid,zgrid), the format suitable for pcolormesh, where zgrid[i,j]\n\ncontains the field at (mean(xgrid[i, j:j+1]), mean(ygrid[i:i+1, j])).\n\n\n\n"
 },
 
 {
