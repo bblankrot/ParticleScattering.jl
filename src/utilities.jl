@@ -63,8 +63,8 @@ well as a vector of indices `inds` of length `n` such that `v == u[inds]`.
 """
 function uniqueind(v::Vector{T}) where T <: Number
     #returns inds,vals such that vals[inds[i]] == v[i]
-    inds = Array{Int}(0)
-    u = Array{T}(0)
+    inds = Array{Int}(undef, 0)
+    u = Array{T}(undef, 0)
     k = 0
     for val in v
         ind = findfirst(u, val)

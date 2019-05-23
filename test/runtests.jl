@@ -1,5 +1,5 @@
 using ParticleScattering
-using Base.Test
+using Test
 
 include("scatteredfield_test.jl")
 include("multipole_test.jl")

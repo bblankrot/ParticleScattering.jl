@@ -31,8 +31,8 @@ function plot_near_field(k0, kin, P, sp::ScatteringProblem, ui::Einc;
 
     # with pcolormesh, the field is calculated at the center of each rectangle.
     # thus we need two grids - the rectangle grid and the sampling grid.
-    x = linspace(x_min, x_max, x_points + 1)
-    y = linspace(y_min, y_max, y_points + 1)
+    x = range(x_min, stop=x_max, length=x_points + 1)
+    y = range(y_min, stop=y_max, length=y_points + 1)
     xgrid = repmat(x', y_points + 1, 1)
     ygrid = repmat(y, 1, x_points + 1)
     dx = (x_max - x_min)/2/x_points
@@ -75,7 +75,7 @@ function plot_far_field(k0, kin, P, sp::ScatteringProblem, pw::PlaneWave;
     x_center = 0.5*(x_max + x_min)
     y_center = 0.5*(y_max + y_min)
     Rfar = Raggregate*1e6
-    theta_far = linspace(0, 2π, plot_points)
+    theta_far = range(0, stop=2π, length=plot_points)
     x_far = x_center + Rfar*cos.(theta_far)
     y_far = y_center + Rfar*sin.(theta_far)
     points = [x_far y_far]
@@ -152,7 +152,7 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, ui::Einc;
         result,sigma_mu =  solve_particle_scattering_FMM(k0, kin, P, sp,
                             ui, opt, verbose = verbose)
         if result[2].isconverged == false
-            warn("FMM process did not converge")
+            @warn("FMM process did not converge")
             return
         end
         beta = result[1]
@@ -169,7 +169,7 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, ui::Einc;
     tic()
     rng_in = zeros(Bool,size(points,1))
     rng_out = zeros(Bool,size(points,1))
-    Rot = Array{Float64}(2,2)
+    Rot = Array{Float64}(undef, 2,2)
     for ic = 1:size(sp)
         rng_in[:] = (tags .== ic)
         rng_out[:] = (tags .== -ic)
@@ -203,10 +203,10 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, ui::Einc;
                 ic == ic2 && continue
                 if method == "multipole"
                     scattered_field_multipole!(u, k0, beta, P, centers, ic2, points,
-                        find(rng_out))
+                        findall(rng_out))
                 elseif method == "recurrence"
                     scattered_field_multipole_recurrence!(u, k0, beta, P, centers, ic2, points,
-                        find(rng_out))
+                        findall(rng_out))
                 else
                     if φs[ic2] == 0.0
                         ft_rot2 = shapes[ids[ic2]].ft .+ centers[ic2,:]'
@@ -230,9 +230,9 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, ui::Einc;
     #incident field
     u[rng] = uinc(k0, points[rng,:], ui)
     if method == "multipole"
-        scattered_field_multipole!(u, k0, beta, P, centers, 1:size(sp), points, find(rng))
+        scattered_field_multipole!(u, k0, beta, P, centers, 1:size(sp), points, findall(rng))
     elseif method == "recurrence"
-        scattered_field_multipole_recurrence!(u, k0, beta, P, centers, 1:size(sp), points, find(rng))
+        scattered_field_multipole_recurrence!(u, k0, beta, P, centers, 1:size(sp), points, findall(rng))
     else
         for ic = 1:size(centers,1)
             if typeof(shapes[ids[ic]]) == ShapeParams
@@ -249,7 +249,7 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, ui::Einc;
                 end
             else
                 scattered_field_multipole!(u, k0, beta, P, centers, ic, points,
-                    find(rng))
+                    findall(rng))
             end
         end
     end
@@ -270,7 +270,7 @@ function calc_far_field(k0, kin, P, points, sp::ScatteringProblem, pw::PlaneWave
     if opt.FMM
         result,sigma_mu =  solve_particle_scattering_FMM(k0, kin, P, sp, pw, opt)
         if result[2].isconverged == false
-            warn("FMM process did not converge")
+            @warn("FMM process did not converge")
             return
         end
         beta = result[1]
@@ -313,7 +313,7 @@ function tagpoints_old(sp, points)
     shapes = sp.shapes;	ids = sp.ids; centers = sp.centers; φs = sp.φs
 
     tags = zeros(Integer, size(points,1))
-    X = Array{Float64}(2)
+    X = Array{Float64}(undef, 2)
     for ix = 1:size(points,1)
         for ic = 1:size(sp)
             X .= points[ix,:] - centers[ic,:]
@@ -339,7 +339,7 @@ function tagpoints(sp, points)
     shapes = sp.shapes;	ids = sp.ids; centers = sp.centers; φs = sp.φs
 
     tags = zeros(Integer, size(points,1))
-    X = Array{Float64}(2) #tmp arrays
+    X = Array{Float64}(undef, 2) #tmp arrays
     for ix = 1:size(points,1) #need two loops due to "break"
         for ic = 1:size(sp)
             X[1] = points[ix,1] - centers[ic,1]

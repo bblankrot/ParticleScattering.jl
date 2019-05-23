@@ -164,8 +164,8 @@ function randpoints(M, dmin, width, height, points; failures = 100)
         dist2 <= dmin2 && error("randpoints: given points have distance <= dmin")
     end
 
-    x_res = Array{Float64}(0)
-    y_res = Array{Float64}(0)
+    x_res = Array{Float64}(undef, 0)
+    y_res = Array{Float64}(undef, 0)
     fail = 0
     while fail < failures && length(x_res) < M
         accepted = true
@@ -281,7 +281,7 @@ function luneburg_grid(R_lens, N_cells, er; levels = 0, TM = true)
 
     if levels > 0
         #uniform quantization
-        rs = collect(linspace(minimum(r_cell), maximum(r_cell), levels))
+        rs = collect(range(minimum(r_cell), stop=maximum(r_cell), length=levels))
         ddd = (r_cell - rs[1])/(rs[2] - rs[1])
         ids = convert(Array{Int,1},round(ddd)) + 1
     else

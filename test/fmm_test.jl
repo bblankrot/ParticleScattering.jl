@@ -19,14 +19,14 @@
     sp = ScatteringProblem(shapes, ids, centers, φs)
     @test verify_min_distance(sp, [0.0 0.0; 0.01+dist 0.01])
     catch
-    warn("Could not find random points (1)")
+    @warn("Could not find random points (1)")
     end
     try
     centers = randpoints(M^2, dist, 5λ0, 5λ0, failures = 1_000)
     sp = ScatteringProblem(shapes, ids, centers, φs)
     @test verify_min_distance(sp)
     catch
-    warn("Could not find random points (2)")
+    @warn("Could not find random points (2)")
     end
 
     centers =  rect_grid(M, M, 0.8λ0, λ0)
@@ -39,7 +39,7 @@
     mFMM2 = FMMbuildMatrices(k0, P, P2, Q, groups, centers, boxSize; tri = true)
     @test norm(mFMM1.Znear - mFMM2.Znear, Inf) == 0
 
-    points = [linspace(-λ0*M, λ0*M, 200) zeros(200)]
+    points = [range(-λ0*M, stop=λ0*M, length=200) zeros(200)]
     u1 = calc_near_field(k0, kin, P, sp, points, PlaneWave(θ_i); opt = fmm_options,
             verbose = false)
     u2 = calc_near_field(k0, kin, P, sp, points, PlaneWave(θ_i); opt = fmm_options,

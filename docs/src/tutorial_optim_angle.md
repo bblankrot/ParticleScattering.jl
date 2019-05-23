@@ -71,7 +71,7 @@ separately with [`plot_near_field`](@ref) or compare them side by side with the
 following PyPlot code:
 
 ```julia
-plts = Array{Any}(3)
+plts = Array{Any}(undef, 3)
 plts[1] = plot_near_field(k0, kin, P, sp, pw, x_points = 100, y_points = 300,
         opt = fmm_options, border = find_border(sp, points))
 plts[2] = plot_near_field(k0, kin, P, sp_min, pw, x_points = 100, y_points = 300,

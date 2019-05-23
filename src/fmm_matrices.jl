@@ -92,7 +92,7 @@ function FMMaggregationMatrix(k, centers, box_center, t, P)
     Q = length(t)
     Ns = size(centers,1)
     A = Array{Complex{Float64}}(Q, Ns*(2*P+1))
-    d = Array{Float64}(2) #silly but faster
+    d = Array{Float64}(undef, 2) #silly but faster
     for i = 1:Ns
         d[1] = centers[i,1] - box_center[1]
         d[2] = centers[i,2] - box_center[2]
@@ -119,7 +119,7 @@ function FMMtranslationMatrix(k, x, t, P2)
     Q = length(t)
     T = zeros(Complex{Float64},Q)
     nx = sqrt(sum(abs2,x))
-    tx = Float64[-atan2(-x[2],-x[1]) - pi/2 + t[q] for q=1:Q]
+    tx = Float64[-atan(-x[2],-x[1]) - pi/2 + t[q] for q=1:Q]
     bess = besselh.(-P2:P2, 1, k*nx)
     T[:] = 0
     for i = -P2:P2, j = 1:Q
@@ -148,7 +148,7 @@ function FMMnearMatrix(k, P, groups, centers, boxSize, num)
                 ig1 == ig2 && (ic1 == ic2 && continue) #no  self-interactions
                 d = centers[groups[ig1].point_ids[ic1],:] - centers[groups[ig2].point_ids[ic2],:]
                 nd = sqrt(sum(abs2,d))
-            	td = atan2(d[2],d[1])
+            	td = atan(d[2],d[1])
                 bess[:] = besselh.(0:2*P,1,k*nd)
             	for ix = 1:2*P #lower diagonals
             		rng = ix+1:1+W:W^2-W*ix
@@ -180,7 +180,7 @@ function FMMnearMatrix_upperTri(k, P, groups, centers, boxSize, num)
     Zs = Array{Complex{Float64}}(num*W^2)
     mindist2 = 3*boxSize^2 #anywhere between 2 and 4
     ind = 0
-    d = Array{Float64}(2)
+    d = Array{Float64}(undef, 2)
     bess = Array{Complex{Float64}}(2*P+1)
     #first, between group and itself
     for ig1 = 1:G
@@ -190,8 +190,8 @@ function FMMnearMatrix_upperTri(k, P, groups, centers, boxSize, num)
                 d[2] = centers[groups[ig1].point_ids[ic1],2] - centers[groups[ig1].point_ids[ic2],2]
                 nd = sqrt(sum(abs2,d))
                 #first for ic2->ic1, then ic1->ic2
-                td1 = atan2(d[2],d[1])
-                td2 = atan2(-d[2],-d[1]) #adding pi instead leads to error
+                td1 = atan(d[2],d[1])
+                td2 = atan(-d[2],-d[1]) #adding pi instead leads to error
                 bess[:] = besselh.(0:2*P,1,k*nd)
                 ind2 = ind + W^2
 
@@ -231,8 +231,8 @@ function FMMnearMatrix_upperTri(k, P, groups, centers, boxSize, num)
                 d[2] = centers[groups[ig1].point_ids[ic1],2] - centers[groups[ig2].point_ids[ic2],2]
                 nd = sqrt(sum(abs2,d))
             	#first for ig2->ig1, then ig1->ig2
-                td1 = atan2(d[2],d[1])
-                td2 = atan2(-d[2],-d[1]) #adding pi instead leads to error
+                td1 = atan(d[2],d[1])
+                td2 = atan(-d[2],-d[1]) #adding pi instead leads to error
                 bess[:] = besselh.(0:2*P,1,k*nd)
                 ind2 = ind + W^2
 
@@ -278,7 +278,7 @@ function FMMbuildMatrices(k, P, P2, Q, groups, centers, boxSize; tri = true)
     Trans = Vector{Complex{Float64}}[]
     #For now, the translation from j to i is at Trans[(i-1)*G + j]
     mindist2 = 3*boxSize^2 #anywhere between 2 and 4
-    d = Array{Float64}(2)
+    d = Array{Float64}(undef, 2)
     num = 0
     for ig1 = 1:G
         for ig2 = 1:G

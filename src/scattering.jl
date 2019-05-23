@@ -17,7 +17,7 @@ function get_potential(kout, kin, P, t, ft, dft)
 
     #assuming the wave is sampled on the shape
     nz = sqrt.(sum(abs2,ft,2))
-    θ = atan2.(ft[:,2], ft[:,1])
+    θ = atan.(ft[:,2], ft[:,1])
     ndz = sqrt.(sum(abs2,dft,2))
     nzndz = nz.*ndz
     wro = dft[:,2].*ft[:,1] - dft[:,1].*ft[:,2]
@@ -87,7 +87,7 @@ function SDNTpotentialsdiff(k1, k2, t, ft, dft)
     A = Array{Complex{Float64}}(4*N, 4*N)
 
     ndft = sqrt.(vec(sum(abs2,dft,2)))
-    rij = Array{Float64}(2)
+    rij = Array{Float64}(undef, 2)
     for i=1:2*N, j=1:i
         if i == j
             T1 = -(k1^2 - k2^2)
@@ -221,7 +221,7 @@ function scatteredfield(sigma_mu, k, t, ft, dft, p)
             nr = hypot(r[1],r[2])
             if nr < eps()
                 #TODO: use SDNTpotentialsdiff here
-                warn("Encountered singularity in scatteredfield.")
+                @warn("Encountered singularity in scatteredfield.")
                 SDout[i,j] = 0
                 SDout[i,j+N] = 0
                 continue
@@ -238,7 +238,7 @@ function shapeMultipoleExpansion(k, t, ft, dft, P)
     #unlike others (so far), this does *not* assume t_j=pi*j/N
     N = div(length(t),2)
     nz = vec(sqrt.(sum(abs2,ft,2)))
-    θ = atan2.(ft[:,2], ft[:,1])
+    θ = atan.(ft[:,2], ft[:,1])
     ndz = vec(sqrt.(sum(abs2,dft,2)))
     AB = Array{Complex{Float64}}(2*P + 1, 4*N)
     bessp = besselj.(-P-1,k*nz)

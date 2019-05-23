@@ -14,7 +14,7 @@ function poynting_vector(k0, beta, centers, points, Ez_inc, Hx_inc, Hy_inc)
 			pt2 = points[ip,2] - centers[ic,2]
 
 			R = hypot(pt1, pt2)
-			θ = atan2(pt2, pt1)
+			θ = atan(pt2, pt1)
 			R == 0 && error("R == 0, center=$(centers[ic,:]),
                                 point=$(points[ip,:]), k0 = $k0, ic=$ic, ip=$ip")
 
@@ -102,10 +102,10 @@ end
 
 function rect_border(b, Nx, Ny)
     #clockwise from top
-    points1 = [linspace(b[1], b[2], Nx)     b[4]*ones(Nx)]
-    points2 = [b[2]*ones(Ny)     linspace(b[4], b[3], Ny)]
-    points3 = [linspace(b[2], b[1], Nx)     b[3]*ones(Nx)]
-    points4 = [b[1]*ones(Ny)     linspace(b[3], b[4], Ny)]
+    points1 = [range(b[1], stop=b[2], length=Nx)     b[4]*ones(Nx)]
+    points2 = [b[2]*ones(Ny)     range(b[4], stop=b[3], length=Ny)]
+    points3 = [range(b[2], stop=b[1], length=Nx)     b[3]*ones(Nx)]
+    points4 = [b[1]*ones(Ny)     range(b[3], stop=b[4], length=Ny)]
 
     n = [[zeros(Nx) ones(Nx)], [ones(Ny) zeros(Ny)], [zeros(Nx) -ones(Nx)], [-ones(Ny) zeros(Ny)]]
     [points1, points2, points3, points4], n

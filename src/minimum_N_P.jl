@@ -36,13 +36,13 @@ function minimumN(kout, kin, shape_function; tol = 1e-9, N_points = 10_000, N_st
 
     if err > tol
         if N > N_max
-            warn("minimumN: Cannot enter binary search mode.")
+            @warn("minimumN: Cannot enter binary search mode.")
         else
             warn("minimumN: Entering binary search mode in [$N,$N_max].")
             N, err = binarySearch(N_ -> -minimumN_helper(N_, kout, kin,
                 shape_function, err_points, E_comp, E_ana), -tol, N, N_max)
         end
-        err > tol && warn("minimumN: Failed to find err(N) < tol.")
+        err > tol && @warn("minimumN: Failed to find err(N) < tol.")
     elseif err < tol
 		if N == N_min
 			return N,err

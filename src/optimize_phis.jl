@@ -190,12 +190,12 @@ function optimize_φ_adj_g!(grad_stor, φs, shared_var, last_φs, α, H, points,
 end
 
 function optimizationHmatrix(points, centers, Ns, P, k0)
-    points_moved = Array{Float64}(2)
+    points_moved = Array{Float64}(undef, 2)
     H = Array{Complex{Float64}}(Ns*(2*P+1), size(points,1))
     for ic = 1:Ns, i = 1:size(points,1)
         points_moved[1] = points[i,1] - centers[ic,1]
         points_moved[2] = points[i,2] - centers[ic,2]
-        r_angle = atan2(points_moved[2], points_moved[1])
+        r_angle = atan(points_moved[2], points_moved[1])
         kr = k0*hypot(points_moved[1], points_moved[2])
 
         ind = (ic-1)*(2*P+1) + P + 1

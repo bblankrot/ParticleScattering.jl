@@ -84,7 +84,7 @@ function M2Lmatrix!(T, k, P, d)
 	#builds non-diagonal translation matrix from particle 2 to particle 1 (d=1-2)
 	#only calculates 2*(2*P+1) values
 	kd = k*sqrt(sum(abs2,d))
-	td = atan2(d[2],d[1])
+	td = atan(d[2],d[1])
 	bess = besselh.(0:2*P,1,kd)
 	for ix = 1:2*P #lower diagonals
 		rng = ix+1:1+(2*P+1):(2*P+1)^2-(2*P+1)*ix
@@ -118,7 +118,7 @@ function scattered_field_multipole!(Esc::Array{Complex{Float64},1}, k0, beta, P,
 			points_moved2 = points[ip,2] - centers[ic,2]
 
 			rs_moved = hypot(points_moved1, points_moved2)
-			ts_moved = atan2(points_moved2, points_moved1)
+			ts_moved = atan(points_moved2, points_moved1)
 			if rs_moved == 0
 				error("rs_moved == 0, center=$(centers[ic,:]), point=$(points[ip,:]), k0 = $k0, ic=$ic, ip=$ip")
 			end
@@ -138,7 +138,7 @@ function scattered_field_multipole_recurrence!(Esc::Array{Complex{Float64},1}, k
 			points_moved2 = points[ip,2] - centers[ic,2]
 
 			rs_moved = hypot(points_moved1, points_moved2)
-			ts_moved = atan2(points_moved2, points_moved1)
+			ts_moved = atan(points_moved2, points_moved1)
 			if rs_moved == 0
 				error("rs_moved == 0, center=$(centers[ic,:]), point=$(points[ip,:]), k0 = $k0, ic=$ic, ip=$ip")
 			end
@@ -201,7 +201,7 @@ function innerFieldCircle(kin, gamma, center::Array{Float64,1}, points::Array{Fl
 	points_moved[:,2] = points[:,2] - center[2]
 
 	rs_moved = sqrt.(sum(abs2,points_moved,2))
-	ts_moved = atan2.(points_moved[:,2], points_moved[:,1])
+	ts_moved = atan.(points_moved[:,2], points_moved[:,1])
 
 	bess = [besselj(p,kin*rs_moved[ii]) for ii=1:len, p=0:P]
 	E = gamma[P + 1]*bess[:,1]
@@ -218,7 +218,7 @@ function innerFieldCircle(kin, gamma, center::Array{Float64,1}, points::Array{Fl
 
     points_moved = points - center
 	rs_moved = sqrt(sum(abs2,points_moved))
-	ts_moved = atan2(points_moved[2], points_moved[1])
+	ts_moved = atan(points_moved[2], points_moved[1])
 
 	bess = [besselj(p,kin*rs_moved) for p=0:P]
 	E = gamma[P + 1]*bess[1]
@@ -229,8 +229,8 @@ function innerFieldCircle(kin, gamma, center::Array{Float64,1}, points::Array{Fl
 end
 
 function particleExpansion(k0, kin, shapes, P, ids)
-    scatteringMatrices = Array{Any}(0)
-	innerExpansions = Array{Any}(0)
+    scatteringMatrices = Array{Any}(undef, 0)
+	innerExpansions = Array{Any}(undef, 0)
 	for i = 1:length(shapes)
         #no use in computing matrices if shape doesn't actually show up! push garbage to maintain order
 		if all(ids .!= i)

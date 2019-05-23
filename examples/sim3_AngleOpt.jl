@@ -14,7 +14,7 @@ size_factor = 7
 width = size_factor*3*l0
 height = size_factor*l0
 myshapefun(N) = rounded_star(a1,a2,a3,N)
-points = [linspace(0.0,width,10) height*ones(10)]
+points = [range(0.0, stop=width, length=10) height*ones(10)]
 
 if !isfile(dirname(@__FILE__) * "/sim3data.jld")
     centers = randpoints(Ns, dmin, width, height, points)

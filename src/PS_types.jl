@@ -214,7 +214,7 @@ start and end points of the source, and `σ` contains the potential density.
 """
 function CurrentSource(x1, y1, x2, y2, σ)
 	len = sqrt((x2 - x1)^2 + (y2 - y1)^2)
-	t = linspace(0, 1, length(σ))
+	t = range(0, stop=1, length=length(σ))
 	p = [(x2 - x1)*t + x1		(y2 - y1)*t + y1]
 	CurrentSource(p, σ, len)
 end

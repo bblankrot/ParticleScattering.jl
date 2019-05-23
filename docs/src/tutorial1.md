@@ -50,7 +50,7 @@ appropriate method:
 
 ```julia
 #calculate field on the x-axis passing through the particle
-points = [linspace(-0.5λ0, 0.5λ0, 200)  zeros(200)]
+points = [range(-0.5λ0, stop=0.5λ0, length=200)  zeros(200)]
 u = calc_near_field(k0, kin, P, sp, points, pw)
 ```
 

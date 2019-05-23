@@ -38,12 +38,12 @@ end
 function optMatrixPwr(points, centers, Ns, P, k0, ui, iₚ, nhat, l)
     sv = PowerBuffer(Ns, P, nhat, iₚ)
     cf = 1/(1im*k0*eta0)
-    pt = Array{Float64}(2)
+    pt = Array{Float64}(undef, 2)
     for ip = 1:size(points,1)
         for ic = 1:Ns
             pt[1] = points[ip,1] - centers[ic,1]
             pt[2] = points[ip,2] - centers[ic,2]
-            θ = atan2(pt[2], pt[1])
+            θ = atan(pt[2], pt[1])
             R = hypot(pt[1], pt[2])
 
             ind = (ic-1)*(2*P+1) + P + 1
