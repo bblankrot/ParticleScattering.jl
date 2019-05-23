@@ -51,16 +51,22 @@ export optimize_φ
 #methods, optimize_rs.jl
 export optimize_radius
 #methods, incident.jl
-export uinc
-
-# For advanced plotting with pgfplots
-import DataFrames, CSV, PGFPlotsX; const pgf = PGFPlotsX
-include("visualization_pgf.jl")
-#methods, visualization_pgf.jl
-export plot_near_field_pgf
+export uinc, hxinc, hyinc
+#consts, incident.jl
+export eta0
 
 #temp
 export divideSpace, FMMtruncation, particleExpansion, FMMbuildMatrices
 export FMMbuffer, FMMmatrices
 
+include("optimize_rs_mf.jl")
+export optimize_rs_mf
+
+include("poynting.jl")
+export calc_power
+
+include("optimize_rs_pwr.jl")
+export PowerBuffer, OptimProblemBuffer, optMatrixPwr, optimize_pwr_rs_f, optimize_pwr_rs_g!
+include("optimize_phis_pwr.jl")
+export optimize_pwr_φ_f, optimize_pwr_φ_g!
 end

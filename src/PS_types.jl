@@ -191,7 +191,7 @@ end
 """
 	LineSource(x, y)
 
-Constructor for the `LineSource` type, where `(x0,y0)` is the coordinate of the
+Constructor for the `LineSource` type, where `(x,y)` is the coordinate of the
 current filament.
 """
 struct LineSource <: Einc

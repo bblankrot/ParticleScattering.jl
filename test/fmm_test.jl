@@ -43,12 +43,12 @@
     u1 = calc_near_field(k0, kin, P, sp, points, PlaneWave(θ_i); opt = fmm_options,
             verbose = false)
     u2 = calc_near_field(k0, kin, P, sp, points, PlaneWave(θ_i); opt = fmm_options,
-            verbose = true, use_multipole = false)
+            verbose = true, method = "density")
     @test norm(u1 - u2)/norm(u1) < 1e-6
 
     u3 = calc_near_field(k0, kin, P, sp, points, LineSource(-0.8λ0,-λ0); opt = fmm_options,
             verbose = false)
     u4 = calc_near_field(k0, kin, P, sp, points, LineSource(-0.8λ0,-λ0); opt = fmm_options,
-            verbose = true, use_multipole = false)
+            verbose = true, method = "recurrence")
     @test norm(u3 - u4)/norm(u3) < 1e-6
 end
