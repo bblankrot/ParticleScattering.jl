@@ -33,12 +33,12 @@ function plot_near_field(k0, kin, P, sp::ScatteringProblem, ui::Einc;
     # thus we need two grids - the rectangle grid and the sampling grid.
     x = range(x_min, stop=x_max, length=x_points + 1)
     y = range(y_min, stop=y_max, length=y_points + 1)
-    xgrid = repmat(x', y_points + 1, 1)
-    ygrid = repmat(y, 1, x_points + 1)
+    xgrid = repeat(transpose(x), y_points + 1)
+    ygrid = repeat(y, 1, x_points + 1)
     dx = (x_max - x_min)/2/x_points
     dy = (y_max - y_min)/2/y_points
-    points = cat(2, vec(xgrid[1:y_points, 1:x_points]) + dx,
-                vec(ygrid[1:y_points, 1:x_points]) + dy)
+    points = cat(vec(xgrid[1:y_points, 1:x_points]) .+ dx,
+                vec(ygrid[1:y_points, 1:x_points]) .+ dy, dims=2)
 
     Ez = calc_near_field(k0, kin, P, sp, points, ui,
             method = method, opt = opt)
@@ -51,7 +51,7 @@ function plot_near_field(k0, kin, P, sp::ScatteringProblem, ui::Einc;
     xlim([x_min/normalize;x_max/normalize])
     ylim([y_min/normalize;y_max/normalize])
     tight_layout()
-    ax[:set_aspect]("equal", adjustable = "box")
+    ax.set_aspect("equal", adjustable = "box")
     return (points,Ez),(xgrid,ygrid,zgrid)
 end
 
@@ -69,8 +69,8 @@ function plot_far_field(k0, kin, P, sp::ScatteringProblem, pw::PlaneWave;
 
     Rmax = maximum(s.R for s in sp.shapes)
 
-    x_max,y_max = maximum(sp.centers,1) + 2*Rmax
-    x_min,y_min = minimum(sp.centers,1) - 2*Rmax
+    x_max,y_max = maximum(sp.centers, dims=1) + 2*Rmax
+    x_min,y_min = minimum(sp.centers, dims=1) - 2*Rmax
     Raggregate = 0.5*max(x_max - x_min, y_max - y_min) #radius of bounding circle
     x_center = 0.5*(x_max + x_min)
     y_center = 0.5*(y_max + y_min)
@@ -109,13 +109,13 @@ function draw_shapes(shapes, ids, centers, φs; ax = gca(), normalize = 1.0)
             if φs[ic] == 0.0
                 ft_rot = shapes[ids[ic]].ft .+ centers[ic,:]'
             else
-                Rot = cartesianrotation(φs[ic])
-                ft_rot = shapes[ids[ic]].ft*Rot.' .+ centers[ic,:]'
+                Rot = cartesianrotation(φs[ic])'
+                ft_rot = shapes[ids[ic]].ft*Rot .+ centers[ic,:]'
             end
-            ax[:plot]([ft_rot[:,1];ft_rot[1,1]]/normalize,
+            ax.plot([ft_rot[:,1];ft_rot[1,1]]/normalize,
                     [ft_rot[:,2];ft_rot[1,2]]/normalize, "k", linewidth = 2)
         else
-            ax[:add_patch](patch.Circle((centers[ic,1]/normalize,
+            ax.add_patch(patch.Circle((centers[ic,1]/normalize,
                             centers[ic,2]/normalize),
                             radius = shapes[ids[ic]].R/normalize,
                             edgecolor="k", facecolor="none", linewidth = 2))
@@ -160,100 +160,100 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, ui::Einc;
         beta, sigma_mu = solve_particle_scattering(k0, kin, P, sp, ui)
     end
 
-    tic()
     #first, let's mark which points are in which shapes in tags:
     #0 denotes outside everything, +-i means inside shape i or between it and its "multipole disk"
-    tags = tagpoints(sp, points)
-    dt_tag = toq()
-
-    tic()
-    rng_in = zeros(Bool,size(points,1))
-    rng_out = zeros(Bool,size(points,1))
-    Rot = Array{Float64}(undef, 2,2)
-    for ic = 1:size(sp)
-        rng_in[:] = (tags .== ic)
-        rng_out[:] = (tags .== -ic)
-        (any(rng_in) || any(rng_out)) || continue
-        if typeof(shapes[ids[ic]]) == ShapeParams
-            if φs[ic] == 0.0
-                ft_rot = shapes[ids[ic]].ft .+ centers[ic,:]'
-                dft_rot = shapes[ids[ic]].dft
-            else
-                Rot[:] = cartesianrotation(φs[ic])
-                ft_rot = shapes[ids[ic]].ft*Rot.' .+ centers[ic,:]'
-                dft_rot = shapes[ids[ic]].dft*Rot.'
-            end
-        end
-        #field inside shape
-        if any(rng_in)
-            if typeof(shapes[ids[ic]]) == ShapeParams
-                u[rng_in] += scatteredfield(sigma_mu[ic], kin, shapes[ids[ic]].t,
-                                ft_rot, dft_rot, points[rng_in,:])
-            else
-                u[rng_in] += innerFieldCircle(kin, sigma_mu[ic], centers[ic,:],
-                                points[rng_in,:])
-            end
-        end
-        #field between shape and multipole disk (impossible for circle)
-        if any(rng_out)
-            u[rng_out] += scatteredfield(sigma_mu[ic], k0, shapes[ids[ic]].t,
-                            ft_rot, dft_rot, points[rng_out,:])
-            u[rng_out] += uinc(k0, points[rng_out,:], ui)
-            for ic2 = 1:size(sp)
-                ic == ic2 && continue
-                if method == "multipole"
-                    scattered_field_multipole!(u, k0, beta, P, centers, ic2, points,
-                        findall(rng_out))
-                elseif method == "recurrence"
-                    scattered_field_multipole_recurrence!(u, k0, beta, P, centers, ic2, points,
-                        findall(rng_out))
-                else
-                    if φs[ic2] == 0.0
-                        ft_rot2 = shapes[ids[ic2]].ft .+ centers[ic2,:]'
-                        dft_rot2 = shapes[ids[ic2]].dft
-                    else
-                        Rot[:] = cartesianrotation(φs[ic2])
-                        ft_rot2 = shapes[ids[ic2]].ft*Rot.' .+ centers[ic2,:]'
-                        dft_rot2 = shapes[ids[ic2]].dft*Rot.'
-                    end
-                    u[rng_out] += scatteredfield(sigma_mu[ic2], k0, shapes[ids[ic2]].t,
-                                    ft_rot2, dft_rot2, points[rng_out,:])
-                end
-            end
-        end
+    dt_tag = @elapsed begin
+        tags = tagpoints(sp, points)
     end
-    dt_in = toq()
 
-    tic()
-    #now compute field outside all shapes
-    rng = (tags .== 0)
-    #incident field
-    u[rng] = uinc(k0, points[rng,:], ui)
-    if method == "multipole"
-        scattered_field_multipole!(u, k0, beta, P, centers, 1:size(sp), points, findall(rng))
-    elseif method == "recurrence"
-        scattered_field_multipole_recurrence!(u, k0, beta, P, centers, 1:size(sp), points, findall(rng))
-    else
-        for ic = 1:size(centers,1)
+    dt_in = @elapsed begin
+        rng_in = zeros(Bool,size(points,1))
+        rng_out = zeros(Bool,size(points,1))
+        Rot = Array{Float64}(undef, 2,2)
+        for ic = 1:size(sp)
+            rng_in[:] = (tags .== ic)
+            rng_out[:] = (tags .== -ic)
+            (any(rng_in) || any(rng_out)) || continue
             if typeof(shapes[ids[ic]]) == ShapeParams
                 if φs[ic] == 0.0
                     ft_rot = shapes[ids[ic]].ft .+ centers[ic,:]'
-                    u[rng] += scatteredfield(sigma_mu[ic], k0, shapes[ids[ic]].t,
-                                ft_rot, shapes[ids[ic]].dft, points[rng,:])
+                    dft_rot = shapes[ids[ic]].dft
                 else
-                    Rot[:] = cartesianrotation(φs[ic])
-                    ft_rot = shapes[ids[ic]].ft*Rot.' .+ centers[ic,:]'
-                    dft_rot = shapes[ids[ic]].dft*Rot.'
-                    u[rng] += scatteredfield(sigma_mu[ic], k0, shapes[ids[ic]].t,
-                                ft_rot, dft_rot, points[rng,:])
+                    Rot[:] = cartesianrotation(φs[ic])'
+                    ft_rot = shapes[ids[ic]].ft*Rot .+ centers[ic,:]'
+                    dft_rot = shapes[ids[ic]].dft*Rot
                 end
-            else
-                scattered_field_multipole!(u, k0, beta, P, centers, ic, points,
-                    findall(rng))
+            end
+            #field inside shape
+            if any(rng_in)
+                if typeof(shapes[ids[ic]]) == ShapeParams
+                    u[rng_in] += scatteredfield(sigma_mu[ic], kin, shapes[ids[ic]].t,
+                                    ft_rot, dft_rot, points[rng_in,:])
+                else
+                    u[rng_in] += innerFieldCircle(kin, sigma_mu[ic], centers[ic,:],
+                                    points[rng_in,:])
+                end
+            end
+            #field between shape and multipole disk (impossible for circle)
+            if any(rng_out)
+                u[rng_out] += scatteredfield(sigma_mu[ic], k0, shapes[ids[ic]].t,
+                                ft_rot, dft_rot, points[rng_out,:])
+                u[rng_out] += uinc(k0, points[rng_out,:], ui)
+                for ic2 = 1:size(sp)
+                    ic == ic2 && continue
+                    if method == "multipole"
+                        scattered_field_multipole!(u, k0, beta, P, centers, ic2, points,
+                            findall(rng_out))
+                    elseif method == "recurrence"
+                        scattered_field_multipole_recurrence!(u, k0, beta, P, centers, ic2, points,
+                            findall(rng_out))
+                    else
+                        if φs[ic2] == 0.0
+                            ft_rot2 = shapes[ids[ic2]].ft .+ centers[ic2,:]'
+                            dft_rot2 = shapes[ids[ic2]].dft
+                        else
+                            Rot[:] = cartesianrotation(φs[ic2])'
+                            ft_rot2 = shapes[ids[ic2]].ft*Rot .+ centers[ic2,:]'
+                            dft_rot2 = shapes[ids[ic2]].dft*Rot
+                        end
+                        u[rng_out] += scatteredfield(sigma_mu[ic2], k0, shapes[ids[ic2]].t,
+                                        ft_rot2, dft_rot2, points[rng_out,:])
+                    end
+                end
             end
         end
     end
-    dt_out = toq()
+
+    #now compute field outside all shapes
+    dt_out = @elapsed begin
+        rng = (tags .== 0)
+        #incident field
+        u[rng] = uinc(k0, points[rng,:], ui)
+        if method == "multipole"
+            scattered_field_multipole!(u, k0, beta, P, centers, 1:size(sp), points, findall(rng))
+        elseif method == "recurrence"
+            scattered_field_multipole_recurrence!(u, k0, beta, P, centers, 1:size(sp), points, findall(rng))
+        else
+            for ic = 1:size(centers,1)
+                if typeof(shapes[ids[ic]]) == ShapeParams
+                    if φs[ic] == 0.0
+                        ft_rot = shapes[ids[ic]].ft .+ centers[ic,:]'
+                        u[rng] += scatteredfield(sigma_mu[ic], k0, shapes[ids[ic]].t,
+                                    ft_rot, shapes[ids[ic]].dft, points[rng,:])
+                    else
+                        Rot[:] = copy(transpose(cartesianrotation(φs[ic])))
+                        ft_rot = shapes[ids[ic]].ft*Rot .+ centers[ic,:]'
+                        dft_rot = shapes[ids[ic]].dft*Rot
+                        u[rng] += scatteredfield(sigma_mu[ic], k0, shapes[ids[ic]].t,
+                                    ft_rot, dft_rot, points[rng,:])
+                    end
+                else
+                    scattered_field_multipole!(u, k0, beta, P, centers, ic, points,
+                        findall(rng))
+                end
+            end
+        end
+    end
     if verbose
         println("Time spent calculating field:")
         println("Location tagging: $dt_tag")
@@ -293,9 +293,9 @@ function calc_far_field(k0, kin, P, points, sp::ScatteringProblem, pw::PlaneWave
                     Ez[:] += scatteredfield(sigma_mu[ic], k0, shapes[ids[ic]].t,
                                 ft_rot, shapes[ids[ic]].dft, points)
                 else
-                    Rot = cartesianrotation(φs[ic])
-                    ft_rot = shapes[ids[ic]].ft*Rot.' .+ centers[ic,:]'
-                    dft_rot = shapes[ids[ic]].dft*Rot.'
+                    Rot = copy(transpose(cartesianrotation(φs[ic])))
+                    ft_rot = shapes[ids[ic]].ft*Rot .+ centers[ic,:]'
+                    dft_rot = shapes[ids[ic]].dft*Rot
                     Ez[:] += scatteredfield(sigma_mu[ic], k0, shapes[ids[ic]].t,
                                 ft_rot, dft_rot, points)
                 end

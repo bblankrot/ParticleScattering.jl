@@ -3,7 +3,7 @@ const eta0 = 4π*299792458e-7
 #plane wave
 function u2α(k, u::PlaneWave, centers::Array{T,2}, P) where T <: Real
 	#build incoming coefficients for plane wave incident field
-	α = Array{Complex{Float64}}(size(centers,1)*(2P + 1))
+	α = Array{Complex{Float64}}(undef, size(centers,1)*(2P + 1))
 	for ic = 1:size(centers,1)
 		phase = exp(1.0im*k*(cos(u.θi)*centers[ic,1] + sin(u.θi)*centers[ic,2])) #phase shift added to move cylinder coords
 		for p = -P:P
@@ -28,7 +28,7 @@ end
 
 #line (filament) source
 function u2α(k, u::LineSource, centers::Array{T,2}, P) where T <: Real
-	α = Array{Complex{Float64}}(size(centers,1)*(2P + 1))
+	α = Array{Complex{Float64}}(undef, size(centers,1)*(2P + 1))
 	for ic = 1:size(centers,1)
 		R = hypot(centers[ic,1] - u.x, centers[ic,2] - u.y)
 		θ = atan(centers[ic,2] - u.y, centers[ic,1] - u.x)
@@ -42,7 +42,7 @@ function u2α(k, u::LineSource, centers::Array{T,2}, P) where T <: Real
 end
 
 function uinc(k, points::Array{T,2}, u::LineSource) where T <: Real
-	r = hypot.(u.x - points[:,1], u.y - points[:,2])
+	r = hypot.(u.x .- points[:,1], u.y .- points[:,2])
 	if any(r .== 0)
 		@warn("uinc: encountered singularity in incident field, returned NaN")
 		r[r.==0] = NaN
@@ -80,8 +80,8 @@ function u2α(k, u::CurrentSource, centers::Array{T,2}, P) where T <: Real
 end
 
 function uinc(k, points::Array{T,2}, u::CurrentSource) where T <: Real
-	res = Array{Complex{Float64}}(size(points, 1))
-	r = Array{Float64}(size(u.p, 1))
+	res = Array{Complex{Float64}}(undef, size(points, 1))
+	r = Array{Float64}(undef, size(u.p, 1))
 	for i = 1:size(points, 1)
 		r .= hypot.(u.p[:,1] - points[i,1], u.p[:,2] - points[i,2])
 		if any(r .== 0) #point is on source
@@ -155,9 +155,9 @@ end
 
 #these untested
 function hxinc(k, points, u::CurrentSource)
-    res = Array{Complex{Float64}}(size(points, 1))
-	r = Array{Float64}(size(u.p, 1))
-    y = Array{Float64}(size(u.p, 1))
+    res = Array{Complex{Float64}}(undef, size(points, 1))
+	r = Array{Float64}(undef, size(u.p, 1))
+    y = Array{Float64}(undef, size(u.p, 1))
 	for i = 1:size(points, 1)
 		y .= points[i,2] - u.p[:,2]
         r .= hypot.(points[i,1] - u.p[:,1], y)
@@ -170,9 +170,9 @@ function hxinc(k, points, u::CurrentSource)
 	res
 end
 function hyinc(k, points, u::CurrentSource)
-    res = Array{Complex{Float64}}(size(points, 1))
-	r = Array{Float64}(size(u.p, 1))
-    x = Array{Float64}(size(u.p, 1))
+    res = Array{Complex{Float64}}(undef, size(points, 1))
+	r = Array{Float64}(undef, size(u.p, 1))
+    x = Array{Float64}(undef, size(u.p, 1))
 	for i = 1:size(points, 1)
 		x .= points[i,1] - u.p[:,1]
         r .= hypot.(x, points[i,2] - u.p[:,2])

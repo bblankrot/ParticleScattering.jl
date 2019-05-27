@@ -105,10 +105,10 @@ We solve this problem using the direct approach and with FMM, and then compare
 both the multipole coefficients ``\beta`` and the resulting potential densities:
 
 ```julia
-betas = Array{Vector}(Pmax)
-betas_FMM = Array{Vector}(Pmax)
-inners = Array{Vector}(Pmax)
-inners_FMM = Array{Vector}(Pmax)
+betas = Array{Vector}(undef, Pmax)
+betas_FMM = Array{Vector}(undef, Pmax)
+inners = Array{Vector}(undef, Pmax)
+inners_FMM = Array{Vector}(undef, Pmax)
 fmmopts = ParticleScattering.FMMoptions(true, nx = 1, acc = 9)
 for P = 1:Pmax
 	betas[P], inners[P] = solve_particle_scattering(k0, kin, P, sp, PlaneWave();

@@ -35,13 +35,13 @@ shape_functions = [myshapefun5; myshapefun_squircle]
 if !isfile(dirname(@__FILE__) * "/mindata.jld")
     Nvec5 = [collect(20:10:90);collect(100:20:6000)]
     Nvecs = [collect(20:10:90);collect(100:20:6000)]
-    errNvec5 = Array{Float64}(length(Nvec5))
-    errNvecs = Array{Float64}(length(Nvecs))
+    errNvec5 = Array{Float64}(undef, length(Nvec5))
+    errNvecs = Array{Float64}(undef, length(Nvecs))
 
     s = myshapefun5(400) #just for radius
     err_points = [s.R*f(i*2*pi/N_points) for i=0:(N_points-1), f in (cos,sin)]
     E_ana = (0.25im*besselh(0,1,k0*s.R))*ones(Complex{Float64},N_points)
-    E_comp = Array{Complex{Float64}}(length(E_ana))
+    E_comp = Array{Complex{Float64}}(undef, length(E_ana))
 
     for i in eachindex(Nvec5)
         errNvec5[i] = ParticleScattering.minimumN_helper(Nvec5[i], k0, kin,
@@ -52,7 +52,7 @@ if !isfile(dirname(@__FILE__) * "/mindata.jld")
     s = myshapefun_squircle(400) #just for radius
     err_points = [s.R*f(i*2*pi/N_points) for i=0:(N_points-1), f in (cos,sin)]
     E_ana = (0.25im*besselh(0,1,k0*s.R))*ones(Complex{Float64},N_points)
-    E_comp = Array{Complex{Float64}}(length(E_ana))
+    E_comp = Array{Complex{Float64}}(undef, length(E_ana))
 
     for i in eachindex(Nvecs)
         errNvecs[i] = ParticleScattering.minimumN_helper(Nvecs[i], k0, kin,
@@ -78,7 +78,7 @@ errNs = errNs[1:inds]
 
 # here binary search is suboptimal since we know that new P is "close" to old one, frequently P or P+1
 function findMinP(N, errN, shapefun, N_points, k0, kin; P_last = 1, P_max = 100)
-	E_multipole = Array{Complex{Float64}}(N_points)
+	E_multipole = Array{Complex{Float64}}(undef, N_points)
 	errP = zeros(Float64, length(errN))
 	Pmin = zeros(Int, length(errN))
 	for iN in eachindex(errN)
@@ -97,7 +97,7 @@ function findMinP(N, errN, shapefun, N_points, k0, kin; P_last = 1, P_max = 100)
 				P_last = P
 				break
 			elseif P == P_max
-				warn("Failed to find P for iN = $iN")
+				@warn("Failed to find P for iN = $iN")
 				return Pmin, errP
 			end
 		end

@@ -5,10 +5,10 @@ using ParticleScattering, IterativeSolvers, PyPlot
 sqrtM_vec = collect(5:30); M_vec = sqrtM_vec.^2
 trials = 3
 simlen = length(M_vec)
-res_vec = Array{Float64}(simlen,trials)
-iter_vec = Array{Float64}(simlen,trials)
-mvp_vec = Array{Float64}(simlen,trials)
-setup_vec = Array{Float64}(simlen,trials)
+res_vec = Array{Float64}(undef, simlen, trials)
+iter_vec = Array{Float64}(undef, simlen, trials)
+mvp_vec = Array{Float64}(undef, simlen, trials)
+setup_vec = Array{Float64}(undef, simlen, trials)
 
 #variables
 k0 = 10.0
@@ -27,15 +27,13 @@ P = 10; errP = 9.57e-7
 # P,errP = minimumP(k0, kin, shapes[1], tol = tol, N_points = 20_000,
 #                             P_min = 1, P_max = 120)
 
-tic()
-scatteringMatrices,innerExpansions = particleExpansion(k0, kin, shapes, P, [1])
-α = Complex{Float64}[exp(1.0im*p*(pi/2-θ_i)) for p=-P:P]
-dt0 = toq()
-for i=1:simlen-1
-    tic()
+dt0 = @elapsed begin
     scatteringMatrices,innerExpansions = particleExpansion(k0, kin, shapes, P, [1])
     α = Complex{Float64}[exp(1.0im*p*(pi/2-θ_i)) for p=-P:P]
-    dt0 += toq()
+end
+dt0 += @elapsed for i=1:simlen-1
+    scatteringMatrices,innerExpansions = particleExpansion(k0, kin, shapes, P, [1])
+    α = Complex{Float64}[exp(1.0im*p*(pi/2-θ_i)) for p=-P:P]
 end
 dt0 /= simlen
 
@@ -49,54 +47,55 @@ for is = 1:simlen, it = 1:trials
         ids = ones(Int, M)
         opt = FMMoptions(true, acc = Int(-log10(tol)), nx = div(sqrtM,2), method="pre")
     end
-    tic()
-    (groups, boxSize) = divideSpace(centers, opt)
-    (P2, Q) = FMMtruncation(opt.acc, boxSize, k0)
-    mFMM = FMMbuildMatrices(k0, P, P2, Q, groups, centers, boxSize, tri=true)
 
-    #construct rhs
-    rhs = repeat(α,outer=[M])
-    for ic = 1:M
-        rng = (ic-1)*(2*P+1) + (1:2*P+1)
-        if φs[ic] == 0.0
-            rhs[rng] = scatteringMatrices[ids[ic]]*α
-        else
-            #rotate without matrix
-            ParticleScattering.rotateMultipole!(view(rhs,rng),-φs[ic],P)
-            rhs[rng] = scatteringMatrices[ids[ic]]*rhs[rng]
-            ParticleScattering.rotateMultipole!(view(rhs,rng),φs[ic],P)
+    setup_vec[is,it] = @elapsed begin
+        (groups, boxSize) = divideSpace(centers, opt)
+        (P2, Q) = FMMtruncation(opt.acc, boxSize, k0)
+        mFMM = FMMbuildMatrices(k0, P, P2, Q, groups, centers, boxSize, tri=true)
+
+        #construct rhs
+        rhs = repeat(α,outer=[M])
+        for ic = 1:M
+            rng = (ic-1)*(2*P+1) .+ (1:2*P+1)
+            if φs[ic] == 0.0
+                rhs[rng] = scatteringMatrices[ids[ic]]*α
+            else
+                #rotate without matrix
+                ParticleScattering.rotateMultipole!(view(rhs,rng),-φs[ic],P)
+                rhs[rng] = scatteringMatrices[ids[ic]]*rhs[rng]
+                ParticleScattering.rotateMultipole!(view(rhs,rng),φs[ic],P)
+            end
+            #phase shift added to move cylinder coords
+            phase = exp(1.0im*k0*(cos(θ_i)*centers[ic,1] + sin(θ_i)*centers[ic,2]))
+            rhs[rng] .*= phase
         end
-        #phase shift added to move cylinder coords
-        phase = exp(1.0im*k0*(cos(θ_i)*centers[ic,1] + sin(θ_i)*centers[ic,2]))
-        rhs[rng] .*= phase
+        pre_agg_buffer = zeros(Complex{Float64},Q,length(groups))
+        trans_buffer = Array{Complex{Float64}}(undef, Q)
+
+        MVP = LinearMaps.LinearMap{eltype(rhs)}((output_, x_) ->
+                ParticleScattering.FMM_mainMVP_pre!(output_, x_, scatteringMatrices,
+                    φs, ids, P, mFMM, pre_agg_buffer, trans_buffer),
+                M*(2*P+1), M*(2*P+1), ismutating = true)
+        x = zero(rhs)
     end
-    pre_agg_buffer = zeros(Complex{Float64},Q,length(groups))
-    trans_buffer = Array{Complex{Float64}}(Q)
 
-    MVP = LinearMaps.LinearMap{eltype(rhs)}((output_, x_) ->
-            ParticleScattering.FMM_mainMVP_pre!(output_, x_, scatteringMatrices,
-                φs, ids, P, mFMM, pre_agg_buffer, trans_buffer),
-            M*(2*P+1), M*(2*P+1), ismutating = true)
-    x = zero(rhs)
-    setup_vec[is,it] = toq()
-
-    tic()
-    x,ch = gmres!(x, MVP, rhs, restart = M*(2*P+1), tol = opt.tol, log = true,
+    res_vec[is,it] = @elapsed begin
+        x,ch = gmres!(x, MVP, rhs, restart = M*(2*P+1), tol = opt.tol, log = true,
                 initially_zero = true) #no restart, preconditioning
-    res_vec[is,it] = toq()
-    tic()
-    rhs[:] = MVP*x
-    mvp_vec[is,it] = toq()
+    end
+    mvp_vec[is,it] = @elapsed begin
+        rhs[:] = MVP*x
+    end
     iter_vec[is,it] = ch.iters
 end
 
 using JLD; @save "sim1_complexity.jld" res_vec, mvp_vec
 
 #average over all simulations
-res_vec = vec(mean(res_vec,2))
-iter_vec = vec(mean(iter_vec,2))
-mvp_vec = vec(mean(mvp_vec,2))
-setup_vec = vec(mean(setup_vec,2))
+res_vec = vec(mean(res_vec, dims=2))
+iter_vec = vec(mean(iter_vec, dims=2))
+mvp_vec = vec(mean(mvp_vec, dims=2))
+setup_vec = vec(mean(setup_vec, dims=2))
 
 a_total,b_total = linreg(log10.(M_vec), log10.(res_vec))
 res_ana = (10^a_total)*(M_vec.^b_total)

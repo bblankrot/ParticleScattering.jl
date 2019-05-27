@@ -7,11 +7,12 @@ for various design problems.
 module ParticleScattering
 
 #Core functionality
-using SpecialFunctions, IterativeSolvers, LinearMaps, Optim
+using SpecialFunctions, IterativeSolvers, LinearMaps, Optim, SparseArrays, LinearAlgebra
+import Statistics: mean
 import LineSearches
 #For plotting with PyPlot
 using PyPlot, PyCall
-@pyimport matplotlib.patches as patch #circles, polygons
+patch = pyimport("matplotlib.patches") #circles, polygons
 
 include("PS_types.jl")
 include("shapes.jl")

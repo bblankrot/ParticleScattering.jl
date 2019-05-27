@@ -13,62 +13,63 @@ printed if `verbose` is true.
 """
 function solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, u::Einc;
 								get_inner = true, verbose = true)
+	#TODO: incorporate matrix-lexx rotation rotateMultipole!
 	shapes = sp.shapes;	ids = sp.ids; centers = sp.centers; φs = sp.φs
 	Ns = size(sp)
 	#first solve for single scatterer densities
-	tic()
-	scatteringMatrices,innerExpansions = particleExpansion(k0, kin, shapes, P, ids)
-	dt1 = toq()
-	tic()
-	T = Array{Complex{Float64}}(Ns*(2*P+1),Ns*(2*P+1))
-	a = u2α(k0, u, centers, P)
-	Btemp = Array{Complex{Float64}}(2*P+1,2*P+1)
-	for ic1 = 1:Ns
-		rng1 = (ic1-1)*(2*P+1) + (1:2*P+1)
-		if φs[ic1] == 0.0 || typeof(shapes[ids[ic1]]) == CircleParams
-			RotScatMat = scatteringMatrices[ids[ic1]]
-		else
-			Rot = spdiagm(Complex{Float64}[exp(-1.0im*φs[ic1]*l) for l=-P:P]) #rotation matrix
-			RotScatMat = Rot*(scatteringMatrices[ids[ic1]]*conj(Rot))
-		end
-		for ic2 = 1:Ns
-			rng2 = (ic2-1)*(2*P+1) + (1:2*P+1)
-			if ic1 == ic2
-				T[rng1,rng2] = eye(Complex{Float64},2*P+1)
-			else
-				M2Lmatrix!(Btemp, k0, P, centers[ic1,:] - centers[ic2,:])
-				T[rng1,rng2] = -RotScatMat*Btemp
-			end
-		end
-		a[rng1] = RotScatMat*a[rng1]
+	dt1 = @elapsed begin
+		scatteringMatrices,innerExpansions = particleExpansion(k0, kin, shapes, P, ids)
 	end
-	dt2 = toq()
-	tic()
-	beta = T\a
-	dt3 = toq()
+	dt2 = @elapsed begin
+		T = Array{Complex{Float64}}(undef, Ns*(2*P+1), Ns*(2*P+1))
+		a = u2α(k0, u, centers, P)
+		Btemp = Array{Complex{Float64}}(undef, 2*P+1, 2*P+1)
+		for ic1 = 1:Ns
+			rng1 = (ic1-1)*(2*P+1) .+ (1:2*P+1)
+			if φs[ic1] == 0.0 || typeof(shapes[ids[ic1]]) == CircleParams
+				RotScatMat = scatteringMatrices[ids[ic1]]
+			else
+				Rot = sparse(Diagonal(Complex{Float64}[exp(-1.0im*φs[ic1]*l) for l=-P:P])) #rotation matrix
+				RotScatMat = Rot*(scatteringMatrices[ids[ic1]]*conj(Rot))
+			end
+			for ic2 = 1:Ns
+				rng2 = (ic2-1)*(2*P+1) .+ (1:2*P+1)
+				if ic1 == ic2
+					T[rng1,rng2] = Matrix{Complex{Float64}}(I, 2*P+1, 2*P+1)
+				else
+					M2Lmatrix!(Btemp, k0, P, centers[ic1,:] - centers[ic2,:])
+					T[rng1,rng2] = -RotScatMat*Btemp
+				end
+			end
+			a[rng1] = RotScatMat*a[rng1]
+		end
+	end
+	dt3 = @elapsed begin
+		beta = T\a
+	end
 	#recover full incoming expansion - in sigma_mu terms for parametrized shape,
 	#in multipole expansion for circle
 	if get_inner
-		tic()
 		#find LU factorization once for each shape
-        scatteringLU = [lufact(scatteringMatrices[iid]) for iid = 1:length(shapes)]
-		inner = Array{Vector{Complex{Float64}}}(Ns)
-		α_c = Array{Complex{Float64}}(2*P+1)
-		for ic = 1:Ns
-			rng = (ic-1)*(2*P+1) + (1:2*P+1)
-			if typeof(shapes[ids[ic]]) == ShapeParams
-				if φs[ic] == 0.0
-					α_c[:] = scatteringLU[ids[ic]]\beta[rng]
+		dt4 = @elapsed begin
+	        scatteringLU = [lu(scatteringMatrices[iid]) for iid = 1:length(shapes)]
+			inner = Array{Vector{Complex{Float64}}}(undef, Ns)
+			α_c = Array{Complex{Float64}}(undef, 2*P+1)
+			for ic = 1:Ns
+				rng = (ic-1)*(2*P+1) .+ (1:2*P+1)
+				if typeof(shapes[ids[ic]]) == ShapeParams
+					if φs[ic] == 0.0
+						α_c[:] = scatteringLU[ids[ic]]\beta[rng]
+					else
+						Rot = sparse(Diagonal(Complex{Float64}[exp(-1.0im*φs[ic]*l) for l=-P:P])) #rotation matrix
+						α_c[:] = scatteringLU[ids[ic]]\(conj(Rot)*beta[rng])
+					end
+					inner[ic] = innerExpansions[ids[ic]]*α_c
 				else
-					Rot = spdiagm(Complex{Float64}[exp(-1.0im*φs[ic]*l) for l=-P:P]) #rotation matrix
-					α_c[:] = scatteringLU[ids[ic]]\(conj(Rot)*beta[rng])
+					inner[ic] = innerExpansions[ids[ic]]*beta[rng]
 				end
-				inner[ic] = innerExpansions[ids[ic]]*α_c
-			else
-				inner[ic] = innerExpansions[ids[ic]]*beta[rng]
 			end
 		end
-		dt4 = toq()
 	end
 	verbose && begin
 		println("Direct solution timing:")
@@ -81,18 +82,18 @@ function solve_particle_scattering(k0, kin, P, sp::ScatteringProblem, u::Einc;
 end
 
 function M2Lmatrix!(T, k, P, d)
-	#builds non-diagonal translation matrix from particle 2 to particle 1 (d=1-2)
+	#builds off-diagonal translation matrix from particle 2 to particle 1 (d=1-2)
 	#only calculates 2*(2*P+1) values
 	kd = k*sqrt(sum(abs2,d))
 	td = atan(d[2],d[1])
 	bess = besselh.(0:2*P,1,kd)
 	for ix = 1:2*P #lower diagonals
 		rng = ix+1:1+(2*P+1):(2*P+1)^2-(2*P+1)*ix
-		T[rng] = exp(-1im*td*ix)*(-1)^(ix)*bess[ix+1]
+		T[rng] .= exp(-1im*td*ix)*(-1)^(ix)*bess[ix+1]
 	end
 	for ix = 0:2*P #central and upper diagonals
 		rng = ix*(2*P+1)+1:1+(2*P+1):(2*P+1)^2-ix
-		T[rng] = exp(1im*td*ix)*bess[ix+1]
+		T[rng] .= exp(1im*td*ix)*bess[ix+1]
 	end
 end
 
@@ -156,8 +157,8 @@ end
 
 function circleScatteringMatrix(kout, kin, R, P; gamma = false)
     #non-vectorized, reuses bessel
-    S = Array{Complex{Float64}}(2*P+1)
-    gamma && (G = Array{Complex{Float64}}(2*P+1))
+    S = Array{Complex{Float64}}(undef, 2*P+1)
+    gamma && (G = Array{Complex{Float64}}(undef, 2*P+1))
 
     pre_J0 = besselj(-P-1,kout*R)
     pre_J1 = besselj(-P-1,kin*R)
@@ -182,9 +183,9 @@ function circleScatteringMatrix(kout, kin, R, P; gamma = false)
         pre_J1 = J1
         pre_H = H
     end
-    ScatMat = spdiagm(S)
+    ScatMat = sparse(Diagonal(S))
     if gamma
-        InnerMat = spdiagm(G)
+        InnerMat = sparse(Diagonal(G))
         return ScatMat,InnerMat
     else
         return ScatMat
@@ -197,10 +198,10 @@ function innerFieldCircle(kin, gamma, center::Array{Float64,1}, points::Array{Fl
 
 	len = size(points,1)
 	points_moved = similar(points)
-    points_moved[:,1] = points[:,1] - center[1]
-	points_moved[:,2] = points[:,2] - center[2]
+    points_moved[:,1] = points[:,1] .- center[1]
+	points_moved[:,2] = points[:,2] .- center[2]
 
-	rs_moved = sqrt.(sum(abs2,points_moved,2))
+	rs_moved = sqrt.(sum(abs2,points_moved, dims=2))
 	ts_moved = atan.(points_moved[:,2], points_moved[:,1])
 
 	bess = [besselj(p,kin*rs_moved[ii]) for ii=1:len, p=0:P]
@@ -233,9 +234,10 @@ function particleExpansion(k0, kin, shapes, P, ids)
 	innerExpansions = Array{Any}(undef, 0)
 	for i = 1:length(shapes)
         #no use in computing matrices if shape doesn't actually show up! push garbage to maintain order
+		#TODO: don't even try to compute LU for these
 		if all(ids .!= i)
-			push!(scatteringMatrices, [0.0im 0.0im])
-			push!(innerExpansions, [0.0im 0.0im])
+			push!(scatteringMatrices, [NaN NaN])
+			push!(innerExpansions, [NaN NaN])
 			continue
 		end
 		if typeof(shapes[i]) == ShapeParams

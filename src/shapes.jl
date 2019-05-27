@@ -6,7 +6,7 @@ Return a `ShapeParams` object containing the shape parametrized by
 """
 function rounded_star(r, d, num, N)
     t = Float64[pi*j/N for j=0:(2*N-1)]
-    Rt = r + d*cos.(num*t)
+    Rt = r .+ d*cos.(num*t)
     dRt = (-d*num)*sin.(num*t)
     ft = [Rt.*cos.(t) Rt.*sin.(t)]
     dft = [dRt.*cos.(t) - Rt.*sin.(t)     dRt.*sin.(t) + Rt.*cos.(t)]
@@ -24,9 +24,9 @@ function squircle(r, N)
     t = Float64[pi*j/N for j=0:(2*N-1)]
     cost = cos.(t); cos4t = cos.(4*t);
     sint = sin.(t); sin4t = sin.(4*t);
-    rho = (sqrt(2)*r)./((3+cos4t).^0.25)
+    rho = (sqrt(2)*r)./((3 .+ cos4t).^0.25)
     ft = [rho.*cost rho.*sint]
-    drho = rho.*sin4t./(3+cos4t)
+    drho = rho.*sin4t./(3 .+ cos4t)
     dx = drho.*cost - rho.*sint
     dy = drho.*sint + rho.*cost
     dft = [dx dy]
@@ -55,7 +55,7 @@ grid of points distanced `d`.
 function square_grid(a::Integer, d)
     offsetx = -0.5*(a-1)
     offsety = -0.5*(a-1)
-    centers = d*Float64[mod.((1:a^2)-1,a) + offsetx   div.((1:a^2)-1,a) + offsety]
+    centers = d*[mod.(0:a^2-1, a) .+ offsetx   div.(0:a^2-1, a) .+ offsety]
 end
 
 """
@@ -68,8 +68,8 @@ respectively.
 function rect_grid(a::Integer, b::Integer, dx, dy)
     offsetx = -0.5*(a-1)
     offsety = -0.5*(b-1)
-	xpoints = dx*((0:a-1) + offsetx)
-	ypoints = dy*((0:b-1) + offsety)
+	xpoints = dx*((0:a-1) .+ offsetx)
+	ypoints = dy*((0:b-1) .+ offsety)
 
     centers = [repeat(xpoints, outer=[b]) 	repeat(ypoints, inner=[a])]
 end
@@ -84,7 +84,7 @@ If `minus1` is true, the last point in every odd row is omitted.
 function hex_grid(a::Integer, rows::Integer, d; minus1 = false)
 	h = d*sqrt(0.75) #row height
 	M = minus1 ? a*rows - div(rows,2) : a*rows
-	centers = Array{Float64}(M,2)
+	centers = Array{Float64}(undef, M, 2)
 	ind = 1
 	for r = 0:rows-1
 		if mod(r,2) == 0
@@ -106,7 +106,7 @@ function hex_grid(a::Integer, rows::Integer, d; minus1 = false)
 			end
 		end
 	end
-	offset = mean(centers, 1)
+	offset = mean(centers, dims=1)
     centers .-= offset
 end
 
@@ -260,14 +260,14 @@ is the radius of the rod centered at `(center[n,1],center[n,2])`. Otherwise
 quantizes the radii to uniformly spaced levels.
 """
 function luneburg_grid(R_lens, N_cells, er; levels = 0, TM = true)
-    r_cell = Array{Float64}(N_cells^2)
-    centers = Array{Float64}(N_cells^2, 2)
-    flag_outside = Array{Bool}(N_cells^2)
+    r_cell = Array{Float64}(undef, N_cells^2)
+    centers = Array{Float64}(undef, N_cells^2, 2)
+    flag_outside = Array{Bool}(undef, N_cells^2)
     a = 2*R_lens/N_cells #cell dimension
     for ix = 1:N_cells, iy = 1:N_cells
         ind = (ix-1)*N_cells + iy
-        centers[ind,1] = a*(ix - N_cells/2.0 - 0.5);
-        centers[ind,2] = a*(iy - N_cells/2.0 - 0.5);
+        centers[ind,1] = a*(ix - N_cells/2.0 - 0.5)
+        centers[ind,2] = a*(iy - N_cells/2.0 - 0.5)
         rho2 = sum(abs2,centers[ind,:])
         if rho2 > R_lens^2 #for now
             flag_outside[ind] = false

@@ -23,16 +23,16 @@ function optimize_radius(rs0, r_min, r_max, points, ids, P, ui, k0, kin,
     Ns = size(centers,1)
     J = length(rs0)
 
-    assert(maximum(ids) <= J)
+    @assert maximum(ids) <= J
     if length(r_min) == 1
         r_min = r_min*ones(Float64,J)
     else
-        assert(J == length(r_min))
+        @assert J == length(r_min)
     end
     if length(r_max) == 1
         r_max = r_max*ones(Float64,J)
     else
-        assert(J == length(r_max))
+        @assert J == length(r_max)
     end
     verify_min_distance(CircleParams.(r_max), centers, ids,
         points) || error("Particles are too close or r_max are too large.")
@@ -43,8 +43,8 @@ function optimize_radius(rs0, r_min, r_max, points, ids, P, ui, k0, kin,
     mFMM = FMMbuildMatrices(k0, P, P2, Q, groups, centers, boxSize, tri = true)
 
     #allocate derivative
-    scatteringMatrices = [speye(Complex{Float64}, 2*P+1) for ic = 1:J]
-    dS_S = [speye(Complex{Float64}, 2*P+1) for ic = 1:J]
+    scatteringMatrices = [sparse(one(Complex{Float64})I, 2*P+1, 2*P+1) for ic = 1:J]
+    dS_S = [sparse(one(Complex{Float64})I, 2*P+1, 2*P+1) for ic = 1:J]
 
     #stuff that is done once
     H = optimizationHmatrix(points, centers, Ns, P, k0)
@@ -56,7 +56,7 @@ function optimize_radius(rs0, r_min, r_max, points, ids, P, ui, k0, kin,
     buf = FMMbuffer(Ns,P,Q,length(groups))
     shared_var = OptimBuffer(Ns,P,size(points,1),J)
     initial_rs = copy(rs0)
-    last_rs = similar(initial_rs); last_rs[1] = NaN; assert(last_rs != initial_rs) #initial_rs, last_rs must be different before first iteration
+    last_rs = similar(initial_rs); last_rs[1] = NaN; @assert last_rs != initial_rs #initial_rs, last_rs must be different before first iteration
 
     if adjoint
         gopt! = (grad_stor, rs) -> optimize_radius_adj_g!(grad_stor, rs, last_rs,
@@ -86,31 +86,25 @@ end
 
 function optimize_radius_common!(rs, last_rs, shared_var, φs, α, H, points, P, uinc_, Ns, k0, kin, centers, scatteringMatrices, dS_S, ids, mFMM, opt, buf)
     if (rs != last_rs)
-        copy!(last_rs, rs)
+        copyto!(last_rs, rs)
         #do whatever common calculations and save to shared_var
         #construct rhs
         for id in unique(ids)
             try
                 updateCircleScatteringDerivative!(scatteringMatrices[id], dS_S[id], k0, kin, rs[id], P)
             catch
-                warn("Could not calculate derivatives for id=$id,k0=$k0,kin=$kin,R=$(rs[id])")
+                @warn("Could not calculate derivatives for id=$id,k0=$k0,kin=$kin,R=$(rs[id])")
                 error()
             end
         end
         for ic = 1:Ns
-            rng = (ic-1)*(2*P+1) + (1:2*P+1)
+            rng = (ic-1)*(2*P+1) .+ (1:2*P+1)
             buf.rhs[rng] = scatteringMatrices[ids[ic]]*α[rng]
         end
 
-        if opt.method == "pre"
-            MVP = LinearMap{eltype(buf.rhs)}((output_, x_) -> FMM_mainMVP_pre!(output_,
-                x_, scatteringMatrices, φs, ids, P, mFMM, buf.pre_agg, buf.trans),
-                Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
-        elseif opt.method == "pre2"
-            MVP = LinearMap{eltype(buf.rhs)}((output_, x_) -> FMM_mainMVP_pre2!(output_,
-                x_, scatteringMatrices, φs, ids, P, mFMM, buf.pre_agg, buf.trans),
-                Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
-        end
+        MVP = LinearMap{eltype(buf.rhs)}((output_, x_) -> FMM_mainMVP_pre!(output_,
+            x_, scatteringMatrices, φs, ids, P, mFMM, buf.pre_agg, buf.trans),
+            Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
 
         fill!(shared_var.β,0.0)
         #no restart
@@ -120,7 +114,7 @@ function optimize_radius_common!(rs, last_rs, shared_var, φs, α, H, points, P,
         if !ch.isconverged
             error("FMM process did not converge")
         end
-        shared_var.f[:] = H.'*shared_var.β
+        shared_var.f[:] = transpose(H)*shared_var.β
         shared_var.f .+= uinc_ #incident
     end
 end
@@ -134,15 +128,9 @@ end
 function optimize_radius_g!(grad_stor, rs, last_rs, shared_var, φs, α, H, points, P, uinc_, Ns, k0, kin, centers, scatteringMatrices, dS_S, ids, mFMM, opt, buf, minimize)
     optimize_radius_common!(rs, last_rs, shared_var, φs, α, H, points, P, uinc_, Ns, k0, kin, centers, scatteringMatrices, dS_S, ids, mFMM, opt, buf)
 
-    if opt.method == "pre"
-        MVP = LinearMap{eltype(buf.rhs)}((output_, x_) -> FMM_mainMVP_pre!(output_,
-            x_, scatteringMatrices, φs, ids, P, mFMM, buf.pre_agg, buf.trans),
-            Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
-    elseif opt.method == "pre2"
-        MVP = LinearMap{eltype(buf.rhs)}((output_, x_) -> FMM_mainMVP_pre2!(output_,
-            x_, scatteringMatrices, φs, ids, P, mFMM, buf.pre_agg, buf.trans),
-            Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
-    end
+    MVP = LinearMap{eltype(buf.rhs)}((output_, x_) -> FMM_mainMVP_pre!(output_,
+        x_, scatteringMatrices, φs, ids, P, mFMM, buf.pre_agg, buf.trans),
+        Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
 
     #time for gradient
     shared_var.∂β[:] = 0.0
@@ -151,7 +139,7 @@ function optimize_radius_g!(grad_stor, rs, last_rs, shared_var, φs, α, H, poin
         #as more than one beta is affected.
         #TODO:expand to phi optimization?, and clean+speed this up.
         for ic = 1:Ns
-            rng = (ic-1)*(2*P+1) + (1:2*P+1)
+            rng = (ic-1)*(2*P+1) .+ (1:2*P+1)
             if ids[ic] == n
                 shared_var.rhs_grad[rng] = dS_S[n]*shared_var.β[rng]
             else
@@ -173,7 +161,7 @@ function optimize_radius_g!(grad_stor, rs, last_rs, shared_var, φs, α, H, poin
         end
     end
 
-    grad_stor[:] = ifelse(minimize,2,-2)*real(shared_var.∂β.'*(H*conj(shared_var.f)))
+    grad_stor[:] = ifelse(minimize,2,-2)*real(transpose(shared_var.∂β)*(H*conj(shared_var.f)))
 end
 
 function optimize_radius_adj_g!(grad_stor, rs, last_rs, shared_var, φs, α, H, points, P, uinc_, Ns, k0, kin, centers, scatteringMatrices, dS_S, ids, mFMM, opt, buf, minimize)
@@ -200,16 +188,17 @@ function optimize_radius_adj_g!(grad_stor, rs, last_rs, shared_var, φs, α, H, 
     for n = 1:length(rs)
         #compute n-th gradient - here we must pay the price for symmetry
         #as more than one beta is affected. Overwrites rhs_grad.
+        #TODO: only sum over relevant parts
         for ic = 1:Ns
-            rng = (ic-1)*(2*P+1) + (1:2*P+1)
+            rng = (ic-1)*(2*P+1) .+ (1:2*P+1)
             if ids[ic] == n
                 shared_var.rhs_grad[rng] = dS_S[n]*shared_var.β[rng]
             else
-                shared_var.rhs_grad[rng] = 0.0
+                shared_var.rhs_grad[rng] .= 0.0
             end
         end
 
-        grad_stor[n] = ifelse(minimize,-2,2)*real(λadj.'*shared_var.rhs_grad)
+        grad_stor[n] = ifelse(minimize,-2,2)*real(transpose(λadj)*shared_var.rhs_grad)
     end
 end
 
@@ -259,8 +248,8 @@ end
 #     mFMM = FMMbuildMatrices(k0, P, P2, Q, groups, centers, boxSize, tri = true)
 #
 #     #allocate derivative
-#     scatteringMatrices = [speye(Complex{Float64}, 2*P+1) for ic = 1:J]
-#     dS_S = [speye(Complex{Float64}, 2*P+1) for ic = 1:J]
+#     scatteringMatrices = [sparse(one(Complex{Float64})I, 2*P+1, 2*P+1) for ic = 1:J]
+#     dS_S = [sparse(one(Complex{Float64})I, 2*P+1, 2*P+1) for ic = 1:J]
 #
 #     #stuff that is done once
 #     H = optimizationHmatrix(points, centers, Ns, P, k0)
@@ -273,7 +262,7 @@ end
 #     shared_var = OptimBuffer(Ns,P,size(points,1),J)
 #     last_rs = similar(rs); all(last_rs .== rs) && (last_rs[1] += 1)
 #
-#     grad_stor = Array{Float64}(J)
+#     grad_stor = Array{Float64}(undef, J)
 #     optimize_radius_adj_g!(grad_stor, rs, last_rs, shared_var, φs, α, H, points,
 #         P, uinc_, Ns, k0, kin, centers, scatteringMatrices, dS_S, ids, mFMM,
 #         fmmopts, buf, minimize)

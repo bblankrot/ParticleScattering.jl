@@ -55,8 +55,8 @@ points = [4a 0.0]
 r_max = (0.4*a)*ones(J)
 r_min = (1e-3*a)*ones(J)
 rs0 = (0.25*a)*ones(J)
-assert(verify_min_distance([CircleParams(r_max[i]) for i = 1:J],
-        centers, ids, points))
+@assert verify_min_distance([CircleParams(r_max[i]) for i = 1:J],
+        centers, ids, points)
 ```
 
 The optimization process is initiated by running:

@@ -1,8 +1,11 @@
 julia 0.7
-IterativeSolvers 0.5.0
+IterativeSolvers
 LinearMaps
-Optim 0.14.0
+Optim 0.16.0
+LineSearches
+PyCall
 PyPlot
 DataFrames
 CSV
 JLD
+SpecialFunctions

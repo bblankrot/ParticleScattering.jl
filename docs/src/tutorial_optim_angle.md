@@ -1,4 +1,4 @@
-#  Tutorial 3: Angle Optimization
+#  [Tutorial 3: Angle Optimization](@id tutorial3)
 
 In this tutorial, we build upon the [previous tutorial](@ref tutorial2) by
 optimizing the rotation angles of the particles (`φs`) to maximize the field
@@ -82,18 +82,18 @@ close("all")
 
 fig, axs = subplots(ncols=3); msh = 0
 for (i, spi) in enumerate([sp;sp_min;sp_max])
-    msh = axs[i][:pcolormesh](plts[i][2][1], plts[i][2][2], abs.(plts[i][2][3]),
+    msh = axs[i].pcolormesh(plts[i][2][1], plts[i][2][2], abs.(plts[i][2][3]),
                         vmin = 0, vmax = 3.4, cmap="viridis")
     draw_shapes(spi, ax = axs[i])
-    axs[i][:set_aspect]("equal", adjustable = "box")
-    axs[i][:set_xlim]([border[1];border[2]])
-    axs[i][:set_ylim]([border[3];border[4]])
-    axs[i][:set_xticks]([-1,0,1])
-    i > 1 && axs[i][:set_yticks]([])
+    axs[i].set_aspect("equal", adjustable = "box")
+    axs[i].set_xlim([border[1];border[2]])
+    axs[i].set_ylim([border[3];border[4]])
+    axs[i].set_xticks([-1,0,1])
+    i > 1 && axs[i].set_yticks([])
 end
 subplots_adjust(left=0.05, right=0.8, top=0.98, bottom = 0.05, wspace = 0.1)
-cbar_ax = fig[:add_axes]([0.85, 0.05, 0.05, 0.93])
-fig[:colorbar](msh, cax=cbar_ax)
+cbar_ax = fig.add_axes([0.85, 0.05, 0.05, 0.93])
+fig.colorbar(msh, cax=cbar_ax)
 ```
 ```@raw html
 <div style="text-align:center">
@@ -116,17 +116,17 @@ fobj2 = -[res_max.trace[i].value for i=1:iters2]
 gobj2 = [res_max.trace[i].g_norm for i=1:iters2]
 
 fig, axs = subplots(ncols=2, figsize=[7,5])
-axs[1][:semilogy](0:iters-1, fobj, linewidth=2)
-axs[2][:semilogy](0:iters-1, gobj, linewidth=2)
-axs[1][:semilogy](0:iters2-1, fobj2, linewidth=2, "--")
-axs[2][:semilogy](0:iters2-1, gobj2, linewidth=2, "--")
-axs[1][:legend](["\$f_\\mathrm{obj}\$ (min)";
+axs[1].semilogy(0:iters-1, fobj, linewidth=2)
+axs[2].semilogy(0:iters-1, gobj, linewidth=2)
+axs[1].semilogy(0:iters2-1, fobj2, linewidth=2, "--")
+axs[2].semilogy(0:iters2-1, gobj2, linewidth=2, "--")
+axs[1].legend(["\$f_\\mathrm{obj}\$ (min)";
                 "\$f_\\mathrm{obj}\$ (max)"], loc="right")
-axs[2][:legend](["\$\\|\\mathbf{g}_\\mathrm{obj}\\|\$ (min)";
+axs[2].legend(["\$\\|\\mathbf{g}_\\mathrm{obj}\\|\$ (min)";
                 "\$\\|\\mathbf{g}_\\mathrm{obj}\\|\$ (max)"], loc="best")
-axs[1][:set_xlabel]("Iteration")
-axs[2][:set_xlabel]("Iteration")
-axs[1][:set_ylim](ymax=40)
+axs[1].set_xlabel("Iteration")
+axs[2].set_xlabel("Iteration")
+axs[1].set_ylim(ymax=40)
 ```
 
 ```@raw html

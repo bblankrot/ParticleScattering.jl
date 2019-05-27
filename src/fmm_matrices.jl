@@ -9,8 +9,8 @@ end
 function divideSpace(centers::Array{Float64,2}, options; drawGroups = false)
     size(centers,1) < 2 && error("divideSpace: need at least 2 points")
     # using findfirst everywhere is slower but more robust to floating errors
-    (x_min,y_min) = minimum(centers,1)
-    (x_max,y_max) = maximum(centers,1)
+    (x_min,y_min) = minimum(centers, dims=1)
+    (x_max,y_max) = maximum(centers, dims=1)
     epss = eps(maximum(abs.([x_min;x_max;y_min;y_max])))
     x_max += epss
     y_max += epss
@@ -37,7 +37,7 @@ function divideSpace(centers::Array{Float64,2}, options; drawGroups = false)
     leftover_y = max(a*ny - (y_max-y_min),0.0)
     y_max += 0.5*leftover_y
     y_min -= 0.5*leftover_y
-    FMMgroups = Array{FMMgroup}(nx,ny)
+    FMMgroups = Array{FMMgroup}(undef,nx,ny)
     for ix = 1:nx, iy = 1:ny
         center_x = x_min + (ix-0.5)*a
         center_y = y_min + (iy-0.5)*a
@@ -82,7 +82,7 @@ end
 #     for i = 1:size(centers,1)
 #         d[1] = centers[i,1] - box_center[1]
 #         d[2] = centers[i,2] - box_center[2]
-#         A[:,(i-1)*(2*P+1) + (1:2*P+1)] = [exp(-1.0im*(k*(cos(t[q])*d[1] + sin(t[q])*d[2])
+#         A[:,(i-1)*(2*P+1) .+ (1:2*P+1)] = [exp(-1.0im*(k*(cos(t[q])*d[1] + sin(t[q])*d[2])
 #             + n*(pi/2-t[q]))) for q=1:Q, n=-P:P]
 #     end
 # end
@@ -91,12 +91,12 @@ function FMMaggregationMatrix(k, centers, box_center, t, P)
     #P is length of first multipole expansion, *not* FMM
     Q = length(t)
     Ns = size(centers,1)
-    A = Array{Complex{Float64}}(Q, Ns*(2*P+1))
+    A = Array{Complex{Float64}}(undef, Q, Ns*(2*P+1))
     d = Array{Float64}(undef, 2) #silly but faster
     for i = 1:Ns
         d[1] = centers[i,1] - box_center[1]
         d[2] = centers[i,2] - box_center[2]
-        A[:,(i-1)*(2*P+1) + (1:2*P+1)] = [exp(-1.0im*(k*(cos(t[q])*d[1] + sin(t[q])*d[2])
+        A[:,(i-1)*(2*P+1) .+ (1:2*P+1)] = [exp(-1.0im*(k*(cos(t[q])*d[1] + sin(t[q])*d[2])
             + n*(pi/2-t[q]))) for q=1:Q, n=-P:P]
     end
     return A
@@ -121,7 +121,7 @@ function FMMtranslationMatrix(k, x, t, P2)
     nx = sqrt(sum(abs2,x))
     tx = Float64[-atan(-x[2],-x[1]) - pi/2 + t[q] for q=1:Q]
     bess = besselh.(-P2:P2, 1, k*nx)
-    T[:] = 0
+    T[:] .= 0
     for i = -P2:P2, j = 1:Q
         T[j] += bess[i+P2+1]*exp(1.0im*i*tx[j])/Q
     end
@@ -133,35 +133,37 @@ function FMMnearMatrix(k, P, groups, centers, boxSize, num)
     Ns = size(centers,1)
     G = length(groups)
     W = 2*P+1
-    Is = Array{Int}(num*W^2)
-    Js = Array{Int}(num*W^2)
-    Zs = Array{Complex{Float64}}(num*W^2)
-    bess = Array{Complex{Float64}}(2*P+1)
+    Is = Array{Int}(undef, num*W^2)
+    Js = Array{Int}(undef, num*W^2)
+    Zs = Array{Complex{Float64}}(undef, num*W^2)
+    bess = Array{Complex{Float64}}(undef, 2*P+1)
     mindist2 = 3*boxSize^2 #anywhere between 2 and 4
     ind = 0
-    for ig1 = 1:G, ig2 = 1:G
-        x = groups[ig1].center - groups[ig2].center
-        sum(abs2,x) > mindist2 && continue
-        #for each enclosed scatterer, build translation matrix
-        for ic1 = 1:length(groups[ig1].point_ids)
-            for ic2 = 1:length(groups[ig2].point_ids)
-                ig1 == ig2 && (ic1 == ic2 && continue) #no  self-interactions
-                d = centers[groups[ig1].point_ids[ic1],:] - centers[groups[ig2].point_ids[ic2],:]
-                nd = sqrt(sum(abs2,d))
-            	td = atan(d[2],d[1])
-                bess[:] = besselh.(0:2*P,1,k*nd)
-            	for ix = 1:2*P #lower diagonals
-            		rng = ix+1:1+W:W^2-W*ix
-            		Zs[ind + rng] = -exp(-1im*td*ix)*(-1)^(ix)*bess[ix+1]
-            	end
-            	for ix = 0:2*P #central and upper diagonals
-            		rng = ix*W+1:1+W:W^2-ix
-            		Zs[ind + rng] = -exp(1im*td*ix)*bess[ix+1]
-            	end
-                for ij = 1:W
-                    Is[ind + (1:W)] = collect((groups[ig1].point_ids[ic1]-1)*W + (1:W))
-                    Js[ind + (1:W)] = (groups[ig2].point_ids[ic2]-1)*W + ij
-                    ind += W
+    for ig1 = 1:G
+        for ig2 = 1:G
+            x = groups[ig1].center - groups[ig2].center
+            sum(abs2,x) > mindist2 && continue
+            #for each enclosed scatterer, build translation matrix
+            for ic1 = 1:length(groups[ig1].point_ids)
+                for ic2 = 1:length(groups[ig2].point_ids)
+                    ig1 == ig2 && (ic1 == ic2 && continue) #no  self-interactions
+                    d = centers[groups[ig1].point_ids[ic1],:] - centers[groups[ig2].point_ids[ic2],:]
+                    nd = sqrt(sum(abs2,d))
+                	td = atan(d[2],d[1])
+                    bess[:] = besselh.(0:2*P,1,k*nd)
+                	for ix = 1:2*P #lower diagonals
+                		rng = ix+1:1+W:W^2-W*ix
+                		Zs[ind .+ rng] .= -exp(-1im*td*ix)*(-1)^(ix)*bess[ix+1]
+                	end
+                	for ix = 0:2*P #central and upper diagonals
+                		rng = ix*W+1:1+W:W^2-ix
+                		Zs[ind .+ rng] .= -exp(1im*td*ix)*bess[ix+1]
+                	end
+                    for ij = 1:W
+                        Is[ind .+ (1:W)] = collect((groups[ig1].point_ids[ic1]-1)*W .+ (1:W))
+                        Js[ind .+ (1:W)] .= (groups[ig2].point_ids[ic2]-1)*W + ij
+                        ind += W
+                    end
                 end
             end
         end
@@ -175,13 +177,13 @@ function FMMnearMatrix_upperTri(k, P, groups, centers, boxSize, num)
     Ns = size(centers,1)
     G = length(groups)
     W = 2*P+1
-    Is = Array{Int}(num*W^2)
-    Js = Array{Int}(num*W^2)
-    Zs = Array{Complex{Float64}}(num*W^2)
+    Is = Array{Int}(undef, num*W^2)
+    Js = Array{Int}(undef, num*W^2)
+    Zs = Array{Complex{Float64}}(undef, num*W^2)
     mindist2 = 3*boxSize^2 #anywhere between 2 and 4
     ind = 0
     d = Array{Float64}(undef, 2)
-    bess = Array{Complex{Float64}}(2*P+1)
+    bess = Array{Complex{Float64}}(undef, 2*P+1)
     #first, between group and itself
     for ig1 = 1:G
         for ic1 = 1:length(groups[ig1].point_ids)
@@ -197,67 +199,69 @@ function FMMnearMatrix_upperTri(k, P, groups, centers, boxSize, num)
 
                 for ix = 1:2*P #lower diagonals
                     rng = ix+1:1+W:W^2-W*ix
-                    Zs[ind + rng] = -exp(-1.0im*td1*ix)*(-1)^(ix)*bess[ix+1]
-                    Zs[ind2 + rng] = -exp(-1.0im*td2*ix)*(-1)^(ix)*bess[ix+1]
+                    Zs[ind .+ rng] .= -exp(-1.0im*td1*ix)*(-1)^(ix)*bess[ix+1]
+                    Zs[ind2 .+ rng] .= -exp(-1.0im*td2*ix)*(-1)^(ix)*bess[ix+1]
                 end
                 for ix = 0:2*P #central and upper diagonals
                     rng = ix*W+1:1+W:W^2-ix
-                    Zs[ind + rng] = -exp(1.0im*td1*ix)*bess[ix+1]
-                    Zs[ind2 + rng] = -exp(1.0im*td2*ix)*bess[ix+1]
+                    Zs[ind .+ rng] .= -exp(1.0im*td1*ix)*bess[ix+1]
+                    Zs[ind2 .+ rng] .= -exp(1.0im*td2*ix)*bess[ix+1]
                 end
                 #this way we avoid allocating vectors
                 for ij = 1:W
-                    rng = (1:W) + (ij-1)*W
-                    Js[ind + rng] = (groups[ig1].point_ids[ic2]-1)*W + ij
-                    Js[ind2 + rng] = (groups[ig1].point_ids[ic1]-1)*W + ij
+                    rng = (1:W) .+ (ij-1)*W
+                    Js[ind .+ rng] .= (groups[ig1].point_ids[ic2]-1)*W + ij
+                    Js[ind2 .+ rng] .= (groups[ig1].point_ids[ic1]-1)*W + ij
                 end
                 for ij = 1:W
-                    rng = (1:W:W^2-W+1) + (ij-1)
-                    Is[ind + rng] = (groups[ig1].point_ids[ic1]-1)*W + ij
-                    Is[ind2 + rng] = (groups[ig1].point_ids[ic2]-1)*W + ij
+                    rng = (1:W:W^2-W+1) .+ (ij-1)
+                    Is[ind .+ rng] .= (groups[ig1].point_ids[ic1]-1)*W + ij
+                    Is[ind2 .+ rng] .= (groups[ig1].point_ids[ic2]-1)*W + ij
                 end
                 ind += 2*W^2 #skip over ind2 data
             end
         end
     end
     #now, between groups
-    for ig1 = 1:G, ig2 = ig1+1:G
-        x = groups[ig1].center - groups[ig2].center
-        sum(abs2,x) > mindist2 && continue
-        #for each enclosed scatterer, build translation matrix
-        for ic1 = 1:length(groups[ig1].point_ids)
-            for ic2 = 1:length(groups[ig2].point_ids)
-                d[1] = centers[groups[ig1].point_ids[ic1],1] - centers[groups[ig2].point_ids[ic2],1]
-                d[2] = centers[groups[ig1].point_ids[ic1],2] - centers[groups[ig2].point_ids[ic2],2]
-                nd = sqrt(sum(abs2,d))
-            	#first for ig2->ig1, then ig1->ig2
-                td1 = atan(d[2],d[1])
-                td2 = atan(-d[2],-d[1]) #adding pi instead leads to error
-                bess[:] = besselh.(0:2*P,1,k*nd)
-                ind2 = ind + W^2
+    for ig1 = 1:G
+        for ig2 = ig1+1:G
+            x = groups[ig1].center - groups[ig2].center
+            sum(abs2,x) > mindist2 && continue
+            #for each enclosed scatterer, build translation matrix
+            for ic1 = 1:length(groups[ig1].point_ids)
+                for ic2 = 1:length(groups[ig2].point_ids)
+                    d[1] = centers[groups[ig1].point_ids[ic1],1] - centers[groups[ig2].point_ids[ic2],1]
+                    d[2] = centers[groups[ig1].point_ids[ic1],2] - centers[groups[ig2].point_ids[ic2],2]
+                    nd = sqrt(sum(abs2,d))
+                	#first for ig2->ig1, then ig1->ig2
+                    td1 = atan(d[2],d[1])
+                    td2 = atan(-d[2],-d[1]) #adding pi instead leads to error
+                    bess[:] = besselh.(0:2*P,1,k*nd)
+                    ind2 = ind + W^2
 
-                for ix = 1:2*P #lower diagonals
-            		rng = ix+1:1+W:W^2-W*ix
-            		Zs[ind + rng] = -exp(-1.0im*td1*ix)*(-1)^(ix)*bess[ix+1]
-                    Zs[ind2 + rng] = -exp(-1.0im*td2*ix)*(-1)^(ix)*bess[ix+1]
-            	end
-            	for ix = 0:2*P #central and upper diagonals
-            		rng = ix*W+1:1+W:W^2-ix
-            		Zs[ind + rng] = -exp(1.0im*td1*ix)*bess[ix+1]
-                    Zs[ind2 + rng] = -exp(1.0im*td2*ix)*bess[ix+1]
-            	end
-                #this way we avoid allocating vectors
-                for ij = 1:W
-                    rng = (1:W) + (ij-1)*W
-                    Js[ind + rng] = (groups[ig2].point_ids[ic2]-1)*W + ij
-                    Js[ind2 + rng] = (groups[ig1].point_ids[ic1]-1)*W + ij
+                    for ix = 1:2*P #lower diagonals
+                		rng = ix+1:1+W:W^2-W*ix
+                		Zs[ind .+ rng] .= -exp(-1.0im*td1*ix)*(-1)^(ix)*bess[ix+1]
+                        Zs[ind2 .+ rng] .= -exp(-1.0im*td2*ix)*(-1)^(ix)*bess[ix+1]
+                	end
+                	for ix = 0:2*P #central and upper diagonals
+                		rng = ix*W+1:1+W:W^2-ix
+                		Zs[ind .+ rng] .= -exp(1.0im*td1*ix)*bess[ix+1]
+                        Zs[ind2 .+ rng] .= -exp(1.0im*td2*ix)*bess[ix+1]
+                	end
+                    #this way we avoid allocating vectors
+                    for ij = 1:W
+                        rng = (1:W) .+ (ij-1)*W
+                        Js[ind .+ rng] .= (groups[ig2].point_ids[ic2]-1)*W + ij
+                        Js[ind2 .+ rng] .= (groups[ig1].point_ids[ic1]-1)*W + ij
+                    end
+                    for ij = 1:W
+                        rng = (1:W:W^2-W+1) .+ (ij-1)
+                        Is[ind .+ rng] .= (groups[ig1].point_ids[ic1]-1)*W + ij
+                        Is[ind2 .+ rng] .= (groups[ig2].point_ids[ic2]-1)*W + ij
+                    end
+                    ind += 2*W^2 #skip over ind2 data
                 end
-                for ij = 1:W
-                    rng = (1:W:W^2-W+1) + (ij-1)
-                    Is[ind + rng] = (groups[ig1].point_ids[ic1]-1)*W + ij
-                    Is[ind2 + rng] = (groups[ig2].point_ids[ic2]-1)*W + ij
-                end
-                ind += 2*W^2 #skip over ind2 data
             end
         end
     end

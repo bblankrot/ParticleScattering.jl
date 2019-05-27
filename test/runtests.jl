@@ -1,5 +1,6 @@
 using ParticleScattering
-using Test
+using Test, LinearAlgebra
+import Optim, LineSearches
 
 include("scatteredfield_test.jl")
 include("multipole_test.jl")

@@ -1,6 +1,4 @@
 #based on the optimizing radius tutorial
-import Optim
-
 @testset "optimize radius" begin
     er = 4.5
     k0 = 2π
@@ -26,8 +24,8 @@ import Optim
     r_max = (0.4*a)*ones(J)
     r_min = (1e-3*a)*ones(J)
     rs0 = (0.25*a)*ones(J)
-    assert(verify_min_distance([CircleParams(r_max[i]) for i = 1:J],
-            centers, ids, points))
+    @assert verify_min_distance([CircleParams(r_max[i]) for i = 1:J],
+            centers, ids, points)
 
     res = optimize_radius(rs0, r_min, r_max, points, ids, P, ui, k0, kin,
             centers, fmm_options, optim_options, minimize = true)

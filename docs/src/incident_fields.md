@@ -38,8 +38,8 @@ ui = CurrentSource(0, -0.5λ, 0, 0.5λ, cos.(π*yc/λ))
 x_points = 100; y_points = 100
 x = range(-3λ, stop=3λ, length=x_points + 1)
 y = range(-3λ, stop=3λ, length=y_points + 1)
-xgrid = repmat(x', y_points + 1, 1)
-ygrid = repmat(y, 1, x_points + 1)
+xgrid = repeat(transpose(x), y_points + 1)
+ygrid = repeat(y, 1, x_points + 1)
 points = cat(2, vec(xgrid[1:y_points, 1:x_points]) + 3λ/x_points,
             vec(ygrid[1:y_points, 1:x_points]) + 3λ/y_points)
 u = uinc(2π/λ, points, ui)

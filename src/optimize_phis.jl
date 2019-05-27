@@ -48,11 +48,11 @@ end
 
 function optimize_φ_common!(φs, last_φs, shared_var, α, H, points, P, uinc_, Ns, k0, centers, scatteringMatrices, ids, mFMM, opt, buf)
     if φs != last_φs
-        copy!(last_φs, φs)
+        copyto!(last_φs, φs)
         #do whatever common calculations and save to shared_var
         #construct rhs
         for ic = 1:Ns
-            rng = (ic-1)*(2*P+1) + (1:2*P+1)
+            rng = (ic-1)*(2*P+1) .+ (1:2*P+1)
             if φs[ic] == 0.0
                 buf.rhs[rng] = scatteringMatrices[ids[ic]]*α[rng]
             else
@@ -63,19 +63,11 @@ function optimize_φ_common!(φs, last_φs, shared_var, α, H, points, P, uinc_,
             end
         end
 
-        if opt.method == "pre"
-            MVP = LinearMap{eltype(buf.rhs)}(
-                    (output_, x_) -> FMM_mainMVP_pre!(output_, x_,
-                                        scatteringMatrices, φs, ids, P, mFMM,
-                                        buf.pre_agg, buf.trans),
-                    Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
-        elseif opt.method == "pre2"
-            MVP = LinearMap{eltype(buf.rhs)}(
-                    (output_, x_) -> FMM_mainMVP_pre2!(output_, x_,
-                                        scatteringMatrices, φs, ids, P, mFMM,
-                                        buf.pre_agg, buf.trans),
-                    Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
-        end
+        MVP = LinearMap{eltype(buf.rhs)}(
+                (output_, x_) -> FMM_mainMVP_pre!(output_, x_,
+                                    scatteringMatrices, φs, ids, P, mFMM,
+                                    buf.pre_agg, buf.trans),
+                Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
 
         fill!(shared_var.β,0.0)
         shared_var.β,ch = gmres!(shared_var.β, MVP, buf.rhs,
@@ -83,7 +75,7 @@ function optimize_φ_common!(φs, last_φs, shared_var, α, H, points, P, uinc_,
 							initially_zero = true) #no restart, preconditioning
         !ch.isconverged && error("FMM process did not converge")
 
-        shared_var.f[:] = H.'*shared_var.β
+        shared_var.f[:] = transpose(H)*shared_var.β
         shared_var.f .+= uinc_
     end
 end
@@ -99,32 +91,24 @@ function optimize_φ_g!(grad_stor, φs, shared_var, last_φs, α, H, points, P, 
     optimize_φ_common!(φs, last_φs, shared_var, α, H, points, P, uinc_, Ns,
         k0, centers,scatteringMatrices, ids, mFMM, opt, buf)
 
-    if opt.method == "pre"
-        MVP = LinearMap{eltype(buf.rhs)}(
-                (output_, x_) -> FMM_mainMVP_pre!(output_, x_,
-                                    scatteringMatrices, φs, ids, P, mFMM,
-                                    buf.pre_agg, buf.trans),
-                Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
-    elseif opt.method == "pre2"
-        MVP = LinearMap{eltype(buf.rhs)}(
-                (output_, x_) -> FMM_mainMVP_pre2!(output_, x_,
-                                    scatteringMatrices, φs, ids, P, mFMM,
-                                    buf.pre_agg, buf.trans),
-                Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
-    end
+    MVP = LinearMap{eltype(buf.rhs)}(
+            (output_, x_) -> FMM_mainMVP_pre!(output_, x_, scatteringMatrices,
+                                            φs, ids, P, mFMM, buf.pre_agg,
+                                            buf.trans),
+            Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
     #time for gradient
     shared_var.rhs_grad[:] = 0.0
     shared_var.∂β[:] = 0.0
     D = -1.0im*collect(-P:P)
-    tempn = Array{Complex{Float64}}(2*P+1)
+    tempn = Array{Complex{Float64}}(undef, 2*P+1)
     for n = 1:Ns
         #compute n-th gradient
-        rng = (n-1)*(2*P+1) + (1:2*P+1)
+        rng = (n-1)*(2*P+1) .+ (1:2*P+1)
         rotateMultipole!(tempn, shared_var.β[rng], -φs[n], P)
         tempn[:] = scatteringLU[ids[n]]\tempn #LU decomp with pivoting
         tempn[:] .*= -D
         v = view(shared_var.rhs_grad, rng)
-        A_mul_B!(v, scatteringMatrices[ids[n]], tempn)
+        mul!(v, scatteringMatrices[ids[n]], tempn)
         rotateMultipole!(v, φs[n], P)
         v[:] += D.*shared_var.β[rng]
 
@@ -132,7 +116,7 @@ function optimize_φ_g!(grad_stor, φs, shared_var, last_φs, α, H, points, P, 
                                     shared_var.rhs_grad, restart = Ns*(2*P+1),
                                     tol = 10*opt.tol, log = true,
 									initially_zero = true)
-        #warn("using dbdn_tol = 10*opt.tol = $(10*opt.tol)")
+        #@warn("using dbdn_tol = 10*opt.tol = $(10*opt.tol)")
 
         if ch.isconverged == false
             display("FMM process did not converge for partial derivative $n/$Ns. ")
@@ -143,7 +127,7 @@ function optimize_φ_g!(grad_stor, φs, shared_var, last_φs, α, H, points, P, 
     end
 
     grad_stor[:] = ifelse(minimize, 2, -2)*
-                    real(shared_var.∂β.'*(H*conj(shared_var.f)))
+                    real(transpose(shared_var.∂β)*(H*conj(shared_var.f)))
 end
 
 
@@ -172,10 +156,10 @@ function optimize_φ_adj_g!(grad_stor, φs, shared_var, last_φs, α, H, points,
     #note: this assumes that there are exactly 2P+1 non zero elements in ∂X. If
     #not, v must be (2P+1)Ns × 1.
     D = -1.0im*collect(-P:P)
-    v = Array{Complex{Float64}}(2P+1) #TODO: minimize dynamic alloc
+    v = Array{Complex{Float64}}(undef, 2P+1) #TODO: minimize dynamic alloc
     for n = 1:Ns
         #compute n-th element of gradient
-        rng = (n-1)*(2*P+1) + (1:2*P+1)
+        rng = (n-1)*(2*P+1) .+ (1:2*P+1)
         rotateMultipole!(v, view(shared_var.β,rng), -φs[n], P)
         v[:] = scatteringLU[ids[n]]\v #LU decomp with pivoting
         v[:] .*= -D
@@ -183,15 +167,15 @@ function optimize_φ_adj_g!(grad_stor, φs, shared_var, last_φs, α, H, points,
         rotateMultipole!(v, φs[n], P)
         v[:] += D.*shared_var.β[rng]
 
-        grad_stor[n] = ifelse(minimize, -2, 2)*real(view(λadj,rng).'*v)
+        grad_stor[n] = ifelse(minimize, -2, 2)*real(transpose(view(λadj,rng))*v)
         #prepare for next one - #TODO: check why this is here
-        v[:] = 0.0im
+        v[:] .= 0.0im
     end
 end
 
 function optimizationHmatrix(points, centers, Ns, P, k0)
     points_moved = Array{Float64}(undef, 2)
-    H = Array{Complex{Float64}}(Ns*(2*P+1), size(points,1))
+    H = Array{Complex{Float64}}(undef, Ns*(2*P+1), size(points,1))
     for ic = 1:Ns, i = 1:size(points,1)
         points_moved[1] = points[i,1] - centers[ic,1]
         points_moved[2] = points[i,2] - centers[ic,2]
@@ -216,7 +200,7 @@ function prepare_fmm_reusal_φs(k0, kin, P, shapes, centers, ids, fmmopt)
     P2, Q = FMMtruncation(fmmopt.acc, boxSize, k0)
     mFMM = FMMbuildMatrices(k0, P, P2, Q, groups, centers, boxSize, tri = true)
     scatteringMatrices,innerExpansions = particleExpansion(k0, kin, shapes, P, ids)
-    scatteringLU = [lufact(scatteringMatrices[iid]) for iid = 1:length(shapes)]
+    scatteringLU = [lu(scatteringMatrices[iid]) for iid = 1:length(shapes)]
     buf = FMMbuffer(Ns,P,Q,length(groups))
     return mFMM, scatteringMatrices, scatteringLU, buf
 end

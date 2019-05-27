@@ -14,19 +14,19 @@
     φs = 2π*rand(M^2) #random rotation angles
     dist = 2*maximum(shapes[i].R for i=1:2)
     try
-    centers = randpoints(M^2, dist, 5λ0, 5λ0, [0.0 0.0; 0.01+dist 0.01],
-                failures = 1_000)
-    sp = ScatteringProblem(shapes, ids, centers, φs)
-    @test verify_min_distance(sp, [0.0 0.0; 0.01+dist 0.01])
+        centers = randpoints(M^2, dist, 5λ0, 5λ0, [0.0 0.0; 0.01+dist 0.01],
+                    failures = 1_000)
+        sp = ScatteringProblem(shapes, ids, centers, φs)
+        @test verify_min_distance(sp, [0.0 0.0; 0.01+dist 0.01])
     catch
-    @warn("Could not find random points (1)")
+        @warn("Could not find random points (1)")
     end
     try
-    centers = randpoints(M^2, dist, 5λ0, 5λ0, failures = 1_000)
-    sp = ScatteringProblem(shapes, ids, centers, φs)
-    @test verify_min_distance(sp)
+        centers = randpoints(M^2, dist, 5λ0, 5λ0, failures = 1_000)
+        sp = ScatteringProblem(shapes, ids, centers, φs)
+        @test verify_min_distance(sp)
     catch
-    @warn("Could not find random points (2)")
+        @warn("Could not find random points (2)")
     end
 
     centers =  rect_grid(M, M, 0.8λ0, λ0)
@@ -46,9 +46,24 @@
             verbose = true, method = "density")
     @test norm(u1 - u2)/norm(u1) < 1e-6
 
-    u3 = calc_near_field(k0, kin, P, sp, points, LineSource(-0.8λ0,-λ0); opt = fmm_options,
-            verbose = false)
-    u4 = calc_near_field(k0, kin, P, sp, points, LineSource(-0.8λ0,-λ0); opt = fmm_options,
-            verbose = true, method = "recurrence")
+    u3 = calc_near_field(k0, kin, P, sp, points, LineSource(-0.8λ0,-λ0);
+            opt = fmm_options, verbose = false)
+    u4 = calc_near_field(k0, kin, P, sp, points, LineSource(-0.8λ0,-λ0);
+            opt = fmm_options, verbose = true, method = "recurrence")
     @test norm(u3 - u4)/norm(u3) < 1e-6
+
+    #test transpose fmm
+    mFMM, sMatrices, sLU, buf = ParticleScattering.prepare_fmm_reusal_φs(k0,
+                                    kin, P, shapes, centers, ids, fmm_options)
+    v1 = 5*rand(ComplexF64, M^2*(2P+1))
+    v2 = rand(ComplexF64, M^2*(2P+1))
+    o1 = Array{ComplexF64}(undef, M^2*(2P+1))
+    o2 = Array{ComplexF64}(undef, M^2*(2P+1))
+    ParticleScattering.FMM_mainMVP_pre!(o1, v1, sMatrices, φs, ids, P, mFMM,
+        buf.pre_agg, buf.trans)
+    res1 = transpose(v2)*o1
+    ParticleScattering.FMM_mainMVP_transpose!(o2, v2, sMatrices, φs, ids, P,
+        mFMM, buf.pre_agg, buf.trans)
+    res2 = transpose(v1)*o2
+    @test res1 ≈ res2
 end

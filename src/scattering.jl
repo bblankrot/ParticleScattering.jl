@@ -5,71 +5,38 @@ Given a shape `s` with `2N` discretization nodes, outer and inner wavenumbers
 `kout`,`kin`, and the cylindrical harmonics parameter `P`, returns the potential
 densities `sigma_mu`. Each column contains the response to a different harmonic,
 where the first `2N` entries contain the single-layer potential density
-(``\sigma``), and the lower entries contain the double-layer density (``\mu``).
+(``\\sigma``), and the lower entries contain the double-layer density (``\\mu``).
 """
 function get_potential(kout, kin, P, t, ft, dft)
     N = length(t) #N here is 2N elesewhere.
 
     A = SDNTpotentialsdiff(kout, kin, t, ft, dft)
-    LU = lufact(A)
+    LU = lu(A)
 
-    sigma_mu = Array{Complex{Float64}}(2*N, 2*P+1)
+    sigma_mu = Array{Complex{Float64}}(undef, 2*N, 2*P+1)
 
     #assuming the wave is sampled on the shape
-    nz = sqrt.(sum(abs2,ft,2))
+    nz = sqrt.(sum(abs2, ft, dims=2))
     θ = atan.(ft[:,2], ft[:,1])
-    ndz = sqrt.(sum(abs2,dft,2))
+    ndz = sqrt.(sum(abs2, dft, dims=2))
     nzndz = nz.*ndz
     wro = dft[:,2].*ft[:,1] - dft[:,1].*ft[:,2]
 	zz = dft[:,1].*ft[:,1] + dft[:,2].*ft[:,2]
 
     bessp = besselj.(-P-1, kout*nz)
     bess = similar(bessp)
-    du = Array{Complex{Float64}}(length(bessp))
-    rhs = Array{Complex{Float64}}(2*length(bessp))
+    du = Array{Complex{Float64}}(undef, length(bessp))
+    rhs = Array{Complex{Float64}}(undef, 2*length(bessp))
     for p = -P:P
         bess[:] = besselj.(p, kout*nz)
 		du[:] = kout*bessp.*wro - (p*bess./nz).*(wro + 1im*zz)
         rhs[:] = -[bess.*exp.(1.0im*p*θ);
                (du./nzndz).*exp.(1.0im*p*θ)]
         sigma_mu[:,p + P + 1] = LU\rhs
-        copy!(bessp, bess)
+        copyto!(bessp, bess)
     end
     return sigma_mu
 end
-#
-# function get_potential_deprecated(kout, kin, P, t, ft, dft)
-# #problematic assumption here that t=θ in the Jacobi-Anger expansion (for rhs).
-# #this means that we assume all shapes are given in polar form (r(θ)cosθ,r(θ)sinθ)),
-# #which is not the case for the simple ellipse (r1cosθ,r2sinθ).
-#     N = length(t) #N here is 2N elesewhere.
-#
-#     A = SDNTpotentialsdiff(kout, kin, t, ft, dft)
-#     LU = lufact(A)
-#
-#     sigma_mu = Array{Complex{Float64}}(2*N, 2*P+1)
-#
-#     #assuming the wave is sampled on the shape
-#     nz = sqrt.(sum(abs2,ft,2))
-#     ndz = sqrt.(sum(abs2,dft,2))
-#     nzndz = nz.*ndz
-#     wro = dft[:,2].*ft[:,1] - dft[:,1].*ft[:,2]
-# 	zz = dft[:,1].*ft[:,1] + dft[:,2].*ft[:,2]
-#
-#     bessp = besselj.(-P-1, kout*nz)
-#     bess = similar(bessp)
-#     du = Array{Complex{Float64}}(length(bessp))
-#     rhs = Array{Complex{Float64}}(2*length(bessp))
-#     for p = -P:P
-#         bess[:] = besselj.(p, kout*nz)
-# 		du[:] = kout*bessp.*wro - (p*bess./nz).*(wro + 1im*zz)
-#         rhs[:] = -[bess.*exp.(1.0im*p*t);
-#                (du./nzndz).*exp.(1.0im*p*t)]
-#         sigma_mu[:,p + P + 1] = LU\rhs
-#         copy!(bessp, bess)
-#     end
-#     return sigma_mu
-# end
 
 """
     get_potential(kout, kin, P, t, ft, dft) -> sigma_mu
@@ -84,14 +51,15 @@ function SDNTpotentialsdiff(k1, k2, t, ft, dft)
     (N = div(length(t),2)) : (error("length(t) must be even"))
 
     (Rvec, kmlogvec) = KM_weights(N)
-    A = Array{Complex{Float64}}(4*N, 4*N)
+    A = Array{Complex{Float64}}(undef, 4*N, 4*N)
 
-    ndft = sqrt.(vec(sum(abs2,dft,2)))
+    ndft = sqrt.(vec(sum(abs2,dft,dims=2)))
     rij = Array{Float64}(undef, 2)
     for i=1:2*N, j=1:i
         if i == j
             T1 = -(k1^2 - k2^2)
-            T2 = k1^2*(π*1im - 2γ + 1 - 2*log(k1*ndft[i]/2)) - k2^2*(π*1im - 2γ + 1 - 2*log(k2*ndft[i]/2))
+            T2 = k1^2*(π*1im - 2MathConstants.γ + 1 - 2*log(k1*ndft[i]/2)) -
+                k2^2*(π*1im - 2MathConstants.γ + 1 - 2*log(k2*ndft[i]/2))
 
             A[i,j] = (-ndft[i]/2/N)*log(k1/k2) #dS (dM1=0)
             A[i,j+2*N] = 1 #dD (dL=0)
@@ -156,7 +124,7 @@ function KM_weights(N)
     #Input: N (integer>=1)
     #Output: R,K (float vectors of length 2N)
     arg1 = Float64[cos(m*j*π/N)/m for m=1:N-1, j=0:2*N-1]
-    R = vec((-2π/N)*sum(arg1,1)) - (π/N^2)*Float64[cos(j*π) for j=0:2*N-1]
+    R = vec((-2π/N)*sum(arg1,dims=1)) - (π/N^2)*Float64[cos(j*π) for j=0:2*N-1]
 
     K = Float64[2*log(2*sin(0.5π*j/N)) for j = 0:2*N-1]
     return (R,K)
@@ -168,16 +136,16 @@ end
 Given a shape `s` with `2N` discretization nodes, outer and inner wavenumbers
 `kout`,`kin`, and an incident plane-wave angle, returns the potential
 densities vector `sigma_mu`. The first `2N` entries contain the single-layer
-potential density (``\sigma``), and the lower entries contain the double-layer
-density (``\mu``).
+potential density (``\\sigma``), and the lower entries contain the double-layer
+density (``\\mu``).
 """
 function get_potentialPW(kout, kin, s, θ_i)
     N = length(s.t) #N here is different...
 
     A = SDNTpotentialsdiff(kout, kin, s.t, s.ft, s.dft)
-    LU = lufact(A)
+    LU = lu(A)
 
-	ndft = sqrt.(sum(abs2,s.dft,2))
+	ndft = sqrt.(sum(abs2, s.dft, dims=2))
     ui = exp.(1.0im*kout*(cos(θ_i)*s.ft[:,1] + sin(θ_i)*s.ft[:,2]))
     rhs = -[ui;
 			(1.0im*kout*ui).*((cos(θ_i)*s.dft[:,2] - sin(θ_i)*s.dft[:,1])./ndft)]
@@ -207,13 +175,13 @@ function scatteredfield(sigma_mu, k, t, ft, dft, p)
     #in space with wavenumber k at points p *off* the boundary. For field on the boundary,
     #SDpotentials function must be used.
     if size(p,2) == 1 #single point, rotate it
-        p = p.'
+        p = transpose(p)
     end
     N = length(t)
     M = size(p,1)
     r = zeros(Float64,2)
     #loop is faster here:
-    SDout = Array{Complex{Float64}}(M, 2*N)
+    SDout = Array{Complex{Float64}}(undef, M, 2*N)
     for j = 1:N
         ndft = hypot(dft[j,1],dft[j,2])
         for i = 1:M
@@ -237,10 +205,10 @@ end
 function shapeMultipoleExpansion(k, t, ft, dft, P)
     #unlike others (so far), this does *not* assume t_j=pi*j/N
     N = div(length(t),2)
-    nz = vec(sqrt.(sum(abs2,ft,2)))
+    nz = vec(sqrt.(sum(abs2, ft, dims=2)))
     θ = atan.(ft[:,2], ft[:,1])
-    ndz = vec(sqrt.(sum(abs2,dft,2)))
-    AB = Array{Complex{Float64}}(2*P + 1, 4*N)
+    ndz = vec(sqrt.(sum(abs2, dft, dims=2)))
+    AB = Array{Complex{Float64}}(undef, 2*P + 1, 4*N)
     bessp = besselj.(-P-1,k*nz)
     bess = similar(bessp)
     for l = -P:0
@@ -256,50 +224,25 @@ function shapeMultipoleExpansion(k, t, ft, dft, P)
             AB[l+P+1,j+2*N] = 0.25im*(π/N)*(exp(-1.0im*l*θ[j])/nz[j])*(b1 + b2)
             l != 0 && (AB[-l+P+1,j+2*N] = 0.25im*((-1.0)^l*π/N)*(exp(1.0im*l*θ[j])/nz[j])*(-b1_ + b2))
         end
-        copy!(bessp,bess)
+        copyto!(bessp,bess)
     end
     return AB
 end
-#
-# function shapeMultipoleExpansion_deprecated(k, t, ft, dft, P)
-#     #unlike others (so far), this does *not* assume t_j=pi*j/N
-#     N = div(length(t),2)
-#     nz = vec(sqrt.(sum(abs2,ft,2)))
-#     ndz = vec(sqrt.(sum(abs2,dft,2)))
-#     AB = Array{Complex{Float64}}(2*P + 1, 4*N)
-#     bessp = besselj.(-P-1,k*nz)
-#     bess = similar(bessp)
-#     for l = -P:0
-#         bess[:] = besselj.(l,k*nz)
-#         for j = 1:2*N
-#             AB[l+P+1,j] = 0.25im*(π/N)*bess[j]*exp(-1.0im*l*t[j])*ndz[j]
-#             l!=0 && (AB[-l+P+1,j] = 0.25im*((-1.0)^l*π/N)*bess[j]*exp(1.0im*l*t[j])*ndz[j])
-#             wro = ft[j,1]*dft[j,2] - ft[j,2]*dft[j,1]
-#             zdz = -1.0im*(ft[j,1]*dft[j,1] + ft[j,2]*dft[j,2])
-#             b1 = (-l*bess[j]/nz[j])*(zdz + wro)
-#             b1_ = (-l*bess[j]/nz[j])*(zdz - wro)
-#             b2 = k*bessp[j]*wro
-#             AB[l+P+1,j+2*N] = 0.25im*(π/N)*(exp(-1.0im*l*t[j])/nz[j])*(b1 + b2)
-#             l!=0 && (AB[-l+P+1,j+2*N] = 0.25im*((-1.0)^l*π/N)*(exp(1.0im*l*t[j])/nz[j])*(-b1_ + b2))
-#         end
-#         copy!(bessp,bess)
-#     end
-#     return AB
-# end
 
 function solvePotential_forError(kin, kout, shape, ls_pos, ls_amp, θ_i)
     #plane wave outside, line sources inside
     N = length(shape.t) #N here is different...
 
     A = SDNTpotentialsdiff(kout, kin, shape.t, shape.ft, shape.dft)
-    LU = lufact(A)
+    LU = lu(A)
 
-	ndft = sqrt.(sum(abs2,shape.dft,2))
+	ndft = sqrt.(sum(abs2, shape.dft, dims=2))
 
-    r = sqrt.((shape.ft[:,1] - ls_pos[1,1]).^2 + (shape.ft[:,2] - ls_pos[1,2]).^2)
+    r = sqrt.((shape.ft[:,1] .- ls_pos[1,1]).^2 +
+            (shape.ft[:,2] .- ls_pos[1,2]).^2)
 
-    uls = -ls_amp[1]*0.25im*besselh.(0,kout*r)
-    duls = ls_amp[1]*0.25im*(kout*besselh.(1,kout*r)).*((shape.ft[:,1]-ls_pos[1,1]).*shape.dft[:,2]-(shape.ft[:,2]-ls_pos[1,2]).*shape.dft[:,1])./r./ndft
+    uls = (-ls_amp[1]*0.25im)*besselh.(0,kout*r)
+    duls = (ls_amp[1]*0.25im*kout)*besselh.(1,kout*r).*((shape.ft[:,1].-ls_pos[1,1]).*shape.dft[:,2]-(shape.ft[:,2].-ls_pos[1,2]).*shape.dft[:,1])./r./ndft
     for i = 2:length(ls_amp)
         r = sqrt.((shape.ft[:,1] - ls_pos[i,1]).^2 + (shape.ft[:,2] - ls_pos[i,2]).^2)
         uls -= ls_amp[i]*0.25im*besselh.(0,kout*r)

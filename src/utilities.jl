@@ -67,8 +67,8 @@ function uniqueind(v::Vector{T}) where T <: Number
     u = Array{T}(undef, 0)
     k = 0
     for val in v
-        ind = findfirst(u, val)
-        if ind == 0
+        ind = findfirst(isequal(val), u)
+        if ind == nothing
             k += 1
             push!(u, val)
             push!(inds, k)
@@ -86,8 +86,8 @@ Returns bounding box that contains all of the shapes in `sp`.
 """
 function find_border(sp::ScatteringProblem)
     Rmax = maximum(s.R for s in sp.shapes)
-    x_max,y_max = maximum(sp.centers,1) + 2*Rmax
-    x_min,y_min = minimum(sp.centers,1) - 2*Rmax
+    x_max,y_max = maximum(sp.centers, dims=1) .+ 2*Rmax
+    x_min,y_min = minimum(sp.centers, dims=1) .- 2*Rmax
     border = [x_min; x_max; y_min; y_max]
 end
 
@@ -99,8 +99,8 @@ Returns bounding box that contains all of the shapes in `sp` as well as specifie
 """
 function find_border(sp::ScatteringProblem, points::Array{Float64,2})
     Rmax = maximum(s.R for s in sp.shapes)
-    x_max,y_max = maximum([sp.centers;points],1) + 2*Rmax
-    x_min,y_min = minimum([sp.centers;points],1) - 2*Rmax
+    x_max,y_max = maximum([sp.centers;points], dims=1) .+ 2*Rmax
+    x_min,y_min = minimum([sp.centers;points], dims=1) .- 2*Rmax
     border = [x_min; x_max; y_min; y_max]
 end
 

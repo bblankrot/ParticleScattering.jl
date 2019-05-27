@@ -1,11 +1,11 @@
 #for now just the main functions, no wrapper
 function optimize_pwr_φ_common!(φs, last_φs, opb, power_buffer, ids, scatteringMatrices, P, Ns, fmmbuf, fmmopts, mFMM)
     if φs != last_φs
-        copy!(last_φs, φs)
+        copyto!(last_φs, φs)
         #do whatever common calculations and save to shared_var
         for i in eachindex(opb)
             for ic = 1:Ns
-                rng = (ic-1)*(2*P+1) + (1:2*P+1)
+                rng = (ic-1)*(2*P+1) .+ (1:2*P+1)
                 if φs[ic] == 0.0
                     fmmbuf.rhs[rng] = scatteringMatrices[i][ids[ic]]*opb[i].α[rng]
                 else
@@ -22,7 +22,7 @@ function optimize_pwr_φ_common!(φs, last_φs, opb, power_buffer, ids, scatteri
                                             fmmbuf.pre_agg, fmmbuf.trans),
                         Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
 
-            opb[i].β[:] = 0
+            opb[i].β[:] .= 0
             opb[i].β,ch = gmres!(opb[i].β, MVP, fmmbuf.rhs,
                                     restart = Ns*(2*P+1), tol = fmmopts.tol,
                                     log = true, initially_zero = true) #no restart
@@ -58,33 +58,33 @@ function optimize_pwr_φ_g!(grad_stor, φs, last_φs, opb, power_buffer, ids, sc
                 Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
 
         #solve adjoint problem
-        opb[i].λadj[:] = 0
+        opb[i].λadj[:] .= 0
         opb[i].λadj, ch = gmres!(opb[i].λadj, MVP, opb[i].rhs_grad,
                             restart = Ns*(2*P+1), tol = fmmopts.tol,
                             log=true, initially_zero = true) #no restart
         !ch.isconverged && error("""FMM process did not converge for adjoint,
             normalized residual:
             $(norm(MVP*opb[i].λadj - opb[i].rhs_grad)/norm(opb[i].rhs_grad))""")
-        D = -1.0im*collect(-P:P)
-        v = Array{Complex{Float64}}(2*P+1) #TODO: minimize dynamic alloc
+        Dd = Diagonal(-1.0im*collect(-P:P))
+        v = Array{Complex{Float64}}(undef, 2*P+1) #TODO: minimize dynamic alloc
         for n = 1:Ns
-            rng = (n-1)*(2*P+1) + (1:2*P+1)
+            rng = (n-1)*(2*P+1) .+ (1:2*P+1)
             # rotateMultipole!(v, view(opb[i].β,rng), -φs[n], P)
             # v[:] = scatteringLU[i][ids[n]]\v #LU decomp with pivoting
             # v[:] .*= -D
             # v[:] = scatteringMatrices[i][ids[n]]*v
             # rotateMultipole!(v, φs[n], P)
             # v[:] += D.*opb[i].β[rng]
-            # grad_stor[n] += (-2)*real(view(opb[i].λadj,rng).'*v)
+            # grad_stor[n] += (-2)*real(transpose(view(opb[i].λadj,rng))*v)
             # #prepare for next one - #TODO: check why this is here
             # v[:] = 0.0im
 
-            #dumb way
-            Φ = spdiagm(exp.(-1.0im*(-P:P)*φs[n]))
-            temppp = Φ*(scatteringLU[i][ids[n]]\(conj(Φ)*opb[i].β[rng]))
-            temppp2 = spdiagm(D)*(Φ*(scatteringMatrices[i][ids[n]]*(conj(Φ)*temppp))) -
-                        Φ*(scatteringMatrices[i][ids[n]]*(conj(Φ)*(spdiagm(D)*temppp)))
-            grad_stor[n] += (-2)*real(opb[i].λadj[rng].'*temppp2)
+            #TODO: adapt code above to fit
+            Φ = Diagonal(exp.(-1.0im*(-P:P)*φs[n]))
+            temppp = scatteringLU[i][ids[n]]\(conj(Φ)*opb[i].β[rng])
+            temppp2 = Dd*(scatteringMatrices[i][ids[n]]*temppp) -
+                        scatteringMatrices[i][ids[n]]*(Dd*temppp)
+            grad_stor[n] += (-2)*real(transpose(opb[i].λadj[rng])*(Φ*temppp2))
         end
     end
 end

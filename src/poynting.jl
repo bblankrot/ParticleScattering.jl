@@ -3,13 +3,13 @@ function poynting_vector(k0, beta, centers, points, Ez_inc, Hx_inc, Hy_inc)
     Ns = size(centers,1)
 	P = div(div(length(beta),Ns)-1,2)
 	len = size(points,1)
-	pyntg = Array{Float64}(len, 2)
+	pyntg = Array{Float64}(undef, len, 2)
     Ez = copy(Ez_inc)
     for ip in 1:len
         ∂Ez∂x = 0.0im
         ∂Ez∂y = 0.0im
         for ic in 1:Ns
-		    ind = (ic-1)*(2*P+1) + P + 1
+		    ind = (ic-1)*(2*P+1) .+ P + 1
 			pt1 = points[ip,1] - centers[ic,1]
 			pt2 = points[ip,2] - centers[ic,2]
 
@@ -51,7 +51,7 @@ end
 function poynting_vector(k0, points, Ez_inc, Hx_inc, Hy_inc)
     #assumes points lie outside all scattering disks
     len = size(points,1)
-	pyntg = Array{Float64}(len, 2)
+	pyntg = Array{Float64}(undef, len, 2)
     for ip in 1:len
         pyntg[ip,1] = (-0.5)*real(Ez_inc[ip]*conj(Hy_inc[ip]))
         pyntg[ip,2] = 0.5*real(Ez_inc[ip]*conj(Hx_inc[ip]))
@@ -61,7 +61,7 @@ end
 
 function calc_power(k0::Array, kin, P, sp, points, nhat, ui)
     #this assumes points are equidistant. correct result only after multiplying by arc length
-    power = Array{Float64}(length(k0))
+    power = Array{Float64}(undef, length(k0))
     for i in eachindex(k0)
         Ez_inc = uinc(k0[i], points, ui)
         Hx_inc = hxinc(k0[i], points, ui)

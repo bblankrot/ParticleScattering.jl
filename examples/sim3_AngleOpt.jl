@@ -39,15 +39,14 @@ draw_fig = false
 
 # verify and draw
 begin
-    assert(verify_min_distance(shapes, centers, ids, points))
+    @assert verify_min_distance(shapes, centers, ids, points)
     if draw_fig
         figure()
         #draw shapes and points
         draw_shapes(shapes, ids, centers, φs)
         plot(points[:,1], points[:,2], "r*")
         tight_layout()
-        ax = gca()
-        ax[:set_aspect]("equal", adjustable = "box")
+        axis("equal")
     end
 end
 
@@ -62,10 +61,10 @@ optim_options =  Optim.Options(f_tol = 1e-6,
 
 optim_method = Optim.BFGS(;linesearch = LineSearches.BackTracking())
 
-tic()
-test_max = optimize_φ(φs, points, P, PlaneWave(θ_i), k0, kin, shapes,
+optim_time = @elapsed begin
+    test_max = optimize_φ(φs, points, P, PlaneWave(θ_i), k0, kin, shapes,
             centers, ids, fmm_options, optim_options, optim_method; minimize = false)
-optim_time = toq()
+end
 
 # %%
 
@@ -74,38 +73,19 @@ plot_near_field(k0, kin, P, sp_before, PlaneWave(θ_i),
                 x_points = 600, y_points = 200, border = plot_border);
 colorbar()
 clim([0;5])
-plot_near_field_pgf(output_dir * "/opt_phi_before.tex", k0, kin, P,
-    sp_before, PlaneWave(θ_i); opt = fmm_options, x_points = 150, y_points = 50,
-    border = plot_border, downsample = 10, include_preamble = true)
 
 sp_after = ScatteringProblem(shapes, ids, centers, test_max.minimizer)
 plot_near_field(k0, kin, P, sp_after, PlaneWave(θ_i),
                 x_points = 600, y_points = 200, border = plot_border)
 colorbar()
 clim([0;5])
-plot_near_field_pgf(output_dir * "/opt_phi_after.tex", k0, kin, P,
-    sp_after, PlaneWave(θ_i); opt = fmm_options, x_points = 150, y_points = 50,
-    border = plot_border, downsample = 10, include_preamble = true)
 
 inner_iters = length(test_max.trace)
 fobj = -[test_max.trace[i].value for i=1:inner_iters]
 gobj = [test_max.trace[i].g_norm for i=1:inner_iters]
 
 figure()
-plot(0:inner_iters-1, fobj)
-plot(0:inner_iters-1, gobj)
-
-pgf.@pgf begin
-    fobj_plot = pgf.Plot({blue, thick, no_markers},
-                        pgf.Coordinates(0:inner_iters-1, fobj))
-    gobj_plot = pgf.Plot({red, thick, dashed, no_markers},
-                        pgf.Coordinates(0:inner_iters-1, gobj))
-    ax = pgf.Axis({ width = "6cm",
-                    xlabel = "Iterations",
-                    legend_pos = "north east",
-                    legend_style = "font = \\footnotesize"},
-                fobj_plot, gobj_plot)
-    push!(ax, pgf.Legend(["\$f_{\\mathrm{obj}}\$";
-                        "\$\\|\\mathbf{g}_{\\mathrm{obj}}\\|\$"]))
-end
-pgf.save(output_dir * "/opt_phi_conv.tex", ax ,include_preamble = false)
+plot(0:inner_iters-1, fobj, label="\$f_{\\mathrm{obj}}\$")
+plot(0:inner_iters-1, gobj, label="\$\\Vert\\mathbf{g}_{\\mathrm{obj}}\\Vert\$")
+legend(loc="best")
+xlabel("Iterations")
