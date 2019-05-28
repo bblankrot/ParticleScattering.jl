@@ -1,6 +1,9 @@
 # Here is a simulation of solution time as a function of M - number of shapes (or sqrt of number of shapes)
 using ParticleScattering, IterativeSolvers, PyPlot
-
+import JLD
+import LinearMaps: LinearMap
+import Statistics: mean
+output_dir = homedir()
 #loop definitions
 sqrtM_vec = collect(5:30); M_vec = sqrtM_vec.^2
 trials = 3
@@ -27,26 +30,22 @@ P = 10; errP = 9.57e-7
 # P,errP = minimumP(k0, kin, shapes[1], tol = tol, N_points = 20_000,
 #                             P_min = 1, P_max = 120)
 
-dt0 = @elapsed begin
-    scatteringMatrices,innerExpansions = particleExpansion(k0, kin, shapes, P, [1])
-    α = Complex{Float64}[exp(1.0im*p*(pi/2-θ_i)) for p=-P:P]
+scatteringMatrices,innerExpansions = particleExpansion(k0, kin, shapes, P, [1])
+α = Complex{Float64}[exp(1.0im*p*(pi/2-θ_i)) for p=-P:P]
+dt0 = @elapsed for i=1:trials
+    global scatteringMatrices,innerExpansions = particleExpansion(k0, kin, shapes, P, [1])
+    global α = Complex{Float64}[exp(1.0im*p*(pi/2-θ_i)) for p=-P:P]
 end
-dt0 += @elapsed for i=1:simlen-1
-    scatteringMatrices,innerExpansions = particleExpansion(k0, kin, shapes, P, [1])
-    α = Complex{Float64}[exp(1.0im*p*(pi/2-θ_i)) for p=-P:P]
-end
-dt0 /= simlen
+dt0 /= trials
 
-for is = 1:simlen, it = 1:trials
+function time_FMM(is, it)
     #compute shape variables
-    begin #setup
-        sqrtM = sqrtM_vec[is]
-        M = sqrtM^2
-        centers = square_grid(sqrtM, dist)
-        φs = rand(M)
-        ids = ones(Int, M)
-        opt = FMMoptions(true, acc = Int(-log10(tol)), nx = div(sqrtM,2), method="pre")
-    end
+    sqrtM = sqrtM_vec[is]
+    M = sqrtM^2
+    centers = square_grid(sqrtM, dist)
+    φs = rand(M)
+    ids = ones(Int, M)
+    opt = FMMoptions(true, acc = Int(-log10(tol)), nx = div(sqrtM,2), method="pre")
 
     setup_vec[is,it] = @elapsed begin
         (groups, boxSize) = divideSpace(centers, opt)
@@ -54,7 +53,7 @@ for is = 1:simlen, it = 1:trials
         mFMM = FMMbuildMatrices(k0, P, P2, Q, groups, centers, boxSize, tri=true)
 
         #construct rhs
-        rhs = repeat(α,outer=[M])
+        rhs = repeat(α, M)
         for ic = 1:M
             rng = (ic-1)*(2*P+1) .+ (1:2*P+1)
             if φs[ic] == 0.0
@@ -72,7 +71,7 @@ for is = 1:simlen, it = 1:trials
         pre_agg_buffer = zeros(Complex{Float64},Q,length(groups))
         trans_buffer = Array{Complex{Float64}}(undef, Q)
 
-        MVP = LinearMaps.LinearMap{eltype(rhs)}((output_, x_) ->
+        MVP = LinearMap{eltype(rhs)}((output_, x_) ->
                 ParticleScattering.FMM_mainMVP_pre!(output_, x_, scatteringMatrices,
                     φs, ids, P, mFMM, pre_agg_buffer, trans_buffer),
                 M*(2*P+1), M*(2*P+1), ismutating = true)
@@ -80,16 +79,23 @@ for is = 1:simlen, it = 1:trials
     end
 
     res_vec[is,it] = @elapsed begin
-        x,ch = gmres!(x, MVP, rhs, restart = M*(2*P+1), tol = opt.tol, log = true,
-                initially_zero = true) #no restart, preconditioning
+        x,ch = gmres!(x, MVP, rhs, restart = M*(2*P+1), tol = opt.tol,
+                log = true, initially_zero = true)
     end
     mvp_vec[is,it] = @elapsed begin
         rhs[:] = MVP*x
     end
     iter_vec[is,it] = ch.iters
 end
-
-using JLD; @save "sim1_complexity.jld" res_vec, mvp_vec
+#warmup
+for is = 1:5:simlen
+    time_FMM(is, 1)
+end
+display("starting main benchmark...")
+#benchmark
+for is = 1:simlen, it = 1:trials
+    time_FMM(is, it)
+end
 
 #average over all simulations
 res_vec = vec(mean(res_vec, dims=2))
@@ -97,6 +103,10 @@ iter_vec = vec(mean(iter_vec, dims=2))
 mvp_vec = vec(mean(mvp_vec, dims=2))
 setup_vec = vec(mean(setup_vec, dims=2))
 
+JLD.@save(joinpath(output_dir, "complexity.jld"), M_vec, res_vec, mvp_vec, setup_vec)
+
+########################
+linreg(x, y) = hcat(fill!(similar(x), 1), x) \ y
 a_total,b_total = linreg(log10.(M_vec), log10.(res_vec))
 res_ana = (10^a_total)*(M_vec.^b_total)
 a_mvp,b_mvp = linreg(log10.(M_vec), log10.(mvp_vec))
@@ -113,35 +123,3 @@ legend(("Elapsed time (Sol.)", @sprintf("\$%fM^{%.2f}\$", 10^a_total, b_total),
         "Elapsed time (MVP.)", @sprintf("\$%fM^{%.2f}\$", 10^a_mvp, b_mvp),
         "Elapsed time (Setup)", @sprintf("\$%fM^{%.2f}\$", 10^a_setup, b_setup)), loc = "best")
 xlabel("Number of Scatterers")
-
-### plot with pgfplots
-import PGFPlotsX; const pgf = PGFPlotsX
-pgf.@pgf begin
-    ax = pgf.Axis({xlabel = "Number of scatterers",
-            ylabel = "\$ \\mathrm{Run time} \\ [\\mathrm{s}]\$",
-            xmode = "linear",
-            ymode = "log",
-            width = "10cm",
-            legend_pos = "north west",
-            legend_style = "font = \\footnotesize",
-            legend_cell_align = "left"})
-    push!(ax, pgf.Plot({blue, "only marks", mark = "*"},
-                        pgf.Coordinates(M_vec, res_vec)))
-    tmp_total = floor(log10(10^a_total))
-    push!(ax, pgf.Plot({blue, thick, no_markers},
-                        pgf.Coordinates(M_vec, res_ana)))
-    push!(ax, pgf.Plot({red, only_marks, mark = "triangle*",
-                        mark_options = {fill = "red"}},
-                        pgf.Coordinates(M_vec, mvp_vec)))
-    tmp_mvp = floor(log10(10^a_mvp))
-    push!(ax, pgf.Plot({red, thick, dashed, no_markers},
-                        pgf.Coordinates(M_vec, mvp_ana)))
-    push!(ax, pgf.Legend([
-                    "Elapsed time (solution)",
-                    @sprintf("\$%.1f \\cdot 10^{%d} \\cdot M^{%.2f}\$",
-                            10^a_total/10^tmp_total, tmp_total, b_total),
-                    "Elapsed time (MVP)",
-                    @sprintf("\$%.1f \\cdot 10^{%d} \\cdot M^{%.2f}\$",
-                            10^a_mvp/10^tmp_mvp, tmp_mvp, b_mvp)]))
-end
-pgf.save(dirname(@__FILE__) * "/sim1.tex", ax ,include_preamble = false)

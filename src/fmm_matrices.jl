@@ -70,7 +70,7 @@ function divideSpace(centers::Array{Float64,2}, options; drawGroups = false)
         ylim([y_min - a;y_max + a])
         tight_layout()
         ax = gca()
-        ax[:set_aspect]("equal", adjustable = "box")
+        ax.set_aspect("equal", adjustable = "box")
     end
     return FMMgroups,a
 end
