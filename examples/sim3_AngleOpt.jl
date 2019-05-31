@@ -1,6 +1,6 @@
 using PyPlot, ParticleScattering
-import JLD, Optim, PGFPlotsX; const pgf = PGFPlotsX
-
+import JLD, Optim, LineSearches
+input_dir = homedir()
 output_dir = homedir()
 Ns = 100
 k0 = 2π
@@ -8,18 +8,17 @@ kin = 3*k0
 l0 = 2π/k0
 a1=0.3*l0; a2=0.1*l0; a3=5;
 dmin = R_multipole*2*(a1+a2)
-θ_i = 0.5π
+θ_i = 0.5π; ui = PlaneWave(θ_i)
 
-size_factor = 7
-width = size_factor*3*l0
-height = size_factor*l0
+width = 21l0
+height = 7l0
 myshapefun(N) = rounded_star(a1,a2,a3,N)
-points = [range(0.0, stop=width, length=10) height*ones(10)]
+points = [range(0.0, stop=width, length=20) height*ones(20)]
 
-if !isfile(dirname(@__FILE__) * "/sim3data.jld")
+if !isfile(joinpath(input_dir), "sim3data.jld")
     centers = randpoints(Ns, dmin, width, height, points)
 else
-    import JLD; JLD.@load(dirname(@__FILE__) * "/sim3data.jld", centers)
+    JLD.@load(joinpath(input_dir, "sim3data.jld"), centers)
 end
 
 N,errN = (934, 9.97040926753751e-7) #
@@ -35,7 +34,7 @@ fmm_options = FMMoptions(true, acc = 6, nx = 9, method="pre")
 
 divideSpace(centers, fmm_options; drawGroups = false)
 
-draw_fig = false
+draw_fig = true
 
 # verify and draw
 begin
@@ -50,10 +49,10 @@ begin
     end
 end
 
-plot_border = shapes[1].R*[-1;1;-1;1] + [0.0; width; 0.0; height]
+border = shapes[1].R*[-1;1;-1;1] + [0.0; width; 0.0; height]
 
 optim_options =  Optim.Options(f_tol = 1e-6,
-                                iterations = 100,
+                                iterations = 150,
                                 store_trace = true,
                                 extended_trace = false,
                                 show_trace = true,
@@ -61,22 +60,23 @@ optim_options =  Optim.Options(f_tol = 1e-6,
 
 optim_method = Optim.BFGS(;linesearch = LineSearches.BackTracking())
 
+#precompile
+test_max = optimize_φ(φs, points, P, ui, k0, kin, shapes, centers, ids,
+            fmm_options, optim_options, optim_method; minimize = false)
 optim_time = @elapsed begin
-    test_max = optimize_φ(φs, points, P, PlaneWave(θ_i), k0, kin, shapes,
-            centers, ids, fmm_options, optim_options, optim_method; minimize = false)
+    test_max = optimize_φ(φs, points, P, ui, k0, kin, shapes, centers, ids,
+                fmm_options, optim_options, optim_method; minimize = false)
 end
 
-# %%
-
 sp_before = ScatteringProblem(shapes, ids, centers, φs)
-plot_near_field(k0, kin, P, sp_before, PlaneWave(θ_i),
-                x_points = 600, y_points = 200, border = plot_border);
+Ez1 = plot_near_field(k0, kin, P, sp_before, ui,
+                x_points = 600, y_points = 200, border = border, method="recurrence")
 colorbar()
 clim([0;5])
 
 sp_after = ScatteringProblem(shapes, ids, centers, test_max.minimizer)
-plot_near_field(k0, kin, P, sp_after, PlaneWave(θ_i),
-                x_points = 600, y_points = 200, border = plot_border)
+Ez2 = plot_near_field(k0, kin, P, sp_after, ui,
+                x_points = 600, y_points = 200, border = border, method="recurrence")
 colorbar()
 clim([0;5])
 
@@ -89,3 +89,5 @@ plot(0:inner_iters-1, fobj, label="\$f_{\\mathrm{obj}}\$")
 plot(0:inner_iters-1, gobj, label="\$\\Vert\\mathbf{g}_{\\mathrm{obj}}\\Vert\$")
 legend(loc="best")
 xlabel("Iterations")
+
+JLD.@save joinpath(output_dir, "angle_optim2.jld")

@@ -10,9 +10,12 @@ module ParticleScattering
 using SpecialFunctions, IterativeSolvers, LinearMaps, Optim, SparseArrays, LinearAlgebra
 import Statistics: mean
 import LineSearches
-#For plotting with PyPlot
+#For plotting with PyPlot - actual import is done at runtime
 using PyPlot, PyCall
-patch = pyimport("matplotlib.patches") #circles, polygons
+const patch = PyNULL()
+function __init__()
+    copy!(patch, pyimport("matplotlib.patches")) #circles, polygons
+end
 
 include("PS_types.jl")
 include("shapes.jl")

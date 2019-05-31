@@ -1,9 +1,10 @@
 ######################################
 ## comparing analytical (fictitious sources) and computed fields. minimum N
-## routine runs on multiple cores
+## routine runs on multiple cores and uses a lot of memory -- reduce max Nvec5,
+## Nvecs if necessary
 using PyPlot,Distributed,SpecialFunctions
 import JLD
-addprocs()
+addprocs(4)
 @everywhere using ParticleScattering
 output_dir = homedir()
 
@@ -62,10 +63,9 @@ end
 	N_points = 20_000
 	myshapefun5(N) = rounded_star(a1,a2,5,N)
 	myshapefun_squircle(N) = squircle(a1+0.5a2,N)
+	Nvec5 = unique(round.(Int, 10 .^ range(log10(20), stop=log10(5000), length=200)))
+	Nvecs = unique(round.(Int, 10 .^ range(log10(20), stop=log10(5000), length=200)))
 end
-
-Nvec5 = unique(round.(Int, 10 .^ range(log10(20), stop=log10(5000), length=200)))
-Nvecs = unique(round.(Int, 10 .^ range(log10(20), stop=log10(5000), length=200)))
 
 dt_Nvec5 = @elapsed begin
 	s = myshapefun5(400) #just for radius
@@ -77,9 +77,10 @@ dt_Nvec5 = @elapsed begin
 		ParticleScattering.minimumN_helper(Nvec5[i], k0, kin,
 						myshapefun5, err_points, E_comp, E_ana)
 	end
-	wp = CachingPool(workers())
-	errNvec5 = pmap(innerfunc1, wp, eachindex(Nvec5),
+	errNvec5 = pmap(innerfunc1, eachindex(Nvec5),
 				on_error = ex->(isa(ex, OutOfMemoryError) ? NaN : rethrow(ex)))
+	#or
+	#errNvec5 = pmap(innerfunc1, eachindex(Nvec5))
 end
 display("finished calculating minimum N for rounded star in $dt_Nvec5 seconds")
 any(isnan.(errNvec5)) && @warn "encountered OutOfMemoryError, some values are NaN"
@@ -94,9 +95,10 @@ dt_Nvecs = @elapsed begin
 		ParticleScattering.minimumN_helper(Nvecs[i], k0, kin,
 						myshapefun_squircle, err_points, E_comp, E_ana)
 	end
-	wp = CachingPool(workers())
-	errNvecs = pmap(innerfunc2, wp, eachindex(Nvecs),
+	errNvecs = pmap(innerfunc2, eachindex(Nvecs),
 				on_error = ex->(isa(ex, OutOfMemoryError) ? NaN : rethrow(ex)))
+	#or
+	#errNvecs = pmap(innerfunc2, eachindex(Nvecs))
 end
 display("finished calculating minimum N for squircle in $dt_Nvecs seconds")
 any(isnan.(errNvecs)) && @warn "encountered OutOfMemoryError, some values are NaN"
