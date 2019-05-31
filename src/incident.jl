@@ -136,21 +136,21 @@ function hyinc(k, p, u::PlaneWave)
 end
 
 function hxinc(k, p, u::LineSource)
-    R = sqrt.((view(p,:,1) - u.x).^2 + (view(p,:,2) - u.y).^2)
+    R = sqrt.((view(p,:,1) .- u.x).^2 + (view(p,:,2) .- u.y).^2)
     if any(R .== 0)
 		@warn("Hinc: encountered singularity in incident field, returned NaN")
 		R[R.==0] = NaN
 	end
-    h = (0.25/eta0./R).*besselh.(1,k*R).*(u.y - view(p,:,2))
+    h = (0.25/eta0./R).*besselh.(1,k*R).*(u.y .- view(p,:,2))
 end
 
 function hyinc(k, p, u::LineSource)
-    R = sqrt.((view(p,:,1) - u.x).^2 + (view(p,:,2) - u.y).^2)
+    R = sqrt.((view(p,:,1) .- u.x).^2 + (view(p,:,2) .- u.y).^2)
     if any(R .== 0)
 		@warn("Hinc: encountered singularity in incident field, returned NaN")
 		R[R.==0] = NaN
 	end
-    h = (0.25/eta0./R).*besselh.(1,k*R).*(view(p,:,1) - u.x)
+    h = (0.25/eta0./R).*besselh.(1,k*R).*(view(p,:,1) .- u.x)
 end
 
 #these untested
@@ -159,8 +159,8 @@ function hxinc(k, points, u::CurrentSource)
 	r = Array{Float64}(undef, size(u.p, 1))
     y = Array{Float64}(undef, size(u.p, 1))
 	for i = 1:size(points, 1)
-		y .= points[i,2] - u.p[:,2]
-        r .= hypot.(points[i,1] - u.p[:,1], y)
+		y[:] = points[i,2] - view(u.p,:,2)
+        r[:] = hypot.(points[i,1] .- view(u.p,:,1), y)
 		if any(r .== 0) #point is on source
 			@warn("Hinc: encountered singularity in incident field, returned NaN")
 			res[i] = NaN
@@ -174,8 +174,8 @@ function hyinc(k, points, u::CurrentSource)
 	r = Array{Float64}(undef, size(u.p, 1))
     x = Array{Float64}(undef, size(u.p, 1))
 	for i = 1:size(points, 1)
-		x .= points[i,1] - u.p[:,1]
-        r .= hypot.(x, points[i,2] - u.p[:,2])
+		x[:] = points[i,1] .- view(u.p,:,1)
+        r[:] = hypot.(x, points[i,2] .- view(u.p,:,2))
 		if any(r .== 0) #point is on source
 			@warn("Hinc: encountered singularity in incident field, returned NaN")
 			res[i] = NaN
