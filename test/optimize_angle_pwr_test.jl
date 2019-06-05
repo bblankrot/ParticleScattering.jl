@@ -1,11 +1,9 @@
-#TODO: write and test this
-
-#@testset "optimize angle" begin
+@testset "optimize angle power" begin
     λ0 = 1 #doesn't matter since everything is normalized to λ0
     k0 = 2π/λ0
     kin = 3k0
     ui = PlaneWave(0.0)
-    M = 20
+    M = 10
 
     sfun(N) = rounded_star(0.35λ0, 0.1λ0, 4, N)
     # N, errN = minimumN(k0, kin, sfun; tol=1e-6, N_start = 200, N_min = 100,
@@ -13,7 +11,7 @@
     shapes = [sfun(202)]
     P = 12#P, errP = minimumP(k0, kin, shapes[1]; P_max = 30, tol = 1e-7)
 
-    centers =  rect_grid(2, div(M,2), λ0, λ0) #2xM/2 grid with distance λ0
+    centers = rect_grid(2, div(M,2), λ0, λ0) #2xM/2 grid with distance λ0
     ids = ones(Int, M)
     φs0 = zeros(M)
     sp = ScatteringProblem(shapes, ids, centers, φs0)
@@ -36,7 +34,7 @@
     buf = FMMbuffer(M, P, Q, length(groups))
     scatteringMatrices,innerExpansions = particleExpansion(k0, kin, shapes, P, ids)
     scatteringMatrices = [scatteringMatrices]
-    scatteringLU = [[lufact(scatteringMatrices[1][iid]) for iid = 1:length(shapes)]]
+    scatteringLU = [[lu(scatteringMatrices[1][iid]) for iid = 1:length(shapes)]]
 
     function fobj_test(sv::Array{PowerBuffer})
         res = -sv[1].pow
@@ -55,7 +53,9 @@
         φs0)
 
     res = Optim.optimize(df, φs0, Optim.LBFGS(), optim_options)
-    pwr0 = 0.5/eta0*len
-    res.minimum/pwr0
 
-#end
+    power_after = calc_power(k0, kin, P, ScatteringProblem(shapes, ids, centers,
+                    res.minimizer), points, nhat, ui)*len
+    @test res.f_converged
+    @test power_after ≈ 0.00094388385
+end

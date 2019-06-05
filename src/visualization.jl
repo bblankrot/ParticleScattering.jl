@@ -157,7 +157,8 @@ function calc_near_field(k0, kin, P, sp::ScatteringProblem, points, ui::Einc;
         end
         beta = result[1]
     else
-        beta, sigma_mu = solve_particle_scattering(k0, kin, P, sp, ui)
+        beta, sigma_mu = solve_particle_scattering(k0, kin, P, sp, ui,
+                            verbose = verbose)
     end
 
     #first, let's mark which points are in which shapes in tags:

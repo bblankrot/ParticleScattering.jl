@@ -31,11 +31,7 @@ accuracy due to `N` is mostly irrelevant).
 
 Above a certain `N`, this error tends to decay as ``O(N^{-3})``, but with a
 multiplicative factor that is heavily dependent on the particle and wavelength.
-With `minimumN`, we first guess a value and then use a binary search to find the
-minimal `N` satisfying some error tolerance `tol`:
-
-```@docs
-minimumN
-```
+With [`minimumN`](@ref), we first guess a value and then use a binary search to find the
+minimal `N` satisfying some error tolerance `tol`.
 
 ## Multipole Parameter P

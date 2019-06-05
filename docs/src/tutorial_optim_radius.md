@@ -26,8 +26,7 @@ fmm_options = FMMoptions(true, acc = 6, dx = 2a)
 [`optimize_radius`](@ref) not only allows us to optimize all of the radii simultaneously,
 but also to assign several particles the same `id`, which can be useful when the
 target radii are expected to have symmetry of some type.
-Here we shall assume symmetry with respect to the ``x``-axis (horizontal line
-of symmetry) with `uniqueind`:
+Here we shall assume symmetry with respect to the ``x``-axis with `uniqueind`:
 
 ```julia
 # let's impose symmetry wrt x-axis
@@ -55,8 +54,7 @@ points = [4a 0.0]
 r_max = (0.4*a)*ones(J)
 r_min = (1e-3*a)*ones(J)
 rs0 = (0.25*a)*ones(J)
-@assert verify_min_distance([CircleParams(r_max[i]) for i = 1:J],
-        centers, ids, points)
+@assert verify_min_distance(CircleParams.(r_max), centers, ids, points)
 ```
 
 The optimization process is initiated by running:
@@ -71,14 +69,14 @@ With the optimization process complete, we can plot the electric field with the
 initial and optimized radii:
 
 ```julia
-sp1 = ScatteringProblem([CircleParams(rs0[i]) for i = 1:J], ids, centers, φs)
+sp1 = ScatteringProblem(CircleParams.(rs0), ids, centers, φs)
 plot_near_field(k0, kin, P, sp1, pw, x_points = 150, y_points = 150,
         opt = fmm_options, border = 0.9*[-1;1;-1;1], normalize = a)
 colorbar()
 clim([0;2.5])
 xlabel("x/a")
 ylabel("y/a")
-sp2 = ScatteringProblem([CircleParams(rs[i]) for i = 1:J], ids, centers, φs)
+sp2 = ScatteringProblem(CircleParams.(rs), ids, centers, φs)
 plot_near_field(k0, kin, P, sp2, pw, x_points = 150, y_points = 150,
         opt = fmm_options, border = 0.9*[-1;1;-1;1], normalize = a)
 colorbar()

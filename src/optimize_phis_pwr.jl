@@ -65,26 +65,20 @@ function optimize_pwr_φ_g!(grad_stor, φs, last_φs, opb, power_buffer, ids, sc
         !ch.isconverged && error("""FMM process did not converge for adjoint,
             normalized residual:
             $(norm(MVP*opb[i].λadj - opb[i].rhs_grad)/norm(opb[i].rhs_grad))""")
-        Dd = Diagonal(-1.0im*collect(-P:P))
+        D = -1.0im*collect(-P:P)
         v = Array{Complex{Float64}}(undef, 2*P+1) #TODO: minimize dynamic alloc
+        v2 = Array{Complex{Float64}}(undef, 2*P+1)
         for n = 1:Ns
             rng = (n-1)*(2*P+1) .+ (1:2*P+1)
-            # rotateMultipole!(v, view(opb[i].β,rng), -φs[n], P)
-            # v[:] = scatteringLU[i][ids[n]]\v #LU decomp with pivoting
-            # v[:] .*= -D
-            # v[:] = scatteringMatrices[i][ids[n]]*v
-            # rotateMultipole!(v, φs[n], P)
-            # v[:] += D.*opb[i].β[rng]
-            # grad_stor[n] += (-2)*real(transpose(view(opb[i].λadj,rng))*v)
-            # #prepare for next one - #TODO: check why this is here
-            # v[:] = 0.0im
-
-            #TODO: adapt code above to fit
-            Φ = Diagonal(exp.(-1.0im*(-P:P)*φs[n]))
-            temppp = scatteringLU[i][ids[n]]\(conj(Φ)*opb[i].β[rng])
-            temppp2 = Dd*(scatteringMatrices[i][ids[n]]*temppp) -
-                        scatteringMatrices[i][ids[n]]*(Dd*temppp)
-            grad_stor[n] += (-2)*real(transpose(opb[i].λadj[rng])*(Φ*temppp2))
+            rotateMultipole!(v, view(opb[i].β,rng), -φs[n], P)
+            ldiv!(scatteringLU[i][ids[n]], v)
+            v2[:] = scatteringMatrices[i][ids[n]]*v
+            v2 .*= D
+            v .*= D
+            v[:] = scatteringMatrices[i][ids[n]]*v
+            v2 .-= v
+            rotateMultipole!(v2, φs[n], P)
+            grad_stor[n] += (-2)*real(transpose(opb[i].λadj[rng])*v2)
         end
     end
 end

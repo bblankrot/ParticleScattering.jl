@@ -114,7 +114,7 @@ function optimize_pwr_rs_common!(rs, last_rs, opb, power_buffer, ids, scattering
                                             fmmbuf.pre_agg, fmmbuf.trans),
                         Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
 
-            opb[i].β[:] = 0
+            opb[i].β[:] .= 0
             opb[i].β,ch = gmres!(opb[i].β, MVP, fmmbuf.rhs,
                                     restart = Ns*(2*P+1), tol = fmmopts.tol,
                                     log = true, initially_zero = true) #no restart
@@ -150,7 +150,7 @@ function optimize_pwr_rs_g!(grad_stor, rs, last_rs, opb, power_buffer, ids, scat
                 Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
 
         #solve adjoint problem
-        opb[i].λadj[:] = 0
+        opb[i].λadj[:] .= 0
         opb[i].λadj, ch = gmres!(opb[i].λadj, MVP, opb[i].rhs_grad,
                             restart = Ns*(2*P+1), tol = fmmopts.tol, log = true,
                             initially_zero = true) #no restart
@@ -165,7 +165,7 @@ function optimize_pwr_rs_g!(grad_stor, rs, last_rs, opb, power_buffer, ids, scat
                 if ids[ic] == n
                     opb[i].rhs_grad[rng] = dS_S[i][n]*opb[i].β[rng]
                 else
-                    opb[i].rhs_grad[rng] = 0.0
+                    opb[i].rhs_grad[rng] .= 0.0
                 end
             end
             grad_stor[n] += -2*real(transpose(opb[i].λadj)*opb[i].rhs_grad)
@@ -194,7 +194,7 @@ function dPdβ_pwr!(sv::PowerBuffer)
     fill!(sv.∂pow, 0.0)
     #this is a sum of real and imaginary parts, hence the additional 1/2 factor
     for ip = 1:len
-        cf = ((ip == 1 || ip == len) ? 0.5 : 1.0)*sv.l/(len-1) #trapezoidal rule constant
+        cf = ifelse(ip == 1 || ip == len, 0.5, 1.0)*sv.l/(len-1) #trapezoidal rule constant
         sv.∂pow .+= (-0.25*cf*sv.nhat[ip,1])*(conj(sv.Hy[ip])*sv.HEz[ip] +
                                     conj(sv.Ez[ip])*sv.HHy[ip])
         sv.∂pow .+= (0.25*cf*sv.nhat[ip,2])*(conj(sv.Hx[ip])*sv.HEz[ip] +
