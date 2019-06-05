@@ -14,9 +14,6 @@ notifications:
 env:
  - PYTHON=Conda-python
 after_success:
-  #doc
-  - julia -e 'using Pkg; Pkg.add("Documenter")'
-  - julia -e 'cd(Pkg.dir("ParticleScattering")); include(joinpath("docs", "make.jl"))'
   # push coverage results to Codecov
   - julia -e 'Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
 
