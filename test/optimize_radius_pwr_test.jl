@@ -43,6 +43,9 @@
     dS_S = [[sparse(one(Complex{Float64})I, 2P+1, 2P+1) for i = 1:Nrs] for i = 1:2]
 
     function fobj_testr(sv::Array{PowerBuffer})
+        if sv[1].pow < 0 || sv[2].pow < 0
+            return Inf
+        end
         barr = -(log(sv[1].pow) + log(sv[2].pow)) #so they're > 0
         res = sv[2].pow/sv[1].pow
         res*(1 + barr)
@@ -50,6 +53,11 @@
 
     function gobj_testr!(sv::Array{PowerBuffer}, opb::Array{OptimProblemBuffer})
         #calculate -(∂f/∂β)ᵀ for adjoint method
+        if sv[1].pow < 0 || sv[2].pow < 0
+            opb[1].rhs_grad[:] .= 0
+            opb[2].rhs_grad[:] .= 0
+            return
+        end
         barr = -(log(sv[1].pow) + log(sv[2].pow))
         res = sv[2].pow/sv[1].pow
         opb[1].rhs_grad[:] = sv[1].∂pow*((1 + barr)*sv[2].pow/sv[1].pow^2)
