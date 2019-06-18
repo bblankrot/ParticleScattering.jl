@@ -43,13 +43,19 @@
     dS_S = [[sparse(one(Complex{Float64})I, 2P+1, 2P+1) for i = 1:Nrs] for i = 1:2]
 
     function fobj_testr(sv::Array{PowerBuffer})
+        barr = -(log(sv[1].pow) + log(sv[2].pow)) #so they're > 0
         res = sv[2].pow/sv[1].pow
+        res*(1 + barr)
     end
 
     function gobj_testr!(sv::Array{PowerBuffer}, opb::Array{OptimProblemBuffer})
         #calculate -(∂f/∂β)ᵀ for adjoint method
-        opb[1].rhs_grad[:] = sv[1].∂pow*(sv[2].pow/sv[1].pow^2)
-        opb[2].rhs_grad[:] = sv[2].∂pow*(-1/sv[1].pow)
+        barr = -(log(sv[1].pow) + log(sv[2].pow))
+        res = sv[2].pow/sv[1].pow
+        opb[1].rhs_grad[:] = sv[1].∂pow*((1 + barr)*sv[2].pow/sv[1].pow^2)
+        opb[2].rhs_grad[:] = sv[2].∂pow*(-(1 + barr)/sv[1].pow)
+        opb[1].rhs_grad .+= sv[1].∂pow*(res/sv[1].pow)
+        opb[2].rhs_grad .+= sv[2].∂pow*(res/sv[2].pow)
     end
 
     #initial, last must be different before first iteration
@@ -63,7 +69,11 @@
     sp_after = ScatteringProblem(CircleParams.(res.minimizer), ids, centers, φs)
     power_after_right = calc_power(k0, kin, P, sp_after, points1, nhat1, ui[1])*len
     power_after_left = calc_power(k0, kin, P, sp_after, points2, nhat2, ui[2])*len
+    display("right:")
     display(power_after_right)
+    display("left:")
     display(power_after_left)
-    @test power_after_right/power_after_left ≈ 109_320.21
+    @test power_after_right > 0
+    @test power_after_left > 0
+    @test power_after_right/power_after_left > 1
 end
