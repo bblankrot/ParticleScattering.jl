@@ -44,7 +44,7 @@
 
     function fobj_testr(sv::Array{PowerBuffer})
         if sv[1].pow < 0 || sv[2].pow < 0
-            return Inf
+            return abs(sv[2].pow/sv[1].pow)*1e9 #instead of Inf
         end
         barr = -(log(sv[1].pow) + log(sv[2].pow)) #so they're > 0
         res = sv[2].pow/sv[1].pow
