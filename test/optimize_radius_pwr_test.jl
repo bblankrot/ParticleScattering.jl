@@ -31,7 +31,7 @@
     groups,boxSize = divideSpace(sp.centers, fmm_options)
     P2,Q = FMMtruncation(fmm_options.acc, boxSize, k0)
     optim_options = Optim.Options(f_tol = 1e-5, iterations = 10, outer_iterations = 5,
-                        store_trace = true, show_trace = true)
+                        store_trace = false, show_trace = false)
     # Allocate buffers
     opb = [OptimProblemBuffer(k0, kin, sp.centers, ui[1], P),
             OptimProblemBuffer(k0, kin, sp.centers, ui[2], P)]
@@ -77,10 +77,6 @@
     sp_after = ScatteringProblem(CircleParams.(res.minimizer), ids, centers, φs)
     power_after_right = calc_power(k0, kin, P, sp_after, points1, nhat1, ui[1])*len
     power_after_left = calc_power(k0, kin, P, sp_after, points2, nhat2, ui[2])*len
-    display("right:")
-    display(power_after_right)
-    display("left:")
-    display(power_after_left)
     @test power_after_right > 0
     @test power_after_left > 0
     @test power_after_right/power_after_left > 1
