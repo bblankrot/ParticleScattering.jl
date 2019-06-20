@@ -1,9 +1,11 @@
 using Documenter, ParticleScattering
 
-makedocs(format = :html,
+makedocs(
     sitename = "ParticleScattering.jl",
     authors = "Boaz Blankrot",
-    linkcheck = !("skiplinks" in ARGS),
+    format = Documenter.HTML(
+        prettyurls = get(ENV, "CI", nothing) == "true"
+    ),
     pages = Any[
         "Home" => "index.md",
         "Tutorials" => Any[
@@ -21,8 +23,4 @@ makedocs(format = :html,
 
 deploydocs(
     repo   = "github.com/bblankrot/ParticleScattering.jl.git",
-    target = "build",
-    julia = "0.6",
-    deps   = nothing,
-    make   = nothing
 )

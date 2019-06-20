@@ -18,19 +18,19 @@ mutable struct PowerBuffer #one for each *power calculation* (can be > 1 for eac
     l::Float64 #arc length
     PowerBuffer(Ns::Integer, P::Integer, nhat, iₚ) =
             new(iₚ,
-                Array{Complex{Float64}}(size(nhat, 1)),
-                Array{Complex{Float64}}(size(nhat, 1)),
-                Array{Complex{Float64}}(size(nhat, 1)),
-                Array{Complex{Float64}}(size(nhat, 1)),
-                Array{Complex{Float64}}(size(nhat, 1)),
-                Array{Complex{Float64}}(size(nhat, 1)),
+                Array{Complex{Float64}}(undef, size(nhat, 1)),
+                Array{Complex{Float64}}(undef, size(nhat, 1)),
+                Array{Complex{Float64}}(undef, size(nhat, 1)),
+                Array{Complex{Float64}}(undef, size(nhat, 1)),
+                Array{Complex{Float64}}(undef, size(nhat, 1)),
+                Array{Complex{Float64}}(undef, size(nhat, 1)),
                 0.0,
-                [Array{Complex{Float64}}(Ns*(2P+1)) for i=1:size(nhat, 1)],
-                [Array{Complex{Float64}}(Ns*(2P+1)) for i=1:size(nhat, 1)],
-                [Array{Complex{Float64}}(Ns*(2P+1)) for i=1:size(nhat, 1)],
+                [Array{Complex{Float64}}(undef, Ns*(2P+1)) for i=1:size(nhat, 1)],
+                [Array{Complex{Float64}}(undef, Ns*(2P+1)) for i=1:size(nhat, 1)],
+                [Array{Complex{Float64}}(undef, Ns*(2P+1)) for i=1:size(nhat, 1)],
                 nhat,
-                Array{Complex{Float64},2}(size(nhat)),
-                Array{Complex{Float64}}(Ns*(2P+1)),
+                Array{Complex{Float64},2}(undef, size(nhat)),
+                Array{Complex{Float64}}(undef, Ns*(2P+1)),
                 0.0)
 end
 
@@ -38,15 +38,15 @@ end
 function optMatrixPwr(points, centers, Ns, P, k0, ui, iₚ, nhat, l)
     sv = PowerBuffer(Ns, P, nhat, iₚ)
     cf = 1/(1im*k0*eta0)
-    pt = Array{Float64}(2)
+    pt = Array{Float64}(undef, 2)
     for ip = 1:size(points,1)
         for ic = 1:Ns
             pt[1] = points[ip,1] - centers[ic,1]
             pt[2] = points[ip,2] - centers[ic,2]
-            θ = atan2(pt[2], pt[1])
+            θ = atan(pt[2], pt[1])
             R = hypot(pt[1], pt[2])
 
-            ind = (ic-1)*(2*P+1) + P + 1
+            ind = (ic-1)*(2*P+1) .+ P + 1
             Hₚ₋₂ = besselh(-1, 1, k0*R)
             Hₚ₋₁ = besselh(0, 1, k0*R)
 
@@ -88,13 +88,15 @@ end
 function OptimProblemBuffer(k0::Float64, kin::Float64, centers::Array{Float64,2}, ui::Einc, P::Integer)
     Ns = size(centers, 1)
     α = ParticleScattering.u2α(k0, ui, centers, P)
-    OptimProblemBuffer(k0, kin, α, ui, Array{Complex{Float64}}(Ns*(2*P+1)),
-        Array{Complex{Float64}}(Ns*(2*P+1)), Array{Complex{Float64}}(Ns*(2*P+1)))
+    OptimProblemBuffer(k0, kin, α, ui,
+        Array{Complex{Float64}}(undef, Ns*(2*P+1)),
+        Array{Complex{Float64}}(undef, Ns*(2*P+1)),
+        Array{Complex{Float64}}(undef, Ns*(2*P+1)))
 end
 
 function optimize_pwr_rs_common!(rs, last_rs, opb, power_buffer, ids, scatteringMatrices, dS_S, P, Ns, fmmbuf, fmmopts, φs, mFMM)
     if rs != last_rs
-        copy!(last_rs, rs)
+        copyto!(last_rs, rs)
         #do whatever common calculations and save to shared_var
         for i in eachindex(opb)
             #TODO: if multiple problems have same k0, these calcs are duplicated
@@ -102,7 +104,7 @@ function optimize_pwr_rs_common!(rs, last_rs, opb, power_buffer, ids, scattering
                 ParticleScattering.updateCircleScatteringDerivative!(scatteringMatrices[i][id], dS_S[i][id], opb[i].k0, opb[i].kin, rs[id], P)
             end
             for ic = 1:Ns
-                rng = (ic-1)*(2*P+1) + (1:2*P+1)
+                rng = (ic-1)*(2*P+1) .+ (1:2*P+1)
                 fmmbuf.rhs[rng] = scatteringMatrices[i][ids[ic]]*opb[i].α[rng]
             end
 
@@ -112,7 +114,7 @@ function optimize_pwr_rs_common!(rs, last_rs, opb, power_buffer, ids, scattering
                                             fmmbuf.pre_agg, fmmbuf.trans),
                         Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
 
-            opb[i].β[:] = 0
+            opb[i].β[:] .= 0
             opb[i].β,ch = gmres!(opb[i].β, MVP, fmmbuf.rhs,
                                     restart = Ns*(2*P+1), tol = fmmopts.tol,
                                     log = true, initially_zero = true) #no restart
@@ -148,7 +150,7 @@ function optimize_pwr_rs_g!(grad_stor, rs, last_rs, opb, power_buffer, ids, scat
                 Ns*(2*P+1), Ns*(2*P+1), ismutating = true)
 
         #solve adjoint problem
-        opb[i].λadj[:] = 0
+        opb[i].λadj[:] .= 0
         opb[i].λadj, ch = gmres!(opb[i].λadj, MVP, opb[i].rhs_grad,
                             restart = Ns*(2*P+1), tol = fmmopts.tol, log = true,
                             initially_zero = true) #no restart
@@ -159,14 +161,14 @@ function optimize_pwr_rs_g!(grad_stor, rs, last_rs, opb, power_buffer, ids, scat
             #rhs_grad is still usually sparse - utilize this to reduce complexity
             #here O(N^2) -> O(N)
             for ic = 1:Ns
-                rng = (ic-1)*(2*P+1) + (1:2*P+1)
+                rng = (ic-1)*(2*P+1) .+ (1:2*P+1)
                 if ids[ic] == n
                     opb[i].rhs_grad[rng] = dS_S[i][n]*opb[i].β[rng]
                 else
-                    opb[i].rhs_grad[rng] = 0.0
+                    opb[i].rhs_grad[rng] .= 0.0
                 end
             end
-            grad_stor[n] += -2*real(opb[i].λadj.'*opb[i].rhs_grad)
+            grad_stor[n] += -2*real(transpose(opb[i].λadj)*opb[i].rhs_grad)
         end
     end
 end
@@ -174,12 +176,12 @@ end
 function calc_multi_pwr!(power_buffer, opb)
     for sv in power_buffer
         len = length(sv.HEz)
-        Sn = Array{Complex{Float64}}(len) # S⋅n
+        Sn = Array{Complex{Float64}}(undef, len) # S⋅n
         βi = opb[sv.iₚ].β
         for ip = 1:len
-            sv.Ez[ip] = sv.HEz[ip].'*βi + sv.Ez_inc[ip]
-            sv.Hx[ip] = sv.HHx[ip].'*βi + sv.Hx_inc[ip]
-            sv.Hy[ip] = sv.HHy[ip].'*βi + sv.Hy_inc[ip]
+            sv.Ez[ip] = transpose(sv.HEz[ip])*βi + sv.Ez_inc[ip]
+            sv.Hx[ip] = transpose(sv.HHx[ip])*βi + sv.Hx_inc[ip]
+            sv.Hy[ip] = transpose(sv.HHy[ip])*βi + sv.Hy_inc[ip]
             Sn[ip] = -0.5*real(sv.Ez[ip]*conj(sv.Hy[ip]))*sv.nhat[ip,1]
             Sn[ip] += 0.5*real(sv.Ez[ip]*conj(sv.Hx[ip]))*sv.nhat[ip,2]
         end
@@ -192,7 +194,7 @@ function dPdβ_pwr!(sv::PowerBuffer)
     fill!(sv.∂pow, 0.0)
     #this is a sum of real and imaginary parts, hence the additional 1/2 factor
     for ip = 1:len
-        cf = ((ip == 1 || ip == len) ? 0.5 : 1.0)*sv.l/(len-1) #trapezoidal rule constant
+        cf = ifelse(ip == 1 || ip == len, 0.5, 1.0)*sv.l/(len-1) #trapezoidal rule constant
         sv.∂pow .+= (-0.25*cf*sv.nhat[ip,1])*(conj(sv.Hy[ip])*sv.HEz[ip] +
                                     conj(sv.Ez[ip])*sv.HHy[ip])
         sv.∂pow .+= (0.25*cf*sv.nhat[ip,2])*(conj(sv.Hx[ip])*sv.HEz[ip] +

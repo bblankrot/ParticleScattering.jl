@@ -6,18 +6,18 @@ function optimize_rs_mf(rs0, r_min, r_max, points, point_flags, ids, P, ui, k0,
 
     Ns = size(centers,1)
     φs = zeros(Ns)
-    Nk = length(k0); assert(Nk == length(kin))
+    Nk = length(k0); @assert Nk == length(kin)
     J = length(rs0)
-    assert(maximum(ids) <= J)
+    @assert maximum(ids) <= J
     if length(r_min) == 1
         r_min = r_min*ones(Float64,J)
     else
-        assert(J == length(r_min))
+        @assert J == length(r_min)
     end
     if length(r_max) == 1
         r_max = r_max*ones(Float64,J)
     else
-        assert(J == length(r_max))
+        @assert J == length(r_max)
     end
     verify_min_distance(CircleParams.(r_max), centers, ids,
         points) || error("Particles are too close or r_max are too large.")
@@ -25,8 +25,8 @@ function optimize_rs_mf(rs0, r_min, r_max, points, point_flags, ids, P, ui, k0,
     groups,boxSize = divideSpace(centers, fmmopts)
     P2,Q = FMMtruncation(fmmopts.acc, boxSize, maximum(k0))
     mFMM = [FMMbuildMatrices(k0[ik], P, P2, Q, groups, centers, boxSize) for ik = 1:Nk]
-    scatteringMatrices = [[speye(Complex{Float64}, 2*P+1) for i = 1:J] for ik = 1:Nk]
-    dS_S = [[speye(Complex{Float64}, 2*P+1) for i = 1:J] for ik = 1:Nk]
+    scatteringMatrices = [[sparse(one(Complex{Float64})I, 2*P+1, 2*P+1) for i = 1:J] for ik = 1:Nk]
+    dS_S = [[sparse(one(Complex{Float64})I, 2*P+1, 2*P+1) for i = 1:J] for ik = 1:Nk]
 
     #calculate nd expand incident field
     α = [u2α(k0[ik], ui, centers, P) for ik = 1:Nk]
@@ -37,7 +37,7 @@ function optimize_rs_mf(rs0, r_min, r_max, points, point_flags, ids, P, ui, k0,
     buf = FMMbuffer(Ns,P,Q,length(groups))
     shared_var = [OptimBuffer(Ns, P, size(points,1), J) for ik = 1:Nk]
     initial_rs = copy(rs0)
-    last_rs = similar(initial_rs); last_rs[1] = NaN; assert(last_rs != initial_rs) #initial_rs, last_rs must be different before first iteration
+    last_rs = similar(initial_rs); last_rs[1] = NaN; @assert last_rs != initial_rs #initial_rs, last_rs must be different before first iteration
     df = OnceDifferentiable(
         rs -> optimize_rs_mf_f(rs, last_rs, shared_var, φs, α, H, points, point_flags,
                             P, uinc_, Ns, k0, kin, centers, scatteringMatrices, dS_S,
@@ -54,7 +54,7 @@ function optimize_rs_mf_common!(rs, last_rs, shared_var, φs, α,
             H, points, P, uinc_, Ns, k0, kin, centers, scatteringMatrices,
             dS_S, ids, mFMM, fmmopts, buf)
     if rs != last_rs
-        copy!(last_rs, rs)
+        copyto!(last_rs, rs)
         #do whatever common calculations and save to shared_var
         #construct rhs
         for ik in eachindex(k0)
@@ -63,7 +63,7 @@ function optimize_rs_mf_common!(rs, last_rs, shared_var, φs, α,
                     dS_S[ik][id], k0[ik], kin[ik], rs[id], P)
             end
             for ic = 1:Ns
-                rng = (ic-1)*(2*P+1) + (1:2*P+1)
+                rng = (ic-1)*(2*P+1) .+ (1:2*P+1)
                 buf.rhs[rng] = scatteringMatrices[ik][ids[ic]]*α[ik][rng]
             end
 
@@ -80,7 +80,7 @@ function optimize_rs_mf_common!(rs, last_rs, shared_var, φs, α,
             !ch.isconverged && error("""FMM process did not converge, normalized
                 residual: $(norm(MVP*shared_var[ik].β - buf.rhs)/norm(buf.rhs))""")
 
-            shared_var[ik].f[:] = H[ik].'*shared_var[ik].β
+            shared_var[ik].f[:] = transpose(H[ik])*shared_var[ik].β
             shared_var[ik].f[:] .+= uinc_[ik]
         end
     end
@@ -121,14 +121,14 @@ function optimize_rs_mf_g!(grad_stor, rs, last_rs, shared_var, φs, α, H, point
             #compute n-th gradient - here we must pay the price for symmetry
             #as more than one beta is affected. Overwrites rhs_grad.
             for ic = 1:Ns
-                rng = (ic-1)*(2*P+1) + (1:2*P+1)
+                rng = (ic-1)*(2*P+1) .+ (1:2*P+1)
                 if ids[ic] == n
                     shared_var[ik].rhs_grad[rng] = dS_S[ik][n]*shared_var[ik].β[rng]
                 else
                     shared_var[ik].rhs_grad[rng] = 0.0
                 end
             end
-            grad_stor[n] += -2*real(λadj.'*shared_var[ik].rhs_grad)
+            grad_stor[n] += -2*real(transpose(λadj)*shared_var[ik].rhs_grad)
         end
     end
 end

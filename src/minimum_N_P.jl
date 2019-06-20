@@ -22,7 +22,7 @@ function minimumN(kout, kin, shape_function; tol = 1e-9, N_points = 10_000, N_st
     s = shape_function(N_max) #just for radius
     err_points = [s.R*f(i*2*pi/N_points) for i=0:(N_points-1), f in (cos,sin)]
     E_ana = (0.25im*besselh(0, 1, kout*s.R))*ones(Complex{Float64}, N_points)
-    E_comp = Array{Complex{Float64}}(N_points)
+    E_comp = Array{Complex{Float64}}(undef, N_points)
 
     N = N_start
     err_start = minimumN_helper(N, kout, kin, shape_function, err_points, E_comp, E_ana)
@@ -36,18 +36,18 @@ function minimumN(kout, kin, shape_function; tol = 1e-9, N_points = 10_000, N_st
 
     if err > tol
         if N > N_max
-            warn("minimumN: Cannot enter binary search mode.")
+            @warn("minimumN: Cannot enter binary search mode.")
         else
-            warn("minimumN: Entering binary search mode in [$N,$N_max].")
+            @warn("minimumN: Entering binary search mode in [$N,$N_max].")
             N, err = binarySearch(N_ -> -minimumN_helper(N_, kout, kin,
                 shape_function, err_points, E_comp, E_ana), -tol, N, N_max)
         end
-        err > tol && warn("minimumN: Failed to find err(N) < tol.")
+        err > tol && @warn("minimumN: Failed to find err(N) < tol.")
     elseif err < tol
 		if N == N_min
 			return N,err
 		end
-        warn("minimumN: Entering binary search in [$N_min,$N].")
+        @warn("minimumN: Entering binary search in [$N_min,$N].")
         N, err = binarySearch(N_ -> -minimumN_helper(N_, kout, kin,
                     shape_function, err_points, E_comp, E_ana), -tol, N_min, N)
     end
@@ -79,12 +79,12 @@ Uses binary search between `P_min` and `P_max`.
 """
 function minimumP(k0, kin, s::ShapeParams; tol = 1e-9, N_points = 10_000, P_min = 1, P_max = 60, dist = 2.0)
 	err_points = [dist*s.R*f(i*2*pi/N_points) for i=0:(N_points-1), f in (cos,sin)]
-	warn("""minimumP: Calculating at $dist*R, thus implicitly assuming all scatterers have same radius and we do not care about closer implications.""")
+	@warn("""minimumP: Calculating at $dist*R, thus implicitly assuming all scatterers have same radius and we do not care about closer implications.""")
 
     #compute direct solution for comparison
     inner = get_potentialPW(k0, kin, s, 0.0)
     E_quadrature = scatteredfield(inner, k0, s, err_points)
-    E_multipole = Array{Complex{Float64}}(N_points)
+    E_multipole = Array{Complex{Float64}}(undef, N_points)
 
     P, errP = binarySearch(P_ -> -minimumP_helper(k0, kin, s, P_,
 		N_points, err_points, E_quadrature, E_multipole), -tol, P_min, P_max)
@@ -92,7 +92,7 @@ end
 
 function minimumP_helper(k0, kin, s, P, N_points, err_points, E_quadrature, E_multipole)
     #helper function for computing error for given P
-    E_multipole[:] = 0.0
+    E_multipole[:] .= 0.0
 	sp = ScatteringProblem([s],[1],[0.0 0.0],[0.0])
     beta_p,inn = solve_particle_scattering(k0, kin, P, sp, PlaneWave(0.0),
 		verbose = false)

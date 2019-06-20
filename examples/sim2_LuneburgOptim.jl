@@ -12,7 +12,7 @@ kin = k0*sqrt(er)
 N_cells = Int(round(2*R_lens/a_lens))
 centers, ids_lnbrg, rs_lnbrg = luneburg_grid(R_lens, N_cells, er)
 φs = zeros(Float64, length(ids_lnbrg))
-θ_i = 0.0
+pw = PlaneWave(0.0)
 P = 5
 
 fmm_options = FMMoptions(true, acc = 6, dx = 2*a_lens, method = "pre")
@@ -28,40 +28,31 @@ r_min = (a_lens*1e-3)*ones(size(centers,1))
 rs0 = (0.25*a_lens)*ones(size(centers,1))
 
 ids_max = collect(1:length(rs0))
-test_max = optimize_radius(rs0, r_min, r_max, points, ids_max, P, PlaneWave(θ_i), k0, kin, #precompile
+test_max = optimize_radius(rs0, r_min, r_max, points, ids_max, P, pw, k0, kin, #precompile
                 centers, fmm_options, optim_options, minimize = false)
-tic()
-test_max = optimize_radius(rs0, r_min, r_max, points, ids_max, P, PlaneWave(θ_i), k0, kin,
+optim_time = @elapsed begin
+    test_max = optimize_radius(rs0, r_min, r_max, points, ids_max, P, pw, k0, kin,
                 centers, fmm_options, optim_options, minimize = false)
-optim_time = toq()
+end
 rs_max = test_max.minimizer
 
 # plot near fields
-filename1 = output_dir * "/opt_r_luneburg.tex"
-filename2 = output_dir * "/opt_r_max.tex"
-filename3 = output_dir * "/opt_r_0.tex"
 border = (R_lens + a_lens)*[-1;1;-1;1]
 
 sp1 = ScatteringProblem([CircleParams(rs_lnbrg[i]) for i in eachindex(rs_lnbrg)],
         ids_lnbrg, centers, φs)
-Ez1 = plot_near_field(k0, kin, P, sp1, PlaneWave(θ_i), x_points = 150, y_points = 150,
+Ez1 = plot_near_field(k0, kin, P, sp1, pw, x_points = 300, y_points = 300,
         opt = fmm_options, border = border)
-plot_near_field_pgf(filename1, k0, kin, P, sp1, PlaneWave(θ_i); opt = fmm_options,
-    x_points = 201, y_points = 201, border = border)
 
 sp2 = ScatteringProblem([CircleParams(rs_max[i]) for i in eachindex(rs_max)],
         ids_max, centers, φs)
-Ez2 = plot_near_field(k0, kin, P, sp2, PlaneWave(θ_i), x_points = 150, y_points = 150,
+Ez2 = plot_near_field(k0, kin, P, sp2, pw, x_points = 300, y_points = 300,
             opt = fmm_options, border = border)
-plot_near_field_pgf(filename2, k0, kin, P, sp2, PlaneWave(θ_i); opt = fmm_options,
-    x_points = 201, y_points = 201, border = border)
 
 sp3 = ScatteringProblem([CircleParams(rs0[i]) for i in eachindex(rs0)],
         collect(1:length(rs0)), centers, φs)
-Ez3 = plot_near_field(k0, kin, P, sp3, PlaneWave(θ_i), x_points = 150, y_points = 150,
+Ez3 = plot_near_field(k0, kin, P, sp3, pw, x_points = 300, y_points = 300,
         opt = fmm_options, border = border)
-plot_near_field_pgf(filename3, k0, kin, P, sp3, PlaneWave(θ_i); opt = fmm_options,
-    x_points = 201, y_points = 201, border = border)
 
 #plot convergence
 inner_iters = length(test_max.trace)
@@ -70,43 +61,20 @@ fobj = -[test_max.trace[i].value for i=1:inner_iters]
 gobj = [test_max.trace[i].g_norm for i=1:inner_iters]
 rng = iters .== 0
 
-test_max_trace = test_max.trace
 trace_of_r = [test_max.trace[i].metadata["x"] for i=1:inner_iters]
-JLD.@save output_dir * "/luneburg_optim.jld"
+JLD.@save(joinpath(output_dir, "luneburg_optim.jld"), sp1, sp2, sp3,Ez1, Ez2, Ez3,
+        inner_iters, iters, fobj, gobj, rng, optim_time, rs_max, border)
 
-# figure()
-# plot(0:inner_iters-1, fobj)
-# plot(0:inner_iters-1, gobj)
-# plot((0:inner_iters-1)[rng], fobj[rng],"*")
-# plot((0:inner_iters-1)[rng], gobj[rng],"*")
-
-import PGFPlotsX; const pgf = PGFPlotsX
-pgf.@pgf begin
-    fobj_plot = pgf.Plot({blue, thick, no_markers},
-                        pgf.Coordinates(0:inner_iters-1, fobj))
-    gobj_plot = pgf.Plot({red, thick, dashed, no_markers},
-                        pgf.Coordinates(0:inner_iters-1, gobj))
-    fobj_outer = pgf.Plot({blue, only_marks, mark = "*",
-                            mark_options = {fill = "blue"}},
-                        pgf.Coordinates((0:inner_iters-1)[rng], fobj[rng]))
-    gobj_outer = pgf.Plot({red, only_marks, mark = "triangle*",
-                            mark_options = {fill = "red"}},
-                        pgf.Coordinates((0:inner_iters-1)[rng], gobj[rng]))
-    ax = pgf.Axis({ xmin = 0,
-                    width = "6cm",
-                    xlabel = "Iterations",
-                    legend_pos = "north east",
-                    legend_style = "font = \\footnotesize",
-                    legend_cell_align = "left"},
-                fobj_plot, gobj_plot, fobj_outer, gobj_outer)
-    push!(ax, pgf.Legend(["\$f_{\\mathrm{obj}}\$";
-                        "\$\\|\\mathbf{g}_{\\mathrm{obj}}\\|_{\\infty}\$"]))
-    ax
-end
-pgf.save(output_dir * "/opt_r_conv.tex", ax ,include_preamble = false)
+figure()
+plot(0:inner_iters-1, fobj, "b", label="\$f_{\\mathrm{obj}}\$")
+plot(0:inner_iters-1, log10.(gobj), "r--", label="\$\\Vert \\mathbf{g}_{\\mathrm{obj}}\\Vert_{\\infty}\$")
+plot((0:inner_iters-1)[rng], fobj[rng],"bo")
+plot((0:inner_iters-1)[rng], gobj[rng],"r^")
+xlabel("Iterations")
+legend(loc="best")
 
 ################ Testing with symmetry ######################
-assert(length(ids_max)==size(centers,1))
+@assert length(ids_max)==size(centers,1)
 centers_abs = centers[:,1] + 1im*abs.(centers[:,2])
 ids_sym, centers_abs = ParticleScattering.uniqueind(centers_abs)
 J = length(centers_abs)
@@ -114,27 +82,20 @@ r_max = (a_lens/1.15/2)*ones(J)
 r_min = (a_lens*1e-3)*ones(J)
 rs0 = (0.25*a_lens)*ones(J)
 
-tic()
-test_max_sym = optimize_radius(rs0, r_min, r_max, points, ids_sym, P, PlaneWave(θ_i), k0, kin,
+sym_time = @elapsed begin
+    test_max_sym = optimize_radius(rs0, r_min, r_max, points, ids_sym, P, pw, k0, kin,
                 centers, fmm_options, optim_options, minimize = false)
-sym_time = toq()
-rs_sym = test_max_sym.minimizer
-JLD.@save output_dir * "/luneburg_optim_sym.jld" test_max_sym sym_time
+end
+JLD.@save joinpath(output_dir, "luneburg_optim_sym.jld") test_max_sym sym_time
 
+rs_sym = test_max_sym.minimizer
 sp4 = ScatteringProblem([CircleParams(rs_sym[i]) for i in eachindex(rs_sym)],
         ids_sym, centers, φs)
-Ez4 = plot_near_field(k0, kin, P, sp4, PlaneWave(θ_i), x_points = 150, y_points = 150,
-        opt = fmm_options, border = border)
-pw = PlaneWave(θ_i)
+Ez4 = plot_near_field(k0, kin, P, sp4, pw, x_points = 300, y_points = 300,
+        opt = fmm_options, border = border, method = "recurrence")
+
 u1 = calc_near_field(k0, kin, 7, sp1, points, pw; opt = fmm_options)
 u2 = calc_near_field(k0, kin, 7, sp2, points, pw; opt = fmm_options)
 u3 = calc_near_field(k0, kin, 7, sp3, points, pw; opt = fmm_options)
 u4 = calc_near_field(k0, kin, 7, sp4, points, pw; opt = fmm_options)
 abs.([u1[1];u2[1];u3[1];u4[1]])
-
-#####################################
-# selfconsistent err P calculation
-Ez_4 = calc_near_field(k0, kin, 4, sp1, points, pw; opt = fmm_options)
-Ez_5 = calc_near_field(k0, kin, 5, sp1, points, pw; opt = fmm_options)
-Ez_6 = calc_near_field(k0, kin, 6, sp1, points, pw; opt = fmm_options)
-Ez_7 = calc_near_field(k0, kin, 7, sp1, points, pw; opt = fmm_options)

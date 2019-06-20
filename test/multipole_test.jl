@@ -7,7 +7,7 @@
 
     N = 1000
     P = 5
-    shapes = [squircle(2π/λ0, N)]
+    shapes = [squircle(0.2λ0, N)]
     centers = [-1.5λ0 0; 1.5λ0 0]
     Ns = size(centers,1)
     φs = [0.0; 0.23]
@@ -23,11 +23,11 @@
     #now rotate everything by some angle and compare
     θ_r = 1.23#2π*rand()
     #notation is transposed due to structure of centers
-    shapes2 = [squircle(2π/λ0, N); CircleParams(15)] #for extra code coverage
-    centers2 = centers*([cos(θ_r) -sin(θ_r); sin(θ_r) cos(θ_r)].')
-    φs2 = θ_r + φs
+    shapes2 = [squircle(0.2λ0, N); CircleParams(15)] #no effect,for extra code coverage
+    centers2 = centers*[cos(θ_r) sin(θ_r); -sin(θ_r) cos(θ_r)]
+    φs2 = θ_r .+ φs
     sp2 = ScatteringProblem(shapes2, ids, centers2, φs2)
-    points2 = points*([cos(θ_r) -sin(θ_r); sin(θ_r) cos(θ_r)].')
+    points2 = points*[cos(θ_r) sin(θ_r); -sin(θ_r) cos(θ_r)]
 
     β2, σ2 = solve_particle_scattering(k0, kin, P, sp2, PlaneWave(θ_i + θ_r);
         get_inner = true, verbose = true)

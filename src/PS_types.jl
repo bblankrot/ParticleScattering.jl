@@ -92,7 +92,7 @@ and the following keyword arguments dictate its behavior:
 - `dx::Real`: group height/width (alternative division)
 - `acc::Integer`: accuracy digits for translation truncation, and also for gmres if `tol` is not given
 - `tol::Real`: gmres tolerance
-- `method::String`: method used: for now can be "pre" or "pre2". Mainly used for development.
+- `method::String`: method used: for now can be "pre". Mainly used for development.
 """
 mutable struct FMMoptions
     FMM::Bool       #Is FMM used?
@@ -100,7 +100,7 @@ mutable struct FMMoptions
     dx::Real        #group height/width (alternative division)
     acc::Integer    #accuracy digits for translation truncation, and also for gmres if tol is not given
     tol::Real       #gmres tolerance
-    method::String  #method used: can be "pre" or "pre2"
+    method::String  #method used: can be "pre"
 	# symmetric::Bool #are agg = disagg points, and thus Disagg[k] = Agg^*[k] ∀k?
 
     #empty contructor - for not using FMM
@@ -121,8 +121,8 @@ mutable struct FMMoptions
             error("FMMoptions: accuracy digits must be in [1,16]")
         tol < 0.0 &&
             error("FMMoptions: gmres tolerance must be greater than 0.0")
-        !in(method, ("pre","pre2")) &&
-            error("FMMoptions: method must be \"pre\" or \"pre2\"")
+        !in(method, ["pre"]) &&
+            error("FMMoptions: method must be \"pre\" or ...")
         tol == 0.0 && (tol = 10^(-Float64(acc)))
         return new(true, nx, dx, acc, tol, method)
     end
@@ -147,10 +147,10 @@ mutable struct OptimBuffer
     rhs_grad::Vector{Complex{Float64}}
 
     OptimBuffer(Ns::Integer, P::Integer, Npoints::Integer, J = Ns) =
-                                new(Array{Complex{Float64}}(Ns*(2*P+1)),
-                                    Array{Complex{Float64}}(Npoints),
-                                    Array{Complex{Float64}}(Ns*(2*P+1), J),
-                                    Array{Complex{Float64}}(Ns*(2*P+1)))
+                                new(Array{Complex{Float64}}(undef, Ns*(2*P+1)),
+                                    Array{Complex{Float64}}(undef, Npoints),
+                                    Array{Complex{Float64}}(undef, Ns*(2*P+1), J),
+                                    Array{Complex{Float64}}(undef, Ns*(2*P+1)))
 end
 
 """
@@ -214,7 +214,7 @@ start and end points of the source, and `σ` contains the potential density.
 """
 function CurrentSource(x1, y1, x2, y2, σ)
 	len = sqrt((x2 - x1)^2 + (y2 - y1)^2)
-	t = linspace(0, 1, length(σ))
+	t = range(0, stop=1, length=length(σ))
 	p = [(x2 - x1)*t + x1		(y2 - y1)*t + y1]
 	CurrentSource(p, σ, len)
 end

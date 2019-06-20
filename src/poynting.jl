@@ -3,18 +3,18 @@ function poynting_vector(k0, beta, centers, points, Ez_inc, Hx_inc, Hy_inc)
     Ns = size(centers,1)
 	P = div(div(length(beta),Ns)-1,2)
 	len = size(points,1)
-	pyntg = Array{Float64}(len, 2)
+	pyntg = Array{Float64}(undef, len, 2)
     Ez = copy(Ez_inc)
     for ip in 1:len
         ∂Ez∂x = 0.0im
         ∂Ez∂y = 0.0im
         for ic in 1:Ns
-		    ind = (ic-1)*(2*P+1) + P + 1
+		    ind = (ic-1)*(2*P+1) .+ P + 1
 			pt1 = points[ip,1] - centers[ic,1]
 			pt2 = points[ip,2] - centers[ic,2]
 
 			R = hypot(pt1, pt2)
-			θ = atan2(pt2, pt1)
+			θ = atan(pt2, pt1)
 			R == 0 && error("R == 0, center=$(centers[ic,:]),
                                 point=$(points[ip,:]), k0 = $k0, ic=$ic, ip=$ip")
 
@@ -51,7 +51,7 @@ end
 function poynting_vector(k0, points, Ez_inc, Hx_inc, Hy_inc)
     #assumes points lie outside all scattering disks
     len = size(points,1)
-	pyntg = Array{Float64}(len, 2)
+	pyntg = Array{Float64}(undef, len, 2)
     for ip in 1:len
         pyntg[ip,1] = (-0.5)*real(Ez_inc[ip]*conj(Hy_inc[ip]))
         pyntg[ip,2] = 0.5*real(Ez_inc[ip]*conj(Hx_inc[ip]))
@@ -61,7 +61,7 @@ end
 
 function calc_power(k0::Array, kin, P, sp, points, nhat, ui)
     #this assumes points are equidistant. correct result only after multiplying by arc length
-    power = Array{Float64}(length(k0))
+    power = Array{Float64}(undef, length(k0))
     for i in eachindex(k0)
         Ez_inc = uinc(k0[i], points, ui)
         Hx_inc = hxinc(k0[i], points, ui)
@@ -102,10 +102,10 @@ end
 
 function rect_border(b, Nx, Ny)
     #clockwise from top
-    points1 = [linspace(b[1], b[2], Nx)     b[4]*ones(Nx)]
-    points2 = [b[2]*ones(Ny)     linspace(b[4], b[3], Ny)]
-    points3 = [linspace(b[2], b[1], Nx)     b[3]*ones(Nx)]
-    points4 = [b[1]*ones(Ny)     linspace(b[3], b[4], Ny)]
+    points1 = [range(b[1], stop=b[2], length=Nx)     b[4]*ones(Nx)]
+    points2 = [b[2]*ones(Ny)     range(b[4], stop=b[3], length=Ny)]
+    points3 = [range(b[2], stop=b[1], length=Nx)     b[3]*ones(Nx)]
+    points4 = [b[1]*ones(Ny)     range(b[3], stop=b[4], length=Ny)]
 
     n = [[zeros(Nx) ones(Nx)], [ones(Ny) zeros(Ny)], [zeros(Nx) -ones(Nx)], [-ones(Ny) zeros(Ny)]]
     [points1, points2, points3, points4], n

@@ -14,12 +14,15 @@ particle parameters for various design problems.
 
 ### Installation
 
-ParticleScattering can be installed using `Pkg.add`. Currently, only Julia 0.6 is supported.
+ParticleScattering for julia 0.7 can be installed using `Pkg.add`:
 
 ```julia
 Pkg.add("ParticleScattering")
 using ParticleScattering
 ```
+
+For julia 0.6, an older version of ParticleScattering can be installed manually
+by cloning [release v0.0.4 from GitHub](https://github.com/bblankrot/ParticleScattering.jl/releases/tag/v0.0.4).
 
 ### Community
 

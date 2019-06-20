@@ -1,6 +1,4 @@
 #based on the optimizing angle tutorial
-import Optim
-
 @testset "optimize angle" begin
     λ0 = 1 #doesn't matter since everything is normalized to λ0
     k0 = 2π/λ0
@@ -20,7 +18,7 @@ import Optim
     sp = ScatteringProblem(shapes, ids, centers, φs0)
 
     points = [-0.05 0.0; 0.05 0.0; 0.0 0.05; 0.0 -0.05]
-    assert(verify_min_distance(sp, points))
+    @assert verify_min_distance(sp, points)
 
     fmm_options = FMMoptions(true, acc = 6, dx = 2λ0)
 
