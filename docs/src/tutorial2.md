@@ -139,12 +139,12 @@ ylabel("\$ \\Delta \$" * " Potential Density")
 
 In both subplots, we see that increasing `P` actually leads to a decrease in
 accuracy (plotting the results separately also shows that the FMM results stay
-virtually constant, while the direct results blow up). This is due to two main reasons &ndash;
+virtually constant, while the direct results blow up). This is due to two main reasons –
 conditioning of the system matrix, and the fact that high-order cylindrical
 harmonics are responsible for substantially greater potential densities than
 lower-order ones. Both of these are impacted by the number of particles as well
 as the wavelength, but mitigated by the iterative solver used by the FMM solver.
 
-This ties in with [Choosing Minimal N and P](@ref minimalNP) &ndash; not only does
+This ties in with [Choosing Minimal N and P](@ref minimalNP) – not only does
 increasing `P` far beyond that required for a certain error impact runtime, but
 can also increase the error in the solution.
