@@ -54,8 +54,8 @@
 
     res = Optim.optimize(df, φs0, Optim.LBFGS(), optim_options)
 
-    power_after = calc_power(k0, kin, P, ScatteringProblem(shapes, ids, centers,
-                    res.minimizer), points, nhat, ui)*len
+    power_after = calc_power([k0], [kin], P, ScatteringProblem(shapes, ids, centers,
+                    res.minimizer), points, nhat, ui)[1]*len
     @test res.f_converged
     @test power_after ≈ 0.00094388385
 end

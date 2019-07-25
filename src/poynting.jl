@@ -59,26 +59,16 @@ function poynting_vector(k0, points, Ez_inc, Hx_inc, Hy_inc)
     pyntg
 end
 
-function calc_power(k0::Array, kin, P, sp, points, nhat, ui)
+function calc_power(k0::Array, kin::Array, P, sp, points, nhat, ui; opt = FMMoptions())
     #this assumes points are equidistant. correct result only after multiplying by arc length
     power = Array{Float64}(undef, length(k0))
     for i in eachindex(k0)
-        Ez_inc = uinc(k0[i], points, ui)
-        Hx_inc = hxinc(k0[i], points, ui)
-        Hy_inc = hyinc(k0[i], points, ui)
-        if sp == nothing
-            pyntg = poynting_vector(k0[i], points, Ez_inc, Hx_inc, Hy_inc)
-        else
-            beta = solve_particle_scattering(k0[i], kin[i], P, sp, ui;
-                        get_inner = false, verbose = false)
-            pyntg = poynting_vector(k0[i], beta, sp.centers, points, Ez_inc, Hx_inc, Hy_inc)
-        end
-        power[i] = power_quadrature(nhat, pyntg)
+        power[i] = calc_power(k0[i], kin[i], P, sp, points, nhat, ui; opt=opt)
     end
     power
 end
 
-function calc_power(k0::Number, kin, P, sp, points, nhat, ui)
+function calc_power(k0::Number, kin::Number, P, sp, points, nhat, ui; opt = FMMoptions())
     #this assumes points are equidistant. correct result only after multiplying by arc length
     Ez_inc = uinc(k0, points, ui)
     Hx_inc = hxinc(k0, points, ui)
@@ -86,8 +76,18 @@ function calc_power(k0::Number, kin, P, sp, points, nhat, ui)
     if sp == nothing
         pyntg = poynting_vector(k0, points, Ez_inc, Hx_inc, Hy_inc)
     else
-        beta = solve_particle_scattering(k0, kin, P, sp, ui;
-                    get_inner = false, verbose = false)
+        if opt.FMM
+            result = solve_particle_scattering_FMM(k0, kin, P, sp, ui, opt;
+                get_inner = false, verbose = false)
+            if result[2].isconverged == false
+                @warn("FMM process did not converge")
+                return
+            end
+            beta = result[1]
+        else
+            beta = solve_particle_scattering(k0, kin, P, sp, ui;
+                        get_inner = false, verbose = false)
+        end
         pyntg = poynting_vector(k0, beta, sp.centers, points, Ez_inc, Hx_inc, Hy_inc)
     end
     power_quadrature(nhat, pyntg)
