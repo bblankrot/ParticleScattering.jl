@@ -203,7 +203,7 @@ function optimize_radius_adj_g!(grad_stor, rs, last_rs, shared_var, φs, α, H, 
 end
 
 function updateCircleScatteringDerivative!(S, dS_S, kout, kin, R::Real, P)
-    #non-vectorized, reuses bessel
+    #non-vectorized, does not reuse bessel. TODO: give recurrence option.
     R > 0 || throw(DomainError(R, "`R` must be positive."))
     pre_J0 = besselj(-1,kout*R)
     pre_J1 = besselj(-1,kin*R)

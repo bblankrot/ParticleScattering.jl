@@ -1,6 +1,7 @@
 *.jl.cov
 *.jl.*.cov
 *.jl.mem
+iterate.dat
 
 docs/build/
 docs/site/

@@ -201,3 +201,143 @@ function dPdβ_pwr!(sv::PowerBuffer)
                                     conj(sv.Ez[ip])*sv.HHx[ip])
     end
 end
+
+##########
+
+function optimize_pwr_rs_direct2_common!(rs, last_rs, opb, power_buffer, ids, scatteringMatrices, dS_S, P, Ns, φs, rhs, A₀, A, LU)
+    if rs != last_rs
+        copyto!(last_rs, rs)
+        #do whatever common calculations and save to shared_var
+        for i in eachindex(opb)
+            #TODO: if multiple problems have same k0, these calcs are duplicated
+            for id in unique(ids)
+                ParticleScattering.updateCircleScatteringDerivative!(scatteringMatrices[i][id], dS_S[i][id], opb[i].k0, opb[i].kin, rs[id], P)
+            end
+            for ic = 1:Ns
+                rng = (ic-1)*(2*P+1) .+ (1:2*P+1)
+                rhs[i][rng] = scatteringMatrices[i][ids[ic]]*opb[i].α[rng]
+            end
+            #TODO: replace with sparse representation for scatteringMatrices
+            for ic = 1:Ns
+                rng = (ic-1)*(2*P+1) .+ (1:2*P+1)
+                A[i][rng, :] = scatteringMatrices[i][ids[ic]]*A₀[i][rng, :]
+            end
+            LU[i] = lu(A[i] + I)
+            opb[i].β[:] = LU[i] \ rhs[i]
+        end
+        #calculate power for each power calculation arc
+        calc_multi_pwr!(power_buffer, opb)
+    end
+end
+
+function optimize_pwr_rs_direct2_f(rs, last_rs, opb, power_buffer, ids, scatteringMatrices, dS_S, P, Ns, φs, rhs, A₀, A, LU, fobj_pwr)
+    optimize_pwr_rs_direct2_common!(rs, last_rs, opb, power_buffer, ids, scatteringMatrices, dS_S, P, Ns, φs, rhs, A₀, A, LU)
+
+    fobj_pwr(power_buffer)
+end
+
+function optimize_pwr_rs_direct2_g!(grad_stor, rs, last_rs, opb, power_buffer, ids, scatteringMatrices, dS_S, P, Ns, φs, rhs, A₀, A, LU, gobj_pwr!)
+    optimize_pwr_rs_direct2_common!(rs, last_rs, opb, power_buffer, ids, scatteringMatrices, dS_S, P, Ns, φs, rhs, A₀, A, LU)
+
+    fill!(grad_stor, 0) #gradient is the sum of both adjoint gradients
+    #compute all ∂P/∂βᵀ
+    dPdβ_pwr!.(power_buffer)
+    #build rhs of all adjoint problems (⁠-∂f/∂βᵀ)
+    gobj_pwr!(power_buffer, opb)
+
+    #for each problem, solve adjoint problem and add to total gradient
+    for i in eachindex(opb)
+        #solve adjoint problem - A is already computed
+        opb[i].λadj[:] = transpose(LU[i]) \ opb[i].rhs_grad
+        for n = 1:length(rs)
+            #compute n-th gradient - here we must pay the price for symmetry
+            #as more than one β is affected. Overwrites rhs_grad (ok because
+            #there is seperate one for each i). TODO:
+            #rhs_grad is still usually sparse - utilize this to reduce complexity
+            #here O(N^2) -> O(N)
+            for ic = 1:Ns
+                rng = (ic-1)*(2*P+1) .+ (1:2*P+1)
+                if ids[ic] == n
+                    opb[i].rhs_grad[rng] = dS_S[i][n]*opb[i].β[rng]
+                else
+                    opb[i].rhs_grad[rng] .= 0.0
+                end
+            end
+            grad_stor[n] += -2*real(transpose(opb[i].λadj)*opb[i].rhs_grad)
+        end
+    end
+end
+
+
+##########
+
+function optimize_pwr_rs_direct1_common!(rs, last_rs, opb, power_buffer, ids, scatteringMatrices, dS_S, P, Ns, φs, rhs, A)
+    if rs != last_rs
+        copyto!(last_rs, rs)
+        #do whatever common calculations and save to shared_var
+        for i in eachindex(opb)
+            #TODO: if multiple problems have same k0, these calcs are duplicated
+            for id in unique(ids)
+                ParticleScattering.updateCircleScatteringDerivative!(scatteringMatrices[i][id], dS_S[i][id], opb[i].k0, opb[i].kin, rs[id], P)
+            end
+            cur_ind = 1
+            for ic = 1:Ns
+                rng = (ic-1)*(2*P+1) .+ (1:2*P+1)
+                rhs[i][rng] = opb[i].α[rng]# remove this
+
+                for p = 1:2P + 1
+                    A[i][cur_ind] = 1/scatteringMatrices[i][ids[ic]][p, p]
+                    cur_ind += Ns*(2P + 1) + 1
+                end
+            end
+            opb[i].β[:] = A[i] \ rhs[i]
+        end
+        #calculate power for each power calculation arc
+        calc_multi_pwr!(power_buffer, opb)
+    end
+end
+
+function optimize_pwr_rs_direct1_f(rs, last_rs, opb, power_buffer, ids, scatteringMatrices, dS_S, P, Ns, φs, rhs, A, fobj_pwr)
+    optimize_pwr_rs_direct1_common!(rs, last_rs, opb, power_buffer, ids, scatteringMatrices, dS_S, P, Ns, φs, rhs, A)
+
+    fobj_pwr(power_buffer)
+end
+
+function optimize_pwr_rs_direct1_g!(grad_stor, rs, last_rs, opb, power_buffer, ids, scatteringMatrices, dS_S, P, Ns, φs, rhs, A, gobj_pwr!)
+    #TODO: re-derive equation so diving by X^{-T} isn't necessary
+    optimize_pwr_rs_direct1_common!(rs, last_rs, opb, power_buffer, ids, scatteringMatrices, dS_S, P, Ns, φs, rhs, A)
+
+    fill!(grad_stor, 0) #gradient is the sum of both adjoint gradients
+    #compute all ∂P/∂βᵀ
+    dPdβ_pwr!.(power_buffer)
+    #build rhs of all adjoint problems (⁠-∂f/∂βᵀ)
+    gobj_pwr!(power_buffer, opb)
+
+    #for each problem, solve adjoint problem and add to total gradient
+    for i in eachindex(opb)
+        #solve adjoint problem - A is already computed
+        opb[i].λadj[:] = transpose(A[i]) \ opb[i].rhs_grad
+        for ic = 1:Ns
+            for p = 1:2P + 1
+                opb[i].λadj[(ic - 1)*(2P + 1) + p] /= scatteringMatrices[i][ids[ic]][p, p]
+            end
+        end
+
+        for n = 1:length(rs)
+            #compute n-th gradient - here we must pay the price for symmetry
+            #as more than one β is affected. Overwrites rhs_grad (ok because
+            #there is seperate one for each i). TODO:
+            #rhs_grad is still usually sparse - utilize this to reduce complexity
+            #here O(N^2) -> O(N)
+            for ic = 1:Ns
+                rng = (ic-1)*(2*P+1) .+ (1:2*P+1)
+                if ids[ic] == n
+                    opb[i].rhs_grad[rng] = dS_S[i][n]*opb[i].β[rng]
+                else
+                    opb[i].rhs_grad[rng] .= 0.0
+                end
+            end
+            grad_stor[n] += -2*real(transpose(opb[i].λadj)*opb[i].rhs_grad)
+        end
+    end
+end
